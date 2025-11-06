@@ -7,3 +7,5 @@ run.sh
 .vscode/
 nohup.out
 BookWorld_test.py
+.DS_Store
+model_cache/
