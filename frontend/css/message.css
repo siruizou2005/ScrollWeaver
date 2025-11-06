@@ -1,0 +1,199 @@
+/* message.css */
+/* 聊天消息区域样式 */
+.chat-messages {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 20px;
+    background-color: #e8d6c5;
+}
+
+.message {
+    display: flex;
+    margin-bottom: 20px;
+    gap: 10px;
+}
+
+.message .icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    overflow: hidden;
+    margin-right: 10px;
+    flex-shrink: 0;
+    flex-basis: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.message .icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    min-width: 40px;
+    min-height: 40px;
+}
+
+.message .content {
+    flex-grow: 1;
+    position: relative;
+}
+
+.message .header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 5px;
+}
+
+.message .username {
+    color: #000000;
+    font-weight: bold;
+}
+
+.message .timestamp {
+    color: #604d4c;
+    font-size: 0.8em;
+}
+
+.message .text {
+    color: #000000;
+    line-height: 1.5;
+}
+
+.message.system {
+    justify-content: center;
+    margin: 10px 0;
+}
+
+.message.system .content {
+    background-color: rgba(255, 255, 255, 0.1);
+    padding: 5px 15px;
+    border-radius: 15px;
+}
+
+.message.system .text {
+    color: #888;
+    font-size: 0.9em;
+    text-align: center;
+}
+
+/* 底部输入区域样式 */
+.input-area {
+    background-color: #5f3d30;
+    padding: 10px;
+    display: flex;
+    gap: 10px;
+    border-top: 1px solid #3d3d3d;
+}
+
+.input-area textarea {
+    flex-grow: 1;
+    background-color: #290000;
+    border: 1px solid #3a2626;
+    color: #e7e7e7;
+    padding: 10px;
+    resize: none;
+    border-radius: 4px;
+    min-height: 40px;
+}
+
+.input-area button {
+    background: none;
+    border: none;
+    color: #e4d5ca;
+    cursor: pointer;
+    padding: 0 10px;
+}
+
+.input-area button:hover {
+    color: #e7e7e7;
+}
+
+.text-wrapper {
+    position: relative;
+}
+
+.text {
+    padding: 5px;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.text.editing {
+    background-color: rgba(255, 255, 255, 0.9);
+    border: 1px solid #5f3737;
+    outline: none;
+    padding: 4px;
+    color: #000;
+}
+
+.edit-buttons {
+    display: none;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.edit-btn {
+    padding: 4px 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: background-color 0.2s;
+}
+
+.save-btn {
+    background-color: #5f3737;
+    color: white;
+}
+
+.save-btn:hover {
+    background-color: #7a4747;
+}
+
+.cancel-btn {
+    background-color: #ccc;
+    color: #333;
+}
+
+.cancel-btn:hover {
+    background-color: #999;
+}
+
+/* 确保系统消息不可编辑 */
+.message.system .text {
+    contenteditable: false;
+    pointer-events: none;
+}
+
+.story-message {
+    background-color: #f5f5f5;
+    border-left: 4px solid #b44b43;
+    margin: 10px 0;
+    padding: 15px;
+}
+
+.story-message .text {
+    white-space: pre-wrap;
+    line-height: 1.5;
+    color: #333;
+}
+
+/* 添加编辑图标按钮样式 */
+.edit-icon {
+    position: absolute;
+    bottom: 5px;
+    right: 5px;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.2s;
+    background: none;
+    border: none;
+    color: #5f3737;
+    padding: 5px;
+}
+
+.message .content:hover .edit-icon {
+    opacity: 1;
+}

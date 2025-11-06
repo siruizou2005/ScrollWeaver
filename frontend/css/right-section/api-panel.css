@@ -1,0 +1,94 @@
+/* api-panel.css */
+.api-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 15px;
+}
+
+.api-model-select,
+.api-input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.api-keys-container {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.api-key-input {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.api-key-input input {
+    padding: 8px;
+    border: 1px solid #5f3737;
+    border-radius: 4px;
+}
+
+label {
+    color: #5f3737;
+    font-weight: bold;
+}
+
+select {
+    padding: 8px;
+    border: 1px solid #5f3737;
+    border-radius: 4px;
+    background-color: white;
+}
+
+.api-submit-btn {
+    padding: 10px;
+    background-color: #5f3737;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.api-submit-btn:hover {
+    background-color: #7a4747;
+}
+
+.api-key-input .toggle-visibility {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    color: #5f3737;
+}
+
+/* 修复i18n后的布局问题 */
+.api-container label h3 {
+    margin: 0;
+    display: inline-block;
+}
+
+.api-submit-btn h3 {
+    margin: 0;
+}
+
+/* 修复 API Provider 标签与下拉框之间的间距 */
+.api-container label {
+    margin-bottom: 0;
+}
+
+/* 确保内联元素的垂直对齐 */
+.api-container label h3 {
+    vertical-align: middle;
+    line-height: normal;
+}
+
+/* 缩小标签和输入框之间的间距 */
+.api-container > label + select,
+.api-container > label + input {
+    margin-top: 5px;
+}

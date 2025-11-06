@@ -1,0 +1,138 @@
+/* status-panel.css */
+.status-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.status-module {
+    background-color: white;
+    border-radius: 8px;
+    padding: 15px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.status-module h3 {
+    color: #5f3737;
+    margin: 0 0 10px 0;
+    font-size: 1.1em;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #fdf5ee;
+}
+
+.module-content {
+    font-size: 0.9em;
+}
+
+/* 事件模块样式 */
+.event-text {
+    color: #5f3737;
+    line-height: 1.4;
+    display: flex;
+    align-items: center;
+}
+
+/* 地点模块样式 */
+.location-name {
+    font-weight: bold;
+    color: #5f3737;
+    margin-bottom: 5px;
+}
+
+.location-description {
+    color: #666;
+    line-height: 1.4;
+}
+
+/* 分组模块样式 */
+.group-members {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.group-member {
+    background-color: #fdf5ee;
+    padding: 5px 10px;
+    border-radius: 15px;
+    font-size: 0.9em;
+    color: #5f3737;
+}
+
+.no-members {
+    color: #666;
+    font-style: italic;
+}
+
+/* 设定模块样式 */
+.settings-content {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.setting-item {
+    background-color: #fdf5ee;
+    padding: 10px;
+    border-radius: 6px;
+    margin-bottom: 8px;
+}
+
+.setting-term {
+    font-weight: bold;
+    color: #5f3737;
+    margin-bottom: 4px;
+}
+
+.setting-nature {
+    color: #666;
+    font-size: 0.9em;
+    margin-bottom: 4px;
+}
+
+.setting-detail {
+    color: #666;
+    line-height: 1.4;
+}
+
+.no-settings {
+    color: #666;
+    font-style: italic;
+    text-align: center;
+    padding: 10px;
+}
+
+/* 滚动条样式 */
+.settings-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.settings-content::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.settings-content::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 3px;
+}
+
+.settings-content::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+/* 状态指示器 */
+.status-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 8px;
+    display: inline-block;
+}
+
+.status-active {
+    background-color: #4CAF50;
+}
+
+.status-inactive {
+    background-color: #999;
+}

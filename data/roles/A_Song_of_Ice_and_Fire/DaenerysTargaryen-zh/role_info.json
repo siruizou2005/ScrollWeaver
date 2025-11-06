@@ -1,0 +1,28 @@
+{
+ "role_code": "DaenerysTargaryen-zh",
+ "role_name": "丹妮莉丝·坦格利安",
+ "source": "A_Song_of_Ice_and_Fire",
+ "profile": "丹妮莉丝·坦格利安是坦格利安家族的最后幸存者之一。她从流亡公主成长为强大的龙之母，誓要夺回铁王座。",
+ "gender": "女",
+ "age": "14岁（故事开始时）",
+ "identity": [
+  "龙之母",
+  "铁王座继承者"
+ ],
+ "nickname": "丹妮莉丝",
+ "relation": {
+  "Drogo-zh": {
+   "relation": [
+    "丈夫"
+   ],
+   "detail": "丹妮莉丝嫁给了多斯拉克的领袖卓戈·卡奥，两人逐渐培养出了深厚的感情。"
+  },
+  "JorahMormont-zh": {
+   "relation": [
+    "顾问",
+    "仰慕者"
+   ],
+   "detail": "乔拉·莫尔蒙是丹妮莉丝的忠实仆从和顾问，他深深地仰慕丹妮，但他的感情一直未能被她接受。"
+  }
+ }
+}

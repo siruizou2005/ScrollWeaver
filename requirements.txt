@@ -1,0 +1,16 @@
+anthropic
+beautifulsoup4
+chromadb
+fastapi
+langchain
+langchain_experimental
+modelscope
+openai
+tiktoken
+torch
+tqdm
+transformers
+uvicorn
+pillow
+faiss-cpu
+huggingface_hub[cli]

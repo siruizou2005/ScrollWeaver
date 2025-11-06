@@ -1,0 +1,28 @@
+{
+ "role_code": "CerseiLannister-zh",
+ "role_name": "瑟曦·兰尼斯特",
+ "source": "A_Song_of_Ice_and_Fire",
+ "profile": "瑟曦·兰尼斯特是兰尼斯特家族的长女，詹姆·兰尼斯特的双胞胎姐妹。她美丽、聪慧，但心狠手辣，为了权力不择手段。",
+ "gender": "女",
+ "age": "31岁（故事开始时）",
+ "identity": [
+  "兰尼斯特家族成员",
+  "王后",
+  "摄政太后"
+ ],
+ "nickname": "瑟曦",
+ "relation": {
+  "RobertBaratheon-zh": {
+   "relation": [
+    "丈夫"
+   ],
+   "detail": "瑟曦是劳勃·拜拉席恩的王后，但两人婚姻不幸福，瑟曦始终对劳勃心怀怨恨。"
+  },
+  "JoffreyBaratheon-zh": {
+   "relation": [
+    "母子"
+   ],
+   "detail": "瑟曦对她的儿子乔佛里极为溺爱，并将他视为权力的延续，尽管乔佛里残酷暴戾。"
+  }
+ }
+}
