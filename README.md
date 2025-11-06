@@ -1,3 +1,19 @@
+## 项目总概
+自动从小说文本中提取所需信息，构建一个“活的”虚拟世界。在这个世界里，书中的角色（作为智能体）可以根据自己的目标和性格自主行动、互动，并“续写”出忠实于原作风格的新故事。
+
+## 下一步计划：
+1、隔离用户操作
+
+2、修改前端
+
+3、增加可玩性，例如将用户作为其中的一个角色，与performer和orchestrator共同推导故事情节的发展
+
+4、增加小说截断功能，可以从小说中某一情节开始enter the book
+
+## 为什么这样命名
+
+ScrollWeaver (织卷者) 是一个由指挥家 (Orchestrator) 和表演者 (Performer) 协同工作、响应玩家（执灯者）的行动，从而动态“编织”出独特故事（书卷）的魔法机器
+
 # ScrollWeaver: Interactive Multi-Agent Story Creation System
 
 <div align="center">
