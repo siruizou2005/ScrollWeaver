@@ -1,9 +1,15 @@
+# --- LangChain Core Dependencies (Pinned for compatibility) ---
+# Pinning langchain to a version before the major 0.1.0 update
+# to ensure compatibility with modules like GenerativeAgent that use old import paths.
+langchain==0.0.354
+langchain-experimental==0.0.47
+
+# --- Other Project Dependencies ---
 anthropic
 beautifulsoup4
 chromadb
 fastapi
-langchain
-langchain_experimental
+# langchain and langchain_experimental are specified above
 modelscope
 openai
 tiktoken
