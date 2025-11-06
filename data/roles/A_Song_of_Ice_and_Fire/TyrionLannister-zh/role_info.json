@@ -1,0 +1,28 @@
+{
+ "role_code": "TyrionLannister-zh",
+ "role_name": "提利昂·兰尼斯特",
+ "source": "A_Song_of_Ice_and_Fire",
+ "profile": "提利昂·兰尼斯特是兰尼斯特家族的侏儒儿子，以机智与智慧闻名。他虽身材矮小，却有着高大的心灵与远大的抱负。",
+ "gender": "男",
+ "age": "24岁（故事开始时）",
+ "identity": [
+  "兰尼斯特家族成员",
+  "国王之手"
+ ],
+ "nickname": "提利昂",
+ "relation": {
+  "TywinLannister-zh": {
+   "relation": [
+    "父亲"
+   ],
+   "detail": "提利昂与他的父亲泰温·兰尼斯特关系紧张，尽管泰温轻视他，但提利昂始终试图证明自己。"
+  },
+  "JaimeLannister-zh": {
+   "relation": [
+    "兄弟",
+    "挚友"
+   ],
+   "detail": "提利昂与詹姆关系极为密切，詹姆一直是提利昂最亲近的家人，两人互相支持。"
+  }
+ }
+}

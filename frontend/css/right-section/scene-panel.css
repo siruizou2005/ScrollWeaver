@@ -1,0 +1,58 @@
+.scenes-container {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    padding: 15px;
+}
+
+.scenes-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.scenes-header h3 {
+    color: #5f3737;
+    margin: 0;
+}
+
+.clear-selection-btn {
+    padding: 5px 10px;
+    background-color: #5f3737;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9em;
+}
+
+.clear-selection-btn:hover {
+    background-color: #7a4747;
+}
+
+.scene-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.scene-btn {
+    padding: 8px 15px;
+    background-color: #fdf5ee;
+    border: 1px solid #5f3737;
+    border-radius: 4px;
+    color: #5f3737;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.scene-btn:hover {
+    background-color: #5f3737;
+    color: white;
+}
+
+.scene-btn.active {
+    background-color: #5f3737;
+    color: white;
+}
+

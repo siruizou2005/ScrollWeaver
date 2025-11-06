@@ -1,0 +1,9 @@
+**/__pycache__/**
+**/chromadb_saves/
+/log/
+/experiment_saves/
+run.sh
+/config/
+.vscode/
+nohup.out
+BookWorld_test.py

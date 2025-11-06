@@ -1,0 +1,30 @@
+/* settings-panel.css */
+.settings-container {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.setting-item {
+    padding: 15px;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.setting-term {
+    font-weight: bold;
+    color: #5f3737;
+    margin-bottom: 5px;
+}
+
+.setting-nature {
+    color: #666;
+    font-size: 0.9em;
+    margin-bottom: 8px;
+}
+
+.setting-detail {
+    color: #333;
+    line-height: 1.4;
+}

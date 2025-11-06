@@ -1,0 +1,28 @@
+{
+ "role_code": "SansaStark-zh",
+ "role_name": "珊莎·史塔克",
+ "source": "A_Song_of_Ice_and_Fire",
+ "profile": "珊莎·史塔克是艾德·史塔克的长女，最初梦想成为王后，但在经历了许多磨难后，她逐渐成长为一个坚强的领袖。",
+ "gender": "女",
+ "age": "11岁（故事开始时）",
+ "identity": [
+  "临冬城家族成员",
+  "临冬城夫人"
+ ],
+ "nickname": "珊莎",
+ "relation": {
+  "CatelynStark-zh": {
+   "relation": [
+    "母亲"
+   ],
+   "detail": "珊莎与母亲凯特琳·史塔克有着深厚的感情，凯特琳一直希望她能有一个幸福的婚姻。"
+  },
+  "PetyrBaelish-zh": {
+   "relation": [
+    "顾问",
+    "操纵者"
+   ],
+   "detail": "小指头培提尔·贝里席曾是珊莎的顾问，但他的意图复杂，他在她的生活中扮演了操纵者的角色。"
+  }
+ }
+}

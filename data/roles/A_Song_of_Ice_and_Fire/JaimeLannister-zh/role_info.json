@@ -1,0 +1,29 @@
+{
+ "role_code": "JaimeLannister-zh",
+ "role_name": "詹姆·兰尼斯特",
+ "source": "A_Song_of_Ice_and_Fire",
+ "profile": "詹姆·兰尼斯特是兰尼斯特家族的长子，外号“弑君者”。他身手矫健，性格复杂，最初因弑君而被世人厌恶，后逐渐展现了他更为人性的另一面。",
+ "gender": "男",
+ "age": "31岁（故事开始时）",
+ "identity": [
+  "兰尼斯特家族成员",
+  "御林铁卫"
+ ],
+ "nickname": "詹姆",
+ "relation": {
+  "CerseiLannister-zh": {
+   "relation": [
+    "姐妹",
+    "情人"
+   ],
+   "detail": "詹姆与双胞胎姐妹瑟曦·兰尼斯特有着禁忌的爱情，两人关系深厚，但也充满了复杂的情感纠葛。"
+  },
+  "TyrionLannister-zh": {
+   "relation": [
+    "兄弟",
+    "挚友"
+   ],
+   "detail": "詹姆与弟弟提利昂关系密切，他是唯一一个真正爱护提利昂的家人，并在许多关键时刻支持了他。"
+  }
+ }
+}

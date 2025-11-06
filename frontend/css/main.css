@@ -1,0 +1,207 @@
+/* main-style.css */
+html, body {
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    width: 100%;
+    overflow: auto;
+    font-family: Arial, sans-serif;
+    background-color: #fdf5ee;
+}
+
+.main-container {
+    display: flex;
+    height: 100vh;
+    width: calc(100% - 60px);
+    margin: 0 auto;
+    padding: 0 30px;
+    overflow: hidden;
+}
+.left-section {
+    width: 24%;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid #5f3737;
+    padding: 0 10px;
+}
+
+/* 地图区域 */
+.map-section {
+    height: 280px; 
+    background-color: #fdf5ee;
+    border-bottom: 1px solid #5f3737;
+    margin-bottom: 50px;
+}
+
+/* 角色档案区域 */
+.character-profiles {
+    flex: 1;
+    background-color: #fdf5ee;
+    overflow-y: auto;
+    padding: 10px;
+}
+
+/* 聊天框 */
+.chat-section {
+    flex-grow: 1;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+}
+
+.chat-container {
+    width: 50%;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+}
+
+/* 顶部工具栏样式 */
+.toolbar {
+    background-color: #5c4545;
+    padding: 10px;
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    border-bottom: 1px solid #c4a983;
+}
+
+.toolbar button {
+    background: none;
+    border: none;
+    color: #ebe3d7;
+    cursor: pointer;
+    padding: 5px 10px;
+}
+
+.toolbar button:hover {
+    color: #fff;
+}
+
+.control-btn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 10px;
+    border: none;
+    border-radius: 4px;
+    background-color: #5f3737;
+    color: white;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.control-btn:hover {
+    background-color: #7a4747;
+}
+
+.control-btn i {
+    font-size: 14px;
+}
+
+.control-btn span {
+    font-size: 12px;
+}
+
+#stopBtn {
+    background-color: #873434;
+}
+
+#stopBtn:hover {
+    background-color: #a34141;
+}
+
+.left-tools, .right-tools {
+    display: flex;
+    gap: 10px;
+}
+
+.language-btn {
+    padding: 8px 15px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background-color: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.language-btn:hover {
+    background-color: #f5f5f5;
+}
+
+/* right-section */
+.right-section {
+    width: 24%;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background-color: #fdf5ee;
+    border-left: 1px solid #5f3737;
+    overflow: hidden;
+}
+
+.right-toolbar {
+    padding: 10px;
+    display: flex;
+    gap: 10px;
+    background-color: #5f3737;
+}
+
+.tab-btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    background-color: transparent;
+    color: #fdf5ee;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.tab-btn:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.tab-btn.active {
+    background-color: #fdf5ee;
+    color: #5f3737;
+}
+
+.right-content {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.tab-panel {
+    display: none;
+    padding: 20px;
+    height: calc(100% - 40px);
+    overflow-y: auto;
+}
+
+.tab-panel.active {
+    display: block;
+}
+
+/* 滚动条美化 */
+*::-webkit-scrollbar {
+    /*滚动条整体样式*/
+    width: 6px;  /*高宽分别对应横竖滚动条的尺寸*/
+    height: 1px;
+    }
+*::-webkit-scrollbar-thumb {
+    /*滚动条里面深色条*/
+    border-radius: 10px;
+    box-shadow: inset 0 0 5px rgba(236, 236, 236, 0.1);
+    background: #ccc;
+}
+*::-webkit-scrollbar-track {
+    /*滚动条里面轨道*/
+    box-shadow: inset 0 0 5px rgba(236, 236, 236, 0.1);
+    border-radius: 10px;
+    background: #ededed;
+}
