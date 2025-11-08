@@ -1,199 +1,112 @@
 /* message.css */
-/* 聊天消息区域样式 */
+/* 聊天消息区域样式（现代化气泡风格） */
 .chat-messages {
     flex-grow: 1;
     overflow-y: auto;
-    padding: 20px;
-    background-color: #e8d6c5;
+    padding: 22px;
+    background: linear-gradient(180deg, rgba(250,245,242,0.7), rgba(244,239,233,0.6));
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
 }
 
 .message {
-    display: flex;
-    margin-bottom: 20px;
-    gap: 10px;
+    display: block;
+    max-width: 86%;
+    margin-bottom: 8px;
 }
 
-.message .icon {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    overflow: hidden;
-    margin-right: 10px;
-    flex-shrink: 0;
-    flex-basis: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.message .icon img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    min-width: 40px;
-    min-height: 40px;
-}
+/* Remove old avatar area (avatars are hidden in chat) */
+.message .icon { display: none; }
 
 .message .content {
-    flex-grow: 1;
     position: relative;
+    display: inline-block;
+    background: #ffffff;
+    padding: 12px 14px;
+    border-radius: 12px;
+    box-shadow: 0 8px 20px rgba(25,20,15,0.06);
+    color: #222;
 }
 
 .message .header {
     display: flex;
     align-items: center;
     gap: 10px;
-    margin-bottom: 5px;
+    margin-bottom: 6px;
 }
 
 .message .username {
-    color: #000000;
-    font-weight: bold;
+    color: #1f2937;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
 }
 
+.message .username.profile-link { color: #1257a6; }
+
 .message .timestamp {
-    color: #604d4c;
-    font-size: 0.8em;
+    color: #7b6b68;
+    font-size: 0.78em;
 }
 
 .message .text {
-    color: #000000;
-    line-height: 1.5;
+    color: #2b2b2b;
+    line-height: 1.6;
+    white-space: pre-wrap;
 }
 
 .message.system {
+    display: flex;
     justify-content: center;
-    margin: 10px 0;
 }
 
 .message.system .content {
-    background-color: rgba(255, 255, 255, 0.1);
-    padding: 5px 15px;
-    border-radius: 15px;
+    background: transparent;
+    box-shadow: none;
+    padding: 6px 10px;
+    border-radius: 10px;
+    color: #666;
 }
 
-.message.system .text {
-    color: #888;
-    font-size: 0.9em;
-    text-align: center;
+.story-message {
+    background-color: #fffaf6;
+    border-left: 4px solid #d88b7a;
+    margin: 10px 0;
+    padding: 14px;
 }
 
-/* 底部输入区域样式 */
+/* 编辑样式保持但更现代 */
+.text-wrapper { position: relative; }
+.text.editing { background-color: #fff; border: 1px solid #e6d8d3; padding: 8px; }
+.edit-buttons { display: none; gap: 8px; margin-top: 8px; }
+.edit-btn { padding: 6px 12px; border-radius: 8px; }
+.save-btn { background: #6b4b4b; color: white; }
+.cancel-btn { background: #efefef; color: #333; }
+
+/* 输入区域现代化 */
 .input-area {
-    background-color: #5f3d30;
-    padding: 10px;
+    background: transparent;
+    padding: 12px;
     display: flex;
     gap: 10px;
-    border-top: 1px solid #3d3d3d;
+    border-top: 1px solid rgba(0,0,0,0.04);
 }
 
 .input-area textarea {
     flex-grow: 1;
-    background-color: #290000;
-    border: 1px solid #3a2626;
-    color: #e7e7e7;
-    padding: 10px;
+    background-color: #fff;
+    border: 1px solid #ece7e4;
+    color: #222;
+    padding: 12px;
     resize: none;
-    border-radius: 4px;
-    min-height: 40px;
+    border-radius: 10px;
+    min-height: 48px;
 }
 
-.input-area button {
-    background: none;
-    border: none;
-    color: #e4d5ca;
-    cursor: pointer;
-    padding: 0 10px;
-}
+.input-area button { background: #1257a6; color: white; border-radius: 10px; padding: 10px 14px; border: none; }
+.input-area button:hover { transform: translateY(-1px); }
 
-.input-area button:hover {
-    color: #e7e7e7;
-}
-
-.text-wrapper {
-    position: relative;
-}
-
-.text {
-    padding: 5px;
-    border-radius: 4px;
-    transition: background-color 0.2s;
-}
-
-.text.editing {
-    background-color: rgba(255, 255, 255, 0.9);
-    border: 1px solid #5f3737;
-    outline: none;
-    padding: 4px;
-    color: #000;
-}
-
-.edit-buttons {
-    display: none;
-    gap: 8px;
-    margin-top: 8px;
-}
-
-.edit-btn {
-    padding: 4px 12px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.9em;
-    transition: background-color 0.2s;
-}
-
-.save-btn {
-    background-color: #5f3737;
-    color: white;
-}
-
-.save-btn:hover {
-    background-color: #7a4747;
-}
-
-.cancel-btn {
-    background-color: #ccc;
-    color: #333;
-}
-
-.cancel-btn:hover {
-    background-color: #999;
-}
-
-/* 确保系统消息不可编辑 */
-.message.system .text {
-    contenteditable: false;
-    pointer-events: none;
-}
-
-.story-message {
-    background-color: #f5f5f5;
-    border-left: 4px solid #b44b43;
-    margin: 10px 0;
-    padding: 15px;
-}
-
-.story-message .text {
-    white-space: pre-wrap;
-    line-height: 1.5;
-    color: #333;
-}
-
-/* 添加编辑图标按钮样式 */
-.edit-icon {
-    position: absolute;
-    bottom: 5px;
-    right: 5px;
-    cursor: pointer;
-    opacity: 0;
-    transition: opacity 0.2s;
-    background: none;
-    border: none;
-    color: #5f3737;
-    padding: 5px;
-}
-
-.message .content:hover .edit-icon {
-    opacity: 1;
-}
+/* 编辑图标显示逻辑 */
+.edit-icon { position: absolute; bottom: 6px; right: 6px; cursor: pointer; opacity: 0; transition: opacity 0.12s; }
+.message .content:hover .edit-icon { opacity: 1; }

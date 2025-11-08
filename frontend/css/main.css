@@ -5,8 +5,9 @@ html, body {
     height: 100vh;
     width: 100%;
     overflow: auto;
-    font-family: Arial, sans-serif;
-    background-color: #fdf5ee;
+    font-family: 'Inter', system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    background: linear-gradient(180deg, #fbf8f5 0%, #f6efe9 100%);
+    color: #2b2b2b;
 }
 
 .main-container {
@@ -14,16 +15,21 @@ html, body {
     height: 100vh;
     width: calc(100% - 60px);
     margin: 0 auto;
-    padding: 0 30px;
+    padding: 20px 30px;
+    gap: 20px;
     overflow: hidden;
+    align-items: stretch;
 }
 .left-section {
     width: 24%;
     height: 100vh;
     display: flex;
     flex-direction: column;
-    border-right: 1px solid #5f3737;
-    padding: 0 10px;
+    border-right: none;
+    padding: 10px;
+    background: rgba(255,255,255,0.6);
+    border-radius: 12px;
+    box-shadow: 0 6px 18px rgba(40,30,20,0.06);
 }
 
 /* 地图区域 */
@@ -52,21 +58,25 @@ html, body {
 }
 
 .chat-container {
-    width: 50%;
+    width: 52%;
     display: flex;
     flex-direction: column;
     height: 100%;
     overflow: hidden;
+    background: linear-gradient(180deg, rgba(255,255,255,0.6), rgba(250,244,240,0.7));
+    border-radius: 14px;
+    padding: 12px;
+    box-shadow: 0 10px 30px rgba(35,25,20,0.06);
 }
 
 /* 顶部工具栏样式 */
 .toolbar {
-    background-color: #5c4545;
-    padding: 10px;
+    background: transparent;
+    padding: 8px 6px;
     display: flex;
     justify-content: space-between;
     gap: 10px;
-    border-bottom: 1px solid #c4a983;
+    align-items: center;
 }
 
 .toolbar button {
@@ -84,14 +94,14 @@ html, body {
 .control-btn {
     display: flex;
     align-items: center;
-    gap: 5px;
-    padding: 5px 10px;
+    gap: 8px;
+    padding: 8px 12px;
     border: none;
-    border-radius: 4px;
-    background-color: #5f3737;
+    border-radius: 8px;
+    background-color: #6b4b4b;
     color: white;
     cursor: pointer;
-    transition: background-color 0.3s;
+    transition: transform 0.12s ease, background-color 0.2s;
 }
 
 .control-btn:hover {
@@ -140,10 +150,27 @@ html, body {
     height: 100vh;
     display: flex;
     flex-direction: column;
-    background-color: #fdf5ee;
-    border-left: 1px solid #5f3737;
+    background: rgba(255,255,255,0.6);
     overflow: hidden;
+    border-radius: 12px;
+    padding: 10px;
+    box-shadow: 0 6px 18px rgba(40,30,20,0.04);
 }
+
+/* Profile modal styles (basic, minimal) */
+.profile-modal.hidden { display: none; }
+.profile-modal { position: fixed; inset: 0; z-index: 1200; display: flex; align-items: center; justify-content: center; }
+.profile-modal .modal-overlay { position: absolute; inset: 0; background: rgba(10,10,10,0.45); backdrop-filter: blur(4px); }
+.profile-modal .modal-card { position: relative; z-index: 2; width: 520px; max-width: calc(100% - 40px); border-radius: 12px; background: #fff; box-shadow: 0 20px 60px rgba(20,15,10,0.18); overflow: hidden; }
+.profile-modal .modal-close { position: absolute; top: 10px; right: 10px; background: transparent; border: none; font-size: 22px; cursor: pointer; }
+.profile-modal .modal-content { padding: 18px 20px; }
+.profile-modal .modal-header { display: flex; gap: 14px; align-items: center; }
+.profile-modal .modal-avatar { width: 64px; height: 64px; border-radius: 10px; object-fit: cover; }
+.profile-modal .modal-name { margin: 0; font-size: 20px; }
+.profile-modal .modal-description { margin: 4px 0 0 0; color: #666; }
+.profile-modal .modal-body { margin-top: 12px; }
+.profile-modal .modal-row { padding: 8px 0; border-top: 1px solid #f0f0f0; }
+.profile-modal .modal-row strong { color: #333; }
 
 .right-toolbar {
     padding: 10px;

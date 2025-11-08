@@ -15,18 +15,12 @@
     <link rel="stylesheet" href="./frontend/css/right-section/scene-panel.css">
     <link rel="stylesheet" href="./frontend/css/right-section/preset-panel.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <script src="https://d3js.org/d3.v7.min.js"></script>
 </head>
 <body>
     <div class="main-container">
-        <!-- 左侧地图组件 --> 
         <div class="left-section">
-            <div class="map-section">
-                <h3 class="map-title" data-i18n="map">地图</h3>
-                <div id="map-container">
-                    <div id="map"></div>
-                </div>
-            </div>
             <div class="character-profiles">
                 <h3 class="profiles-title" data-i18n="characterProfiles">角色档案</h3>
                 <div class="profiles-container">
@@ -76,7 +70,6 @@
                 <button class="tab-btn active" data-target="status-panel" data-i18n="status">状态</button>
                 <button class="tab-btn" data-target="scenes-panel" data-i18n="scenes">场景</button>
                 <button class="tab-btn" data-target="preset-panel" data-i18n="preset">预设</button>
-                <button class="tab-btn" data-target="api-panel" data-i18n="APIsettings">API设置</button>
             </div>
             <div class="right-content">
                 <div class="tab-panel active" id="status-panel">
@@ -133,34 +126,26 @@
                         <button class="preset-submit-btn" disabled>Load</button>
                     </div>
                 </div>
-                <div class="tab-panel" id="api-panel">
-                    <div class="api-container">
-                        <label for="api-provider"><h3 data-i18n="apiProvider">API 提供商:</h3></label>
-                        <select id="api-provider" class="api-model-select">
-                            <option value="openai">OpenAI</option>
-                            <option value="anthropic">Anthropic</option>
-                            <option value="alibaba">Alibaba</option>
-                            <option value="openrouter">OpenRouter</option>
-                            <option value="google">Google / Gemini (包括 Vertex)</option>
-                        </select>
-
-                        <label for="api-model"><h3 data-i18n="model">模型:</h3></label>
-                        <select id="api-model" class="api-model-select">
-                            <!-- 默认加载 OpenAI 模型 -->
-                            <option value="gpt-3.5-turbo">gpt-3.5-turbo</option>
-                            <option value="gpt-4">gpt-4</option>
-                        </select>
-
-                        <div class="api-config-disabled">
-                            <p><strong>注意：</strong>出于安全考虑，前端配置已被禁用。请在服务器上编辑 <code>config.json</code> 来更改 API Key / 模型设置，然后重启服务。</p>
-                            <p>示例位置：<code>./config.json</code></p>
-                            <p>保存后，服务会在下次重启时加载新的设置。</p>
-                        </div>
-                        <label for="api-key">API Key:</label>
-                        <input type="password" id="api-key" placeholder="Enter API Key" disabled>
-
-                        <button class="api-submit-btn" disabled>Submit (disabled)</button>
+            </div>
+        </div>
+    </div>
+    <!-- 角色档案弹窗（点击聊天中的角色名打开） -->
+    <div id="profile-modal" class="profile-modal hidden" aria-hidden="true">
+        <div class="modal-overlay"></div>
+        <div class="modal-card">
+            <button class="modal-close" aria-label="Close">&times;</button>
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div>
+                        <h2 class="modal-name">角色名</h2>
+                        <p class="modal-description">简短描述</p>
                     </div>
+                </div>
+                <div class="modal-body">
+                    <div class="modal-row"><strong>地点：</strong><span class="modal-location"></span></div>
+                    <div class="modal-row"><strong>目标：</strong><span class="modal-goal"></span></div>
+                    <div class="modal-row"><strong>状态：</strong><span class="modal-state"></span></div>
+                    <!-- 注意：动机（motivation）故意不展示以满足隐藏动机的需求 -->
                 </div>
             </div>
         </div>
