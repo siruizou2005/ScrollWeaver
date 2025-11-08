@@ -27,8 +27,10 @@ class CharacterProfiles {
             // WebSocket消息处理
             window.addEventListener('websocket-message', (event) => {
                 const message = event.detail;
-                if (message.type === 'initial_data' && message.data.characters) {
-                    this.updateCharacters(message.data.characters);
+
+                if (message.type === 'initial_data') {
+                    if (message.data.characters) this.updateCharacters(message.data.characters);
+                    if (message.data.status) this.updateAllStatus(message.data.status);
                 }
 
                 if (message.type === 'scene_characters') {
@@ -36,21 +38,10 @@ class CharacterProfiles {
                     this.updateCharacters(message.data, true);
                 }
 
-                if (message.type === 'status_update' && message.data.characters) {
-                    this.updateCharacters(message.data.characters);
+                if (message.type === 'status_update') {
+                    if (message.data.characters) this.updateCharacters(message.data.characters);
+                    if (message.data.status) this.updateAllStatus(message.data.status);
                 }
-
-                window.addEventListener('websocket-message', (event) => {
-            const message = event.detail;
-            
-            if (message.type === 'status_update') {
-                this.updateAllStatus(message.data);
-            }
-            
-            if (message.type === 'initial_data' && message.data.status) {
-                this.updateAllStatus(message.data.status);
-            }
-        });
             });
 
             // 绑定点击事件
@@ -64,9 +55,6 @@ class CharacterProfiles {
         
         return `
             <div class="character-card" data-id="${character.id}">
-                <div class="character-icon">
-                    <img src="${character.icon}" alt="${character.name}">
-                </div>
                 <div class="character-info">
                     <div class="character-name">${character.name}</div>
                     <div class="character-description">
@@ -140,6 +128,73 @@ class CharacterProfiles {
                 container.innerHTML += this.createCharacterCard(character);
             });
         }
+    }
+
+    // 更新所有角色的状态字段（statusData 可以是数组或对象）
+    updateAllStatus(statusData) {
+        if (!statusData) return;
+        // 支持数组或 map
+        if (Array.isArray(statusData)) {
+            statusData.forEach(s => {
+                const id = s.id || s.character_id || s.name;
+                const target = this.characters.find(c => String(c.id) === String(id) || String(c.name) === String(id) || String(c.nickname) === String(id));
+                if (target) {
+                    if (s.state) target.state = s.state;
+                    if (s.status) target.state = s.status;
+                    if (s.location) target.location = s.location;
+                    if (s.goal) target.goal = s.goal;
+                }
+            });
+        } else {
+            // object map: key -> status
+            Object.keys(statusData).forEach(key => {
+                const s = statusData[key];
+                const target = this.characters.find(c => String(c.id) === String(key) || String(c.name) === String(key) || String(c.nickname) === String(key));
+                if (target) {
+                    if (s.state) target.state = s.state;
+                    if (s.status) target.state = s.status;
+                    if (s.location) target.location = s.location;
+                    if (s.goal) target.goal = s.goal;
+                }
+            });
+        }
+        // 重新渲染
+        this.renderCharacters(this.characters);
+    }
+
+    // 显示角色详情到全局 modal（不显示动机字段）
+    showCharacterDetails(character) {
+        const modal = document.getElementById('profile-modal');
+        if (!modal) return;
+        const nameEl = modal.querySelector('.modal-name');
+        const descEl = modal.querySelector('.modal-description');
+        const avatarEl = modal.querySelector('.modal-avatar');
+        const locEl = modal.querySelector('.modal-location');
+        const goalEl = modal.querySelector('.modal-goal');
+        const stateEl = modal.querySelector('.modal-state');
+
+        nameEl.textContent = character.name || character.nickname || character.id || 'Unknown';
+        descEl.textContent = character.description || character.brief || '';
+        avatarEl.src = character.icon || './frontend/assets/images/default-icon.jpg';
+        locEl.textContent = character.location || '—';
+        goalEl.textContent = character.goal || '—';
+        stateEl.textContent = character.state || character.status || '—';
+
+        modal.classList.remove('hidden');
+        modal.setAttribute('aria-hidden', 'false');
+        const closeBtn = modal.querySelector('.modal-close');
+        const overlay = modal.querySelector('.modal-overlay');
+        function close() {
+            modal.classList.add('hidden');
+            modal.setAttribute('aria-hidden', 'true');
+            closeBtn.removeEventListener('click', close);
+            overlay.removeEventListener('click', close);
+            document.removeEventListener('keydown', onKeyDown);
+        }
+        function onKeyDown(e) { if (e.key === 'Escape') close(); }
+        closeBtn.addEventListener('click', close);
+        overlay.addEventListener('click', close);
+        document.addEventListener('keydown', onKeyDown);
     }
 
 

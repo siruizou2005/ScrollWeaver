@@ -19,6 +19,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // 添加场景相关属性
     let currentSceneFilter = null;
     let startButtonText =  translations[window.i18n.currentLang]['start'];
+    // 全局编辑状态，避免为每条消息注册 document 监听
+    let currentEditingMessage = null;
+    let currentEditingOriginalText = '';
     // 控制按钮点击事件
     controlBtn.addEventListener('click', function() {
         if (!isPlaying) {
@@ -138,8 +141,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 渲染消息
     function renderMessage(message) {
-        const messageElement = document.createElement('div');
-        messageElement.className = 'message';
+    const messageElement = document.createElement('div');
+    // 支持基于来源的样式：如果消息包含 from/is_user 字段，则加上 user/npc 类
+    const srcClass = (message.from === 'user' || message.is_user) ? ' user' : ' npc';
+    messageElement.className = 'message' + srcClass;
         messageElement.dataset.timestamp = message.timestamp;
         messageElement.dataset.username = message.username;
         
@@ -149,13 +154,11 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log(`Rendering message for scene ${message.scene}`);
         }
         
+        // Note: avatar/icon intentionally not rendered in chat (requirement: remove avatars)
         messageElement.innerHTML = `
-            <div class="icon">
-                <img src="${message.icon}" alt="${message.username}">
-            </div>
             <div class="content">
                 <div class="header">
-                    <span class="username">${message.username}</span>
+                    <a href="#" class="username profile-link">${message.username}</a>
                     <span class="timestamp">${message.timestamp}</span>
                 </div>
                 <div class="text-wrapper">
@@ -173,46 +176,44 @@ document.addEventListener('DOMContentLoaded', function() {
         const textElement = messageElement.querySelector('.text');
         const editButtons = messageElement.querySelector('.edit-buttons');
         const editIcon = messageElement.querySelector('.edit-icon');
-        
-        // 存储原始文本
-        let originalText = message.text;
-        let isEditing = false;
-    
-        // 移除文本元素的 focus 事件监听器，改为编辑图标的点击事件
+
+        // 存储原始文本并使用全局编辑状态管理
+        const originalText = message.text;
+
+        // 点击铅笔图标进入编辑模式
         editIcon.addEventListener('click', () => {
-            if (!isEditing) {
-                isEditing = true;
-                editButtons.style.display = 'flex';
-                textElement.classList.add('editing');
-                textElement.setAttribute('contenteditable', 'true');
-                textElement.focus();
+            // 如果已有其他编辑中的消息，先退出它（回退）
+            if (currentEditingMessage && currentEditingMessage !== messageElement) {
+                exitEditMode(currentEditingMessage, true);
             }
+            currentEditingMessage = messageElement;
+            currentEditingOriginalText = originalText;
+            editButtons.style.display = 'flex';
+            textElement.classList.add('editing');
+            textElement.setAttribute('contenteditable', 'true');
+            textElement.focus();
         });
-    
+
         // 保存按钮点击事件
         messageElement.querySelector('.save-btn').addEventListener('click', () => {
             const newText = textElement.textContent.trim();
             if (newText !== originalText) {
-                // 发送编辑消息到服务器
                 ws.send(JSON.stringify({
                     type: 'edit_message',
-                    data: {
-                        uuid: message.uuid,
-                        text: newText,
-                    }
+                    data: { uuid: message.uuid, text: newText }
                 }));
-                originalText = newText;
+                currentEditingOriginalText = newText;
             }
-            exitEditMode();
+            exitEditMode(messageElement, false);
         });
-    
+
         // 取消按钮点击事件
         messageElement.querySelector('.cancel-btn').addEventListener('click', () => {
-            textElement.textContent = originalText;
-            exitEditMode();
+            textElement.textContent = currentEditingOriginalText || originalText;
+            exitEditMode(messageElement, true);
         });
-    
-        // 处理快捷键
+
+        // 处理快捷键（仅在编辑时）
         textElement.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
@@ -222,26 +223,27 @@ document.addEventListener('DOMContentLoaded', function() {
                 messageElement.querySelector('.cancel-btn').click();
             }
         });
-    
-        // 添加点击外部监听器
-        document.addEventListener('click', function(event) {
-            if (isEditing && !messageElement.contains(event.target)) {
-                // 如果点击位置不在当前消息元素内，退出编辑模式
-                exitEditMode();
-                textElement.textContent = originalText;
-            }
-        });
-    
-        // 防止编辑区域的点击事件冒泡
+
+        // 防止消息点击冒泡到全局点击（全局点击用于退出编辑）
         messageElement.addEventListener('click', function(event) {
             event.stopPropagation();
         });
-    
-        function exitEditMode() {
-            isEditing = false;
-            editButtons.style.display = 'none';
-            textElement.classList.remove('editing');
-            textElement.blur();
+
+        function exitEditMode(msgEl, revert) {
+            if (!msgEl) return;
+            const txtEl = msgEl.querySelector('.text');
+            const btns = msgEl.querySelector('.edit-buttons');
+            if (btns) btns.style.display = 'none';
+            if (txtEl) {
+                txtEl.classList.remove('editing');
+                txtEl.removeAttribute('contenteditable');
+                txtEl.blur();
+                if (revert) txtEl.textContent = currentEditingOriginalText || originalText;
+            }
+            if (currentEditingMessage === msgEl) {
+                currentEditingMessage = null;
+                currentEditingOriginalText = '';
+            }
         }
     
         // 根据当前场景筛选器决定是否显示
@@ -290,6 +292,88 @@ document.addEventListener('DOMContentLoaded', function() {
             sendMessage();
         }
     });
+    
+    // 角色名点击 -> 打开角色档案弹窗（弹窗内容不包含动机）
+    document.addEventListener('click', function (e) {
+        const target = e.target;
+        if (target && target.classList && target.classList.contains('profile-link')) {
+            e.preventDefault();
+            const name = target.textContent.trim();
+            openProfileModalByName(name);
+        }
+    });
+
+    // 全局文档点击：用于退出任何打开的编辑模式（回退不保存）
+    document.addEventListener('click', function (e) {
+        if (currentEditingMessage && !currentEditingMessage.contains(e.target)) {
+            const txt = currentEditingMessage.querySelector('.text');
+            if (txt) txt.textContent = currentEditingOriginalText || txt.textContent;
+            const btns = currentEditingMessage.querySelector('.edit-buttons');
+            if (btns) btns.style.display = 'none';
+            if (txt) {
+                txt.classList.remove('editing');
+                txt.removeAttribute('contenteditable');
+            }
+            currentEditingMessage = null;
+            currentEditingOriginalText = '';
+        }
+    });
+
+    function openProfileModalByName(name) {
+        const modal = document.getElementById('profile-modal');
+        if (!modal) return;
+        // Try to find character data from the left-side CharacterProfiles instance
+        const profiles = window.characterProfiles && window.characterProfiles.allCharacters ? window.characterProfiles.allCharacters : (window.characterProfiles && window.characterProfiles.characters ? window.characterProfiles.characters : []);
+        let character = profiles.find(c => String(c.name || c.nickname || c.id) === String(name) || String(c.nickname || '') === String(name));
+        // Fallback: try matching by nickname or id
+        if (!character) {
+            character = profiles.find(c => (c.nickname && c.nickname === name));
+        }
+
+        // Populate modal (do not show motivation)
+        const nameEl = modal.querySelector('.modal-name');
+        const descEl = modal.querySelector('.modal-description');
+        const avatarEl = modal.querySelector('.modal-avatar');
+        const locEl = modal.querySelector('.modal-location');
+        const goalEl = modal.querySelector('.modal-goal');
+        const stateEl = modal.querySelector('.modal-state');
+
+        if (character) {
+            nameEl.textContent = character.name || character.nickname || name;
+            descEl.textContent = character.description || character.brief || '';
+            avatarEl.src = character.icon || './frontend/assets/images/default-icon.jpg';
+            locEl.textContent = character.location || '—';
+            goalEl.textContent = character.goal || '—';
+            stateEl.textContent = character.state || character.status || '—';
+        } else {
+            // Minimal fallback when no character data
+            nameEl.textContent = name;
+            descEl.textContent = '';
+            avatarEl.src = './frontend/assets/images/default-icon.jpg';
+            locEl.textContent = '—';
+            goalEl.textContent = '—';
+            stateEl.textContent = '—';
+        }
+
+        modal.classList.remove('hidden');
+        modal.setAttribute('aria-hidden', 'false');
+        // Close handlers (支持 overlay 点击和 ESC 键)
+        const closeBtn = modal.querySelector('.modal-close');
+        const overlay = modal.querySelector('.modal-overlay');
+        function close() {
+            modal.classList.add('hidden');
+            modal.setAttribute('aria-hidden', 'true');
+            closeBtn.removeEventListener('click', close);
+            overlay.removeEventListener('click', close);
+            document.removeEventListener('keydown', onKeyDown);
+        }
+        function onKeyDown(e) {
+            if (e.key === 'Escape') close();
+        }
+        closeBtn.addEventListener('click', close);
+        overlay.addEventListener('click', close);
+        document.addEventListener('keydown', onKeyDown);
+    }
     
     // 监听场景选择事件
     window.addEventListener('scene-selected', (event) => {
