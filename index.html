@@ -60,10 +60,7 @@
                     </button>
                 </div>
                 <div class="right-tools">
-                    <button id="languageBtn" class="language-btn">
-                        <i class="fas fa-language"></i>
-                        <span data-i18n="switchLang">EN/中</span>
-                    </button>
+                    <!-- 语言切换按钮已移除，默认使用中文 -->
                 </div>
             </div>
 
@@ -166,6 +163,42 @@
                     <div class="modal-row"><strong>目标：</strong><span class="modal-goal"></span></div>
                     <div class="modal-row"><strong>状态：</strong><span class="modal-state"></span></div>
                     <!-- 注意：动机（motivation）故意不展示以满足隐藏动机的需求 -->
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 角色选择模态框 -->
+    <div id="role-select-modal" class="role-select-modal hidden" aria-hidden="true">
+        <div class="modal-overlay"></div>
+        <div class="modal-card">
+            <button class="modal-close" aria-label="Close">&times;</button>
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title" data-i18n="selectRole">选择角色</h2>
+                </div>
+                <div class="role-cards-container" id="roleCardsContainer">
+                    <!-- 角色卡片将动态插入这里 -->
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 故事导出模态框 -->
+    <div id="story-modal" class="story-modal hidden" aria-hidden="true">
+        <div class="modal-overlay"></div>
+        <div class="modal-card">
+            <button class="modal-close" aria-label="Close">&times;</button>
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title" data-i18n="exportStory">输出故事</h2>
+                    <button id="downloadStoryBtn" class="download-btn" title="下载故事">
+                        <i class="fas fa-download"></i>
+                        <span data-i18n="download">下载</span>
+                    </button>
+                </div>
+                <div class="story-content" id="storyContent">
+                    <!-- 故事内容将显示在这里 -->
                 </div>
             </div>
         </div>

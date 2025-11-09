@@ -28,6 +28,8 @@ const translations = {
         presetList: "Preset List",
         autoComplete: "AI Auto Complete",
         generatingAction: "Generating AI action...",
+        download: "Download",
+        selectRole: "Select Role",
     },
     zh: {
         start: "开始",
@@ -58,27 +60,33 @@ const translations = {
         presetList: "预设列表",
         autoComplete: "AI自动完成",
         generatingAction: "正在生成AI行动...",
+        download: "下载",
+        selectRole: "选择角色",
     }
 };
 
 class I18nManager {
     constructor() {
-        this.currentLang = 'en';
+        this.currentLang = 'zh'; // 默认使用中文
         this.init();
     }
 
     init() {
-        this.bindLanguageButton();
+        // 语言切换按钮已移除，不再绑定
+        // this.bindLanguageButton();
         this.updateTexts();
     }
 
     bindLanguageButton() {
+        // 语言切换功能已禁用
         const langBtn = document.getElementById('languageBtn');
-        langBtn.addEventListener('click', () => {
-            this.currentLang = this.currentLang === 'zh' ? 'en' : 'zh';
-            this.updateTexts();
-            this.saveLanguagePreference();
-        });
+        if (langBtn) {
+            langBtn.addEventListener('click', () => {
+                this.currentLang = this.currentLang === 'zh' ? 'en' : 'zh';
+                this.updateTexts();
+                this.saveLanguagePreference();
+            });
+        }
     }
 
     updateTexts() {

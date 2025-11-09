@@ -83,13 +83,17 @@ class CharacterProfiles {
             const expandBtn = descContainer.querySelector('.expand-btn');
 
             if (shortDesc.style.display !== 'none') {
+                // 展开
                 shortDesc.style.display = 'none';
-                fullDesc.style.display = 'inline';
+                fullDesc.style.display = 'block';
                 expandBtn.textContent = '收起';
+                descContainer.classList.add('expanded');
             } else {
-                shortDesc.style.display = 'inline';
+                // 收起
+                shortDesc.style.display = 'block';
                 fullDesc.style.display = 'none';
                 expandBtn.textContent = '展开';
+                descContainer.classList.remove('expanded');
             }
             return; // 防止触发卡片的其他点击事件
         }
