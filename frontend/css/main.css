@@ -551,6 +551,329 @@ html, body {
     line-height: 1.6;
 }
 
+/* 角色选择模态框样式 */
+.role-select-modal.hidden { display: none; }
+.role-select-modal { 
+    position: fixed; 
+    inset: 0; 
+    z-index: 2000; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    animation: fadeIn 0.3s ease;
+}
+.role-select-modal .modal-overlay { 
+    position: absolute; 
+    inset: 0; 
+    background: rgba(0, 0, 0, 0.5); 
+    backdrop-filter: blur(8px); 
+}
+.role-select-modal .modal-card { 
+    position: relative; 
+    z-index: 2; 
+    width: 90%; 
+    max-width: 900px; 
+    max-height: calc(100vh - 40px);
+    border-radius: 12px; 
+    background: #fff; 
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); 
+    overflow: hidden;
+    animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid #e2e8f0;
+    display: flex;
+    flex-direction: column;
+}
+.role-select-modal .modal-close { 
+    position: absolute; 
+    top: 16px; 
+    right: 16px; 
+    width: 36px;
+    height: 36px;
+    background: rgba(0, 0, 0, 0.05); 
+    border: none; 
+    border-radius: 50%;
+    font-size: 20px; 
+    color: #666;
+    cursor: pointer; 
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    z-index: 3;
+}
+.role-select-modal .modal-close:hover {
+    background: rgba(0, 0, 0, 0.1);
+    color: #333;
+    transform: rotate(90deg);
+}
+.role-select-modal .modal-content { 
+    padding: 32px; 
+    overflow-y: auto;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+.role-select-modal .modal-header {
+    margin-bottom: 24px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid #f0f0f0;
+}
+.role-select-modal .modal-title {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 700;
+    color: #1e293b;
+}
+.role-cards-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 20px;
+    padding: 0;
+}
+
+.role-select-card {
+    background: #ffffff;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 20px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    position: relative;
+    overflow: hidden;
+}
+
+.role-select-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #1e293b 0%, #334155 50%, #1e293b 100%);
+    transform: scaleX(0);
+    transition: transform 0.3s ease;
+}
+
+.role-select-card:hover {
+    border-color: #1e293b;
+    box-shadow: 0 8px 16px rgba(30, 41, 59, 0.15);
+    transform: translateY(-4px);
+}
+
+.role-select-card:hover::before {
+    transform: scaleX(1);
+}
+
+.role-select-card:active {
+    transform: translateY(-2px);
+}
+
+.role-select-card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.role-select-card-avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 10px;
+    object-fit: cover;
+    border: 2px solid #e2e8f0;
+    flex-shrink: 0;
+}
+
+.role-select-card-name {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0;
+    flex: 1;
+}
+
+.role-select-card-description {
+    font-size: 14px;
+    color: #64748b;
+    line-height: 1.6;
+    margin: 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.role-select-card-details {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 8px;
+    padding-top: 12px;
+    border-top: 1px solid #f0f0f0;
+}
+
+.role-select-card-detail {
+    font-size: 13px;
+    color: #475569;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.role-select-card-detail-icon {
+    font-size: 14px;
+    opacity: 0.7;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .role-select-modal .modal-card {
+        width: 95%;
+        max-height: calc(100vh - 20px);
+    }
+    .role-select-modal .modal-content {
+        padding: 20px;
+    }
+    .role-cards-container {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+}
+
+/* 故事导出模态框样式 */
+.story-modal.hidden { display: none; }
+.story-modal { 
+    position: fixed; 
+    inset: 0; 
+    z-index: 2000; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    animation: fadeIn 0.3s ease;
+}
+.story-modal .modal-overlay { 
+    position: absolute; 
+    inset: 0; 
+    background: rgba(0, 0, 0, 0.5); 
+    backdrop-filter: blur(8px); 
+}
+.story-modal .modal-card { 
+    position: relative; 
+    z-index: 2; 
+    width: 90%; 
+    max-width: 800px; 
+    max-height: calc(100vh - 40px);
+    border-radius: 12px; 
+    background: #fff; 
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); 
+    overflow: hidden;
+    animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid #e2e8f0;
+    display: flex;
+    flex-direction: column;
+}
+.story-modal .modal-close { 
+    position: absolute; 
+    top: 16px; 
+    right: 16px; 
+    width: 36px;
+    height: 36px;
+    background: rgba(0, 0, 0, 0.05); 
+    border: none; 
+    border-radius: 50%;
+    font-size: 20px; 
+    color: #666;
+    cursor: pointer; 
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    z-index: 3;
+}
+.story-modal .modal-close:hover {
+    background: rgba(0, 0, 0, 0.1);
+    color: #333;
+    transform: rotate(90deg);
+}
+.story-modal .modal-content { 
+    padding: 32px; 
+    overflow-y: auto;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+.story-modal .modal-header {
+    margin-bottom: 24px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid #f0f0f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.story-modal .modal-title {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 700;
+    color: #1e293b;
+}
+.download-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    background: #1e293b;
+    color: #ffffff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 14px;
+    transition: all 0.2s ease;
+}
+.download-btn:hover {
+    background: #334155;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(30, 41, 59, 0.2);
+}
+.download-btn:active {
+    transform: translateY(0);
+}
+.story-content {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    line-height: 1.8;
+    font-size: 15px;
+    color: #1e293b;
+    padding: 20px;
+    background: #f8fafc;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    max-height: calc(100vh - 200px);
+    overflow-y: auto;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .story-modal .modal-card {
+        width: 95%;
+        max-height: calc(100vh - 20px);
+    }
+    .story-modal .modal-content {
+        padding: 20px;
+    }
+    .story-modal .modal-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+    }
+    .download-btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
 .right-toolbar {
     padding: 12px 16px;
     display: flex;

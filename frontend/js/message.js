@@ -153,6 +153,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 autoCompleteBtn.style.opacity = '1';
             }
         }
+        else if (message.type === 'story_exported') {
+            // 故事导出成功
+            showStoryModal(message.data.story, message.data.timestamp);
+        }
         else if (message.type === 'auto_complete_success') {
             // AI自动完成成功
             if (autoCompleteBtn) {
@@ -406,6 +410,11 @@ document.addEventListener('DOMContentLoaded', function() {
     // 角色选择按钮
     const selectRoleBtn = document.getElementById('selectRoleBtn');
     selectRoleBtn.addEventListener('click', function() {
+        showRoleSelectModal();
+    });
+    
+    // 显示角色选择模态框
+    function showRoleSelectModal() {
         // 优先从window.characterProfiles获取完整数据
         let profiles = [];
         if (window.characterProfiles) {
@@ -429,12 +438,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 const locationEl = card.querySelector('.character-location');
                 const goalEl = card.querySelector('.character-goal');
                 const stateEl = card.querySelector('.character-state');
+                const iconEl = card.querySelector('.character-icon img');
                 
                 if (nameEl) {
                     const name = nameEl.textContent.trim();
                     const location = locationEl ? locationEl.textContent.replace('📍', '').trim() : '';
                     const goal = goalEl ? goalEl.textContent.replace('🎯', '').trim() : '';
                     const state = stateEl ? stateEl.textContent.replace('⚡', '').trim() : '';
+                    const icon = iconEl ? iconEl.src : './frontend/assets/images/default-icon.jpg';
                     
                     // 提取描述
                     let description = '';
@@ -457,6 +468,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         location: location,
                         goal: goal,
                         state: state,
+                        icon: icon,
                         index: idx
                     });
                 }
@@ -472,26 +484,90 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
-        // 创建角色选择对话框
-        const roleList = profiles.map((char, idx) => 
-            `${idx + 1}. ${char.name || char.nickname || 'Unknown'}`
-        ).join('\n');
+        // 显示模态框
+        const modal = document.getElementById('role-select-modal');
+        const container = document.getElementById('roleCardsContainer');
         
-        const roleIndex = prompt(`请选择角色（输入序号）：\n\n${roleList}\n\n输入序号：`);
-        
-        if (roleIndex) {
-            const index = parseInt(roleIndex) - 1;
-            if (index >= 0 && index < profiles.length) {
-                const selectedChar = profiles[index];
-                const roleName = selectedChar.name || selectedChar.nickname;
-                if (roleName) {
-                    handleRoleSelection(roleName, selectedChar);
-                }
-            } else {
-                alert('无效的序号');
-            }
+        if (!modal || !container) {
+            console.error('角色选择模态框元素未找到');
+            return;
         }
-    });
+        
+        // 清空容器
+        container.innerHTML = '';
+        
+        // 创建角色卡片
+        profiles.forEach((character) => {
+            const card = createRoleSelectCard(character);
+            container.appendChild(card);
+        });
+        
+        // 显示模态框
+        modal.classList.remove('hidden');
+        modal.setAttribute('aria-hidden', 'false');
+        
+        // 设置关闭事件
+        const closeBtn = modal.querySelector('.modal-close');
+        const overlay = modal.querySelector('.modal-overlay');
+        
+        function closeModal() {
+            modal.classList.add('hidden');
+            modal.setAttribute('aria-hidden', 'true');
+            closeBtn.removeEventListener('click', closeModal);
+            overlay.removeEventListener('click', closeModal);
+            document.removeEventListener('keydown', onKeyDown);
+        }
+        
+        function onKeyDown(e) {
+            if (e.key === 'Escape') closeModal();
+        }
+        
+        closeBtn.addEventListener('click', closeModal);
+        overlay.addEventListener('click', closeModal);
+        document.addEventListener('keydown', onKeyDown);
+    }
+    
+    // 创建角色选择卡片
+    function createRoleSelectCard(character) {
+        const card = document.createElement('div');
+        card.className = 'role-select-card';
+        card.setAttribute('data-role-name', character.name || character.nickname);
+        
+        const name = character.name || character.nickname || 'Unknown';
+        const description = character.description || character.brief || '';
+        const icon = character.icon || './frontend/assets/images/default-icon.jpg';
+        const location = character.location || '';
+        const goal = character.goal || '';
+        const state = character.state || character.status || '';
+        
+        card.innerHTML = `
+            <div class="role-select-card-header">
+                <img class="role-select-card-avatar" src="${icon}" alt="${name}" onerror="this.src='./frontend/assets/images/default-icon.jpg'">
+                <h3 class="role-select-card-name">${name}</h3>
+            </div>
+            ${description ? `<p class="role-select-card-description">${description}</p>` : ''}
+            ${(location || goal || state) ? `
+                <div class="role-select-card-details">
+                    ${location ? `<div class="role-select-card-detail"><span class="role-select-card-detail-icon">📍</span><span>${location}</span></div>` : ''}
+                    ${goal ? `<div class="role-select-card-detail"><span class="role-select-card-detail-icon">🎯</span><span>${goal}</span></div>` : ''}
+                    ${state ? `<div class="role-select-card-detail"><span class="role-select-card-detail-icon">⚡</span><span>${state}</span></div>` : ''}
+                </div>
+            ` : ''}
+        `;
+        
+        // 添加点击事件
+        card.addEventListener('click', function() {
+            handleRoleSelection(name, character);
+            // 关闭模态框
+            const modal = document.getElementById('role-select-modal');
+            if (modal) {
+                modal.classList.add('hidden');
+                modal.setAttribute('aria-hidden', 'true');
+            }
+        });
+        
+        return card;
+    }
     
     // 处理角色选择的函数
     function handleRoleSelection(roleName, characterData) {
@@ -668,8 +744,76 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 添加导出故事按钮的点击事件
     exportStoryBtn.addEventListener('click', function() {
+        // 显示加载状态
+        exportStoryBtn.disabled = true;
+        exportStoryBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>生成中...</span>';
+        
         ws.send(JSON.stringify({
             type: 'generate_story'
         }));
     });
+    
+    // 显示故事模态框
+    function showStoryModal(storyText, timestamp) {
+        const modal = document.getElementById('story-modal');
+        const content = document.getElementById('storyContent');
+        const downloadBtn = document.getElementById('downloadStoryBtn');
+        
+        if (!modal || !content) {
+            console.error('故事模态框元素未找到');
+            return;
+        }
+        
+        // 恢复按钮状态
+        exportStoryBtn.disabled = false;
+        exportStoryBtn.innerHTML = '<i class="fas fa-book"></i><span data-i18n="exportStory">输出故事</span>';
+        
+        // 设置故事内容
+        content.textContent = storyText;
+        
+        // 显示模态框
+        modal.classList.remove('hidden');
+        modal.setAttribute('aria-hidden', 'false');
+        
+        // 设置下载功能
+        if (downloadBtn) {
+            downloadBtn.onclick = function() {
+                downloadStory(storyText, timestamp);
+            };
+        }
+        
+        // 设置关闭事件
+        const closeBtn = modal.querySelector('.modal-close');
+        const overlay = modal.querySelector('.modal-overlay');
+        
+        function closeModal() {
+            modal.classList.add('hidden');
+            modal.setAttribute('aria-hidden', 'true');
+            closeBtn.removeEventListener('click', closeModal);
+            if (overlay) overlay.removeEventListener('click', closeModal);
+            document.removeEventListener('keydown', onKeyDown);
+        }
+        
+        function onKeyDown(e) {
+            if (e.key === 'Escape') closeModal();
+        }
+        
+        closeBtn.addEventListener('click', closeModal);
+        if (overlay) overlay.addEventListener('click', closeModal);
+        document.addEventListener('keydown', onKeyDown);
+    }
+    
+    // 下载故事
+    function downloadStory(storyText, timestamp) {
+        const filename = `story_${timestamp || new Date().toISOString().replace(/[:.]/g, '-')}.txt`;
+        const blob = new Blob([storyText], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
 });

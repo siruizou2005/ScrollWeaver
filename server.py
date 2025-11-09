@@ -560,18 +560,26 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
             
             elif message['type'] == 'generate_story':
                 # 生成故事文本
-                story_text = manager.scrollweaver.generate_story()
-                # 发送生成的故事作为新消息
-                await websocket.send_json({
-                    'type': 'message',
-                    'data': {
-                        'username': 'System',
-                        'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                        'text': story_text,
-                        'icon': default_icon_path,
-                        'type': 'story'
-                    }
-                })
+                try:
+                    story_text = manager.scrollweaver.generate_story()
+                    # 发送生成的故事
+                    await websocket.send_json({
+                        'type': 'story_exported',
+                        'data': {
+                            'story': story_text,
+                            'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                        }
+                    })
+                except Exception as e:
+                    print(f"Error generating story: {e}")
+                    import traceback
+                    traceback.print_exc()
+                    await websocket.send_json({
+                        'type': 'error',
+                        'data': {
+                            'message': f'生成故事时出错: {str(e)}'
+                        }
+                    })
                 
     except Exception as e:
         print(f"WebSocket error: {e}")
