@@ -201,3 +201,4 @@ class CharacterProfiles {
     
 }
 const characterProfiles = new CharacterProfiles();
+window.characterProfiles = characterProfiles;

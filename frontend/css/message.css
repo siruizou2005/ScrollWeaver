@@ -197,12 +197,12 @@
     color: #999;
 }
 
-.input-area .menu-btn {
+.input-area .auto-complete-btn {
     width: 48px;
     height: 48px;
-    background: #ffffff;
-    color: #64748b;
-    border: 1px solid #cbd5e1;
+    background: #8b5cf6;
+    color: #ffffff;
+    border: 1px solid #8b5cf6;
     border-radius: 6px;
     cursor: pointer;
     display: flex;
@@ -212,10 +212,20 @@
     flex-shrink: 0;
 }
 
-.input-area .menu-btn:hover {
-    background: #f8fafc;
-    border-color: #94a3b8;
-    color: #475569;
+.input-area .auto-complete-btn:hover {
+    background: #7c3aed;
+    border-color: #7c3aed;
+    color: #ffffff;
+    box-shadow: 0 2px 4px rgba(139, 92, 246, 0.3);
+}
+
+.input-area .auto-complete-btn:active {
+    background: #6d28d9;
+    box-shadow: 0 1px 2px rgba(139, 92, 246, 0.2);
+}
+
+.input-area .auto-complete-btn i {
+    font-size: 16px;
 }
 
 .input-area .send-btn { 

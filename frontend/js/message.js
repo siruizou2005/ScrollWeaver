@@ -25,6 +25,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // 用户选择的角色
     let selectedRoleName = null;
     let waitingForInput = false;
+    const autoCompleteBtn = document.getElementById('autoCompleteBtn');
     // 控制按钮点击事件
     controlBtn.addEventListener('click', function() {
         if (!isPlaying) {
@@ -90,16 +91,74 @@ document.addEventListener('DOMContentLoaded', function() {
             textarea.placeholder = `请输入 ${message.data.role_name} 的内容...`;
             textarea.disabled = false;
             textarea.focus();
+            // 显示AI自动完成按钮
+            if (autoCompleteBtn) {
+                autoCompleteBtn.style.display = 'flex';
+                autoCompleteBtn.title = window.i18n?.get('autoComplete') ?? 'AI自动完成';
+            }
             addSystemMessage(`等待输入：${message.data.role_name} - ${message.data.message}`);
         }
         else if (message.type === 'role_selected') {
             // 角色选择成功
             selectedRoleName = message.data.role_name;
             addSystemMessage(message.data.message);
+            
+            // 查找并显示选中的角色
+            if (window.characterProfiles) {
+                const allChars = window.characterProfiles.allCharacters || window.characterProfiles.characters || [];
+                const selectedChar = allChars.find(c => 
+                    (c.name && c.name === message.data.role_name) || 
+                    (c.nickname && c.nickname === message.data.role_name)
+                );
+                if (selectedChar) {
+                    showSelectedCharacter(selectedChar);
+                } else {
+                    // 如果找不到，从DOM中获取
+                    const cards = document.querySelectorAll('.character-card');
+                    cards.forEach(card => {
+                        const nameEl = card.querySelector('.character-name');
+                        if (nameEl && nameEl.textContent.trim() === message.data.role_name) {
+                            const descEl = card.querySelector('.character-description');
+                            const locationEl = card.querySelector('.character-location');
+                            const goalEl = card.querySelector('.character-goal');
+                            const stateEl = card.querySelector('.character-state');
+                            
+                            showSelectedCharacter({
+                                name: message.data.role_name,
+                                nickname: message.data.role_name,
+                                description: descEl ? descEl.textContent.trim() : '',
+                                location: locationEl ? locationEl.textContent.replace('📍', '').trim() : '',
+                                goal: goalEl ? goalEl.textContent.replace('🎯', '').trim() : '',
+                                state: stateEl ? stateEl.textContent.replace('⚡', '').trim() : ''
+                            });
+                        }
+                    });
+                }
+            }
+        }
+        else if (message.type === 'characters_list') {
+            // 收到角色列表，更新本地数据
+            if (window.characterProfiles && message.data.characters) {
+                window.characterProfiles.updateCharacters(message.data.characters);
+                // 提示用户可以重新选择
+                addSystemMessage('角色列表已更新，请重新点击"选择角色"按钮');
+            }
         }
         else if (message.type === 'error') {
             // 错误消息
             addSystemMessage(`错误: ${message.data.message}`);
+            // 恢复自动完成按钮状态
+            if (autoCompleteBtn && waitingForInput) {
+                autoCompleteBtn.disabled = false;
+                autoCompleteBtn.style.opacity = '1';
+            }
+        }
+        else if (message.type === 'auto_complete_success') {
+            // AI自动完成成功
+            if (autoCompleteBtn) {
+                autoCompleteBtn.disabled = false;
+                autoCompleteBtn.style.opacity = '1';
+            }
         }
         else if (message.type === 'story_ended') {
             // 故事结束
@@ -318,27 +377,104 @@ document.addEventListener('DOMContentLoaded', function() {
             if (waitingForInput) {
                 waitingForInput = false;
                 textarea.placeholder = 'input';
+                // 隐藏AI自动完成按钮
+                if (autoCompleteBtn) {
+                    autoCompleteBtn.style.display = 'none';
+                }
             }
         }
+    }
+
+    // AI自动完成按钮点击事件
+    if (autoCompleteBtn) {
+        autoCompleteBtn.addEventListener('click', function() {
+            if (waitingForInput && ws.readyState === WebSocket.OPEN) {
+                // 发送自动完成请求
+                ws.send(JSON.stringify({
+                    type: 'auto_complete',
+                    timestamp: new Date().toLocaleString()
+                }));
+                // 禁用按钮，防止重复点击
+                autoCompleteBtn.disabled = true;
+                autoCompleteBtn.style.opacity = '0.6';
+                const generatingMsg = window.i18n?.get('generatingAction') ?? '正在生成AI行动...';
+                addSystemMessage(generatingMsg);
+            }
+        });
     }
 
     // 角色选择按钮
     const selectRoleBtn = document.getElementById('selectRoleBtn');
     selectRoleBtn.addEventListener('click', function() {
-        // 获取所有角色
-        const profiles = window.characterProfiles && window.characterProfiles.allCharacters ? 
-            window.characterProfiles.allCharacters : 
-            (window.characterProfiles && window.characterProfiles.characters ? 
-                window.characterProfiles.characters : []);
+        // 优先从window.characterProfiles获取完整数据
+        let profiles = [];
+        if (window.characterProfiles) {
+            // 尝试多种方式获取角色列表
+            if (window.characterProfiles.allCharacters && window.characterProfiles.allCharacters.length > 0) {
+                profiles = window.characterProfiles.allCharacters;
+            } else if (window.characterProfiles.characters && window.characterProfiles.characters.length > 0) {
+                profiles = window.characterProfiles.characters;
+            }
+        }
+        
+        console.log('角色选择 - window.characterProfiles:', window.characterProfiles);
+        console.log('角色选择 - profiles from characterProfiles:', profiles.length);
+        
+        // 如果还没有，从DOM中获取
+        if (profiles.length === 0) {
+            const characterCards = document.querySelectorAll('.character-card');
+            characterCards.forEach((card, idx) => {
+                const nameEl = card.querySelector('.character-name');
+                const descEl = card.querySelector('.character-description');
+                const locationEl = card.querySelector('.character-location');
+                const goalEl = card.querySelector('.character-goal');
+                const stateEl = card.querySelector('.character-state');
+                
+                if (nameEl) {
+                    const name = nameEl.textContent.trim();
+                    const location = locationEl ? locationEl.textContent.replace('📍', '').trim() : '';
+                    const goal = goalEl ? goalEl.textContent.replace('🎯', '').trim() : '';
+                    const state = stateEl ? stateEl.textContent.replace('⚡', '').trim() : '';
+                    
+                    // 提取描述
+                    let description = '';
+                    if (descEl) {
+                        const fullDesc = descEl.querySelector('.full-desc');
+                        const shortDesc = descEl.querySelector('.short-desc');
+                        if (fullDesc && fullDesc.style.display !== 'none') {
+                            description = fullDesc.textContent.trim();
+                        } else if (shortDesc) {
+                            description = shortDesc.textContent.trim();
+                        } else {
+                            description = descEl.textContent.trim();
+                        }
+                    }
+                    
+                    profiles.push({
+                        name: name,
+                        nickname: name,
+                        description: description,
+                        location: location,
+                        goal: goal,
+                        state: state,
+                        index: idx
+                    });
+                }
+            });
+        }
         
         if (profiles.length === 0) {
-            alert('暂无可用角色');
+            // 从服务器请求
+            ws.send(JSON.stringify({
+                type: 'request_characters'
+            }));
+            alert('正在加载角色列表，请稍后再试');
             return;
         }
         
         // 创建角色选择对话框
         const roleList = profiles.map((char, idx) => 
-            `${idx + 1}. ${char.name || char.nickname}`
+            `${idx + 1}. ${char.name || char.nickname || 'Unknown'}`
         ).join('\n');
         
         const roleIndex = prompt(`请选择角色（输入序号）：\n\n${roleList}\n\n输入序号：`);
@@ -348,19 +484,72 @@ document.addEventListener('DOMContentLoaded', function() {
             if (index >= 0 && index < profiles.length) {
                 const selectedChar = profiles[index];
                 const roleName = selectedChar.name || selectedChar.nickname;
-                selectedRoleName = roleName;
-                
-                // 发送角色选择消息
-                ws.send(JSON.stringify({
-                    type: 'select_role',
-                    role_name: roleName
-                }));
-                
-                selectRoleBtn.innerHTML = `<i class="fas fa-user-check"></i><span>${roleName}</span>`;
-                selectRoleBtn.style.background = '#1e293b';
+                if (roleName) {
+                    handleRoleSelection(roleName, selectedChar);
+                }
+            } else {
+                alert('无效的序号');
             }
         }
     });
+    
+    // 处理角色选择的函数
+    function handleRoleSelection(roleName, characterData) {
+        selectedRoleName = roleName;
+        
+        // 发送角色选择消息
+        ws.send(JSON.stringify({
+            type: 'select_role',
+            role_name: roleName
+        }));
+        
+        // 更新按钮
+        selectRoleBtn.innerHTML = `<i class="fas fa-user-check"></i><span>${roleName}</span>`;
+        selectRoleBtn.style.background = '#1e293b';
+        
+        // 显示选中的角色在左侧栏顶部
+        showSelectedCharacter(characterData);
+    }
+    
+    // 显示选中的角色
+    function showSelectedCharacter(character) {
+        const selectedSection = document.getElementById('selectedCharacterSection');
+        const selectedCard = document.getElementById('selectedCharacterCard');
+        
+        if (!selectedSection || !selectedCard) return;
+        
+        // 创建选中角色的卡片
+        const name = character.name || character.nickname || '未知角色';
+        const description = character.description || '';
+        const location = character.location || '—';
+        const goal = character.goal || '—';
+        const state = character.state || '—';
+        
+        selectedCard.innerHTML = `
+            <div class="selected-character-info">
+                <div class="selected-character-name">${name}</div>
+                ${description ? `<div class="selected-character-description">${description}</div>` : ''}
+                <div class="selected-character-details">
+                    <div class="selected-character-location">📍 ${location}</div>
+                    <div class="selected-character-goal">🎯 ${goal}</div>
+                    <div class="selected-character-state">⚡ ${state}</div>
+                </div>
+            </div>
+        `;
+        
+        // 显示选中区域
+        selectedSection.style.display = 'block';
+        
+        // 从普通列表中移除选中的角色（可选）
+        const allCards = document.querySelectorAll('.character-card');
+        allCards.forEach(card => {
+            const nameEl = card.querySelector('.character-name');
+            if (nameEl && nameEl.textContent.trim() === (character.name || character.nickname)) {
+                card.style.opacity = '0.5';
+                card.style.border = '2px solid #1e293b';
+            }
+        });
+    }
 
     // 绑定发送按钮点击事件
     sendButton.addEventListener('click', sendMessage);
