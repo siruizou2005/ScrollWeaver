@@ -14,22 +14,17 @@ document.addEventListener('DOMContentLoaded', function() {
     if (leftToggle && leftSection) {
         leftToggle.addEventListener('click', function(e) {
             e.stopPropagation();
+            e.preventDefault();
             leftCollapsed = !leftCollapsed;
             
             if (leftCollapsed) {
                 leftSection.classList.add('collapsed');
                 leftToggle.innerHTML = '<i class="fas fa-chevron-right"></i>';
-                leftToggle.style.position = 'fixed';
-                leftToggle.style.left = '8px';
-                leftToggle.style.right = 'auto';
-                leftToggle.style.zIndex = '1000';
+                leftToggle.setAttribute('aria-label', '展开左侧栏');
             } else {
                 leftSection.classList.remove('collapsed');
                 leftToggle.innerHTML = '<i class="fas fa-chevron-left"></i>';
-                leftToggle.style.position = 'absolute';
-                leftToggle.style.left = 'auto';
-                leftToggle.style.right = '-16px';
-                leftToggle.style.zIndex = '11';
+                leftToggle.setAttribute('aria-label', '折叠左侧栏');
             }
         });
     }
@@ -38,22 +33,17 @@ document.addEventListener('DOMContentLoaded', function() {
     if (rightToggle && rightSection) {
         rightToggle.addEventListener('click', function(e) {
             e.stopPropagation();
+            e.preventDefault();
             rightCollapsed = !rightCollapsed;
             
             if (rightCollapsed) {
                 rightSection.classList.add('collapsed');
                 rightToggle.innerHTML = '<i class="fas fa-chevron-left"></i>';
-                rightToggle.style.position = 'fixed';
-                rightToggle.style.right = '8px';
-                rightToggle.style.left = 'auto';
-                rightToggle.style.zIndex = '1000';
+                rightToggle.setAttribute('aria-label', '展开右侧栏');
             } else {
                 rightSection.classList.remove('collapsed');
                 rightToggle.innerHTML = '<i class="fas fa-chevron-right"></i>';
-                rightToggle.style.position = 'absolute';
-                rightToggle.style.right = 'auto';
-                rightToggle.style.left = '-16px';
-                rightToggle.style.zIndex = '11';
+                rightToggle.setAttribute('aria-label', '折叠右侧栏');
             }
         });
     }
@@ -67,6 +57,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 leftSection.classList.add('collapsed');
                 if (leftToggle) {
                     leftToggle.innerHTML = '<i class="fas fa-chevron-right"></i>';
+                    leftToggle.setAttribute('aria-label', '展开左侧栏');
                 }
                 leftCollapsed = true;
             }
@@ -74,6 +65,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 rightSection.classList.add('collapsed');
                 if (rightToggle) {
                     rightToggle.innerHTML = '<i class="fas fa-chevron-left"></i>';
+                    rightToggle.setAttribute('aria-label', '展开右侧栏');
                 }
                 rightCollapsed = true;
             }

@@ -3,6 +3,9 @@
     display: flex;
     flex-direction: column;
     gap: 16px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 .status-module {
@@ -12,6 +15,11 @@
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
     border: 1px solid #e2e8f0;
     transition: all 0.2s ease;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
 }
 
 .status-module:hover {
@@ -26,10 +34,20 @@
     font-weight: 700;
     padding-bottom: 10px;
     border-bottom: 1px solid #e2e8f0;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
 }
 
 .module-content {
     font-size: 0.9em;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
 }
 
 /* 事件模块样式 */
@@ -39,6 +57,17 @@
     display: flex;
     align-items: center;
     font-size: 14px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    min-width: 0;
+}
+
+.event-text > * {
+    min-width: 0;
+    flex-shrink: 1;
 }
 
 /* 地点模块样式 */
@@ -60,6 +89,9 @@
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 .group-member {
@@ -88,6 +120,10 @@
 .settings-content {
     max-height: 300px;
     overflow-y: auto;
+    overflow-x: hidden;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 .setting-item {
@@ -97,6 +133,11 @@
     margin-bottom: 10px;
     border: 1px solid #e2e8f0;
     transition: all 0.2s ease;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
 }
 
 .setting-item:hover {

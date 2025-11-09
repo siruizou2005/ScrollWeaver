@@ -4,6 +4,9 @@
     flex-direction: column;
     gap: 20px;
     padding: 15px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 .api-model-select,
@@ -29,6 +32,9 @@
     padding: 8px;
     border: 1px solid #5f3737;
     border-radius: 4px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 label {
@@ -41,6 +47,9 @@ select {
     border: 1px solid #5f3737;
     border-radius: 4px;
     background-color: white;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 .api-submit-btn {
