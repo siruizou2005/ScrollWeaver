@@ -22,6 +22,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // 全局编辑状态，避免为每条消息注册 document 监听
     let currentEditingMessage = null;
     let currentEditingOriginalText = '';
+    // 用户选择的角色
+    let selectedRoleName = null;
+    let waitingForInput = false;
     // 控制按钮点击事件
     controlBtn.addEventListener('click', function() {
         if (!isPlaying) {
@@ -81,7 +84,30 @@ document.addEventListener('DOMContentLoaded', function() {
         window.dispatchEvent(wsEvent);
 
         // 消息处理逻辑
-        if (message.type === 'message') {
+        if (message.type === 'waiting_for_user_input') {
+            // 等待用户输入
+            waitingForInput = true;
+            textarea.placeholder = `请输入 ${message.data.role_name} 的内容...`;
+            textarea.disabled = false;
+            textarea.focus();
+            addSystemMessage(`等待输入：${message.data.role_name} - ${message.data.message}`);
+        }
+        else if (message.type === 'role_selected') {
+            // 角色选择成功
+            selectedRoleName = message.data.role_name;
+            addSystemMessage(message.data.message);
+        }
+        else if (message.type === 'error') {
+            // 错误消息
+            addSystemMessage(`错误: ${message.data.message}`);
+        }
+        else if (message.type === 'story_ended') {
+            // 故事结束
+            addSystemMessage(message.data.message);
+            isPlaying = false;
+            controlBtn.innerHTML = '<i class="fas fa-play"></i><span data-i18n="start">开始</span>';
+        }
+        else if (message.type === 'message') {
             // 从状态中获取当前场景编号
             const sceneNumber = message.data.scene; // 确保消息中包含场景信息
             if (sceneNumber !== undefined) {
@@ -271,7 +297,15 @@ document.addEventListener('DOMContentLoaded', function() {
     // 发送消息
     function sendMessage() {
         const text = textarea.value.trim();
-        if (text && ws.readyState === WebSocket.OPEN) {
+        if (!text) {
+            // 空输入提示
+            if (waitingForInput) {
+                alert('请输入内容');
+            }
+            return;
+        }
+        
+        if (ws.readyState === WebSocket.OPEN) {
             const message = {
                 type: 'user_message',
                 text: text,
@@ -279,8 +313,54 @@ document.addEventListener('DOMContentLoaded', function() {
             };
             ws.send(JSON.stringify(message));
             textarea.value = '';
+            
+            // 如果正在等待输入，重置状态
+            if (waitingForInput) {
+                waitingForInput = false;
+                textarea.placeholder = 'input';
+            }
         }
     }
+
+    // 角色选择按钮
+    const selectRoleBtn = document.getElementById('selectRoleBtn');
+    selectRoleBtn.addEventListener('click', function() {
+        // 获取所有角色
+        const profiles = window.characterProfiles && window.characterProfiles.allCharacters ? 
+            window.characterProfiles.allCharacters : 
+            (window.characterProfiles && window.characterProfiles.characters ? 
+                window.characterProfiles.characters : []);
+        
+        if (profiles.length === 0) {
+            alert('暂无可用角色');
+            return;
+        }
+        
+        // 创建角色选择对话框
+        const roleList = profiles.map((char, idx) => 
+            `${idx + 1}. ${char.name || char.nickname}`
+        ).join('\n');
+        
+        const roleIndex = prompt(`请选择角色（输入序号）：\n\n${roleList}\n\n输入序号：`);
+        
+        if (roleIndex) {
+            const index = parseInt(roleIndex) - 1;
+            if (index >= 0 && index < profiles.length) {
+                const selectedChar = profiles[index];
+                const roleName = selectedChar.name || selectedChar.nickname;
+                selectedRoleName = roleName;
+                
+                // 发送角色选择消息
+                ws.send(JSON.stringify({
+                    type: 'select_role',
+                    role_name: roleName
+                }));
+                
+                selectRoleBtn.innerHTML = `<i class="fas fa-user-check"></i><span>${roleName}</span>`;
+                selectRoleBtn.style.background = '#1e293b';
+            }
+        }
+    });
 
     // 绑定发送按钮点击事件
     sendButton.addEventListener('click', sendMessage);
