@@ -24,6 +24,13 @@
             <button class="left-section-toggle" id="leftSectionToggle" aria-label="Toggle left sidebar">
                 <i class="fas fa-chevron-left"></i>
             </button>
+            <!-- 已选角色区域 -->
+            <div class="selected-character-section" id="selectedCharacterSection" style="display: none;">
+                <h3 class="selected-title">已选角色</h3>
+                <div class="selected-character-card" id="selectedCharacterCard">
+                    <!-- 选中的角色将显示在这里 -->
+                </div>
+            </div>
             <div class="character-profiles">
                 <h3 class="profiles-title" data-i18n="characterProfiles">角色档案</h3>
                 <div class="profiles-container">
@@ -67,7 +74,9 @@
 
             <!-- 底部输入区域 -->
             <div class="input-area">
-                <button class="menu-btn"><i class="fas fa-bars"></i></button>
+                <button class="auto-complete-btn" id="autoCompleteBtn" title="" style="display: none;">
+                    <i class="fas fa-magic"></i>
+                </button>
                 <textarea placeholder="input"></textarea>
                 <button class="send-btn"><i class="fas fa-paper-plane"></i></button>
             </div>

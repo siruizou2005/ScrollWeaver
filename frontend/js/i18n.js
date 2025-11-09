@@ -26,6 +26,8 @@ const translations = {
         APIsettings: "API Setting",
         preset: "Preset",
         presetList: "Preset List",
+        autoComplete: "AI Auto Complete",
+        generatingAction: "Generating AI action...",
     },
     zh: {
         start: "开始",
@@ -54,6 +56,8 @@ const translations = {
         APIsettings: "API设置",
         preset: "预设",
         presetList: "预设列表",
+        autoComplete: "AI自动完成",
+        generatingAction: "正在生成AI行动...",
     }
 };
 

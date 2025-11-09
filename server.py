@@ -231,18 +231,56 @@ class ConnectionManager:
         return message,status
     
     def _get_role_code_by_name(self, role_name: str) -> str:
-        """通过角色名称找到角色代码"""
+        """通过角色名称找到角色代码（支持role_name和nickname匹配）"""
         if not role_name:
             return None
         try:
-            # 遍历所有角色，查找匹配的名称或昵称
+            # 遍历所有角色，查找匹配的名称或昵称（不区分大小写）
+            role_name_lower = role_name.lower().strip()
             for role_code in self.scrollweaver.server.role_codes:
                 performer = self.scrollweaver.server.performers[role_code]
-                if performer.role_name == role_name or performer.nickname == role_name:
+                if (performer.role_name and performer.role_name.lower().strip() == role_name_lower) or \
+                   (performer.nickname and performer.nickname.lower().strip() == role_name_lower):
                     return role_code
         except Exception as e:
             print(f"Error finding role code for {role_name}: {e}")
+            import traceback
+            traceback.print_exc()
         return None
+    
+    async def generate_auto_action(self, client_id: str, role_code: str) -> str:
+        """使用AI自动生成角色的行动"""
+        try:
+            performer = self.scrollweaver.server.performers[role_code]
+            current_status = self.scrollweaver.server.current_status
+            # current_status['group'] 存储的是角色代码列表
+            group_codes = current_status.get('group', [])
+            
+            # 获取同组其他角色信息（使用Server的_get_group_members_info_dict方法）
+            other_roles_info = self.scrollweaver.server._get_group_members_info_dict(group_codes)
+            
+            # 如果当前角色不在group中，确保包含自己
+            if role_code not in group_codes:
+                other_roles_info[role_code] = {
+                    "nickname": performer.nickname,
+                    "profile": performer.role_profile
+                }
+            
+            # 调用Performer的plan方法生成行动
+            plan = performer.plan(
+                other_roles_info=other_roles_info,
+                available_locations=self.scrollweaver.server.orchestrator.locations,
+                world_description=self.scrollweaver.server.orchestrator.description,
+                intervention=self.scrollweaver.server.event
+            )
+            
+            # 返回生成的行动详情
+            return plan.get("detail", "")
+        except Exception as e:
+            print(f"Error in generate_auto_action: {e}")
+            import traceback
+            traceback.print_exc()
+            return None
     
     async def handle_user_role_input(self, client_id: str, role_code: str, user_text: str):
         """处理用户输入作为角色消息（当消息没有uuid时使用）"""
@@ -434,6 +472,16 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                                 'message': f'未找到角色: {role_name}'
                             }
                         })
+            
+            elif message['type'] == 'request_characters':
+                # 请求角色列表
+                characters = manager.scrollweaver.get_characters_info()
+                await websocket.send_json({
+                    'type': 'characters_list',
+                    'data': {
+                        'characters': characters
+                    }
+                })
                 
             elif message['type'] == 'control':
                 # 处理控制命令
@@ -462,6 +510,46 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                     'data': scene_characters
                 })
                 
+            elif message['type'] == 'auto_complete':
+                # 处理AI自动完成请求
+                if client_id in manager.waiting_for_input and manager.waiting_for_input[client_id]:
+                    user_role_code = manager.user_selected_roles.get(client_id)
+                    if user_role_code and client_id in manager.pending_user_inputs:
+                        if not manager.pending_user_inputs[client_id].done():
+                            try:
+                                # 调用AI生成角色行动
+                                auto_text = await manager.generate_auto_action(client_id, user_role_code)
+                                if auto_text:
+                                    # 将AI生成的行动作为用户输入
+                                    manager.pending_user_inputs[client_id].set_result(auto_text)
+                                    await websocket.send_json({
+                                        'type': 'auto_complete_success',
+                                        'data': {'message': 'AI已生成行动'}
+                                    })
+                                else:
+                                    await websocket.send_json({
+                                        'type': 'error',
+                                        'data': {'message': 'AI生成行动失败，请重试'}
+                                    })
+                            except Exception as e:
+                                print(f"Error generating auto action: {e}")
+                                import traceback
+                                traceback.print_exc()
+                                await websocket.send_json({
+                                    'type': 'error',
+                                    'data': {'message': f'生成行动时出错: {str(e)}'}
+                                })
+                    else:
+                        await websocket.send_json({
+                            'type': 'error',
+                            'data': {'message': '未选择角色或不在等待输入状态'}
+                        })
+                else:
+                    await websocket.send_json({
+                        'type': 'error',
+                        'data': {'message': '当前不在等待输入状态'}
+                    })
+            
             elif message['type'] == 'generate_story':
                 # 生成故事文本
                 story_text = manager.scrollweaver.generate_story()
