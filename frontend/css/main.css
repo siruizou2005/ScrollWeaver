@@ -17,7 +17,7 @@ html, body {
     margin: 0;
     padding: 0;
     gap: 0;
-    overflow: hidden;
+    overflow: visible;
     align-items: stretch;
     position: relative;
 }
@@ -25,19 +25,42 @@ html, body {
 .left-section {
     width: 280px;
     min-width: 280px;
+    max-width: 280px;
     height: 100vh;
     display: flex;
     flex-direction: column;
     padding: 0;
     background: #ffffff;
     border-right: 1px solid #e2e8f0;
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.3s cubic-bezier(0.4, 0, 0.2, 1), max-width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
-    z-index: 10;
+    z-index: 1000;
+    flex-shrink: 0;
+    box-sizing: border-box;
+    overflow: visible;
+}
+
+.left-section > * {
+    box-sizing: border-box;
+    max-width: 100%;
 }
 
 .left-section.collapsed {
-    transform: translateX(-100%);
+    transform: translateX(calc(-100% - 1px));
+    width: 0 !important;
+    min-width: 0 !important;
+    max-width: 0 !important;
+    border-right: none;
+    overflow: visible !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    visibility: visible;
+}
+
+.left-section.collapsed > *:not(.left-section-toggle) {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
 }
 
 .left-section.collapsed ~ .chat-container {
@@ -46,37 +69,73 @@ html, body {
 
 .left-section-toggle {
     position: absolute;
-    top: 16px;
-    right: -16px;
-    width: 32px;
-    height: 32px;
+    top: 50%;
+    right: -20px;
+    transform: translateY(-50%);
+    width: 40px;
+    height: 80px;
     background: #ffffff;
-    border: 1px solid #cbd5e1;
-    border-radius: 6px;
-    color: #475569;
+    border: 1px solid #e2e8f0;
+    border-left: none;
+    border-radius: 0 12px 12px 0;
+    color: #64748b;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    z-index: 11;
-    transition: all 0.2s ease;
-    font-size: 12px;
+    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.08);
+    z-index: 1001;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    font-size: 14px;
+    box-sizing: border-box;
+    pointer-events: auto;
 }
 
 .left-section-toggle:hover {
-    background: #f1f5f9;
-    border-color: #94a3b8;
-    color: #334155;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    background: #f8fafc;
+    color: #1e293b;
+    box-shadow: 2px 0 12px rgba(0, 0, 0, 0.12);
+    transform: translateY(-50%) translateX(2px);
 }
 
-.left-section.collapsed ~ .chat-container .left-section-toggle {
-    position: fixed;
-    left: 8px;
-    top: 16px;
-    right: auto;
-    z-index: 1000;
+.left-section-toggle:active {
+    transform: translateY(-50%) translateX(0);
+}
+
+/* 侧边栏折叠时的按钮样式 */
+.left-section.collapsed .left-section-toggle {
+    position: fixed !important;
+    left: 0 !important;
+    top: 50% !important;
+    right: auto !important;
+    transform: translateY(-50%) !important;
+    z-index: 1001 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    border-radius: 0 12px 12px 0 !important;
+    border-top: 1px solid #e2e8f0 !important;
+    border-right: 1px solid #e2e8f0 !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+    border-left: 1px solid transparent !important;
+    background: #ffffff !important;
+    color: #64748b !important;
+    box-shadow: 2px 0 12px rgba(0, 0, 0, 0.15) !important;
+    width: 40px !important;
+    height: 80px !important;
+    box-sizing: border-box !important;
+    font-size: 14px !important;
+    cursor: pointer !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.left-section.collapsed .left-section-toggle:hover {
+    background: #f8fafc !important;
+    transform: translateY(-50%) translateX(4px) !important;
+    box-shadow: 4px 0 16px rgba(0, 0, 0, 0.2) !important;
 }
 
 /* 地图区域 */
@@ -92,9 +151,14 @@ html, body {
     flex: 1;
     background-color: transparent;
     overflow-y: auto;
+    overflow-x: hidden;
     padding: 16px;
     display: flex;
     flex-direction: column;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    min-width: 0;
 }
 
 /* 聊天框 */
@@ -115,6 +179,13 @@ html, body {
     overflow: hidden;
     background: #ffffff;
     position: relative;
+    transition: margin 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 1;
+}
+
+.chat-container > * {
+    position: relative;
+    z-index: 1;
 }
 
 /* 顶部工具栏样式 */
@@ -243,56 +314,118 @@ html, body {
 .right-section {
     width: 320px;
     min-width: 320px;
+    max-width: 320px;
     height: 100vh;
     display: flex;
     flex-direction: column;
     background: #ffffff;
-    overflow: hidden;
+    overflow: visible;
     padding: 0;
     border-left: 1px solid #e2e8f0;
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.3s cubic-bezier(0.4, 0, 0.2, 1), max-width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
-    z-index: 10;
+    z-index: 1000;
+    flex-shrink: 0;
+    box-sizing: border-box;
+}
+
+.right-section > * {
+    box-sizing: border-box;
+}
+
+.right-content *,
+.tab-panel * {
+    box-sizing: border-box;
+    max-width: 100%;
 }
 
 .right-section.collapsed {
-    transform: translateX(100%);
+    transform: translateX(calc(100% + 1px));
+    width: 0 !important;
+    min-width: 0 !important;
+    max-width: 0 !important;
+    border-left: none;
+    overflow: visible !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    visibility: visible;
+}
+
+.right-section.collapsed > *:not(.right-section-toggle) {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
 }
 
 .right-section-toggle {
     position: absolute;
-    top: 16px;
-    left: -16px;
-    width: 32px;
-    height: 32px;
+    top: 50%;
+    left: -20px;
+    transform: translateY(-50%);
+    width: 40px;
+    height: 80px;
     background: #ffffff;
-    border: 1px solid #cbd5e1;
-    border-radius: 6px;
-    color: #475569;
+    border: 1px solid #e2e8f0;
+    border-right: none;
+    border-radius: 12px 0 0 12px;
+    color: #64748b;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    z-index: 11;
-    transition: all 0.2s ease;
-    font-size: 12px;
+    box-shadow: -2px 0 8px rgba(0, 0, 0, 0.08);
+    z-index: 1001;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    font-size: 14px;
+    box-sizing: border-box;
+    pointer-events: auto;
 }
 
 .right-section-toggle:hover {
-    background: #f1f5f9;
-    border-color: #94a3b8;
-    color: #334155;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    background: #f8fafc;
+    color: #1e293b;
+    box-shadow: -2px 0 12px rgba(0, 0, 0, 0.12);
+    transform: translateY(-50%) translateX(-2px);
 }
 
-.right-section.collapsed ~ * .right-section-toggle,
-.right-section.collapsed ~ .right-section-toggle {
-    position: fixed;
-    right: 8px;
-    top: 16px;
-    left: auto;
-    z-index: 1000;
+.right-section-toggle:active {
+    transform: translateY(-50%) translateX(0);
+}
+
+/* 侧边栏折叠时的按钮样式 */
+.right-section.collapsed .right-section-toggle {
+    position: fixed !important;
+    right: 0 !important;
+    top: 50% !important;
+    left: auto !important;
+    transform: translateY(-50%) !important;
+    z-index: 1001 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    border-radius: 12px 0 0 12px !important;
+    border-top: 1px solid #e2e8f0 !important;
+    border-left: 1px solid #e2e8f0 !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+    border-right: 1px solid transparent !important;
+    background: #ffffff !important;
+    color: #64748b !important;
+    box-shadow: -2px 0 12px rgba(0, 0, 0, 0.15) !important;
+    width: 40px !important;
+    height: 80px !important;
+    box-sizing: border-box !important;
+    font-size: 14px !important;
+    cursor: pointer !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.right-section.collapsed .right-section-toggle:hover {
+    background: #f8fafc !important;
+    transform: translateY(-50%) translateX(-4px) !important;
+    box-shadow: -4px 0 16px rgba(0, 0, 0, 0.2) !important;
 }
 
 /* Profile modal styles (modern, beautiful) */
@@ -424,6 +557,10 @@ html, body {
     gap: 8px;
     background: #ffffff;
     border-bottom: 1px solid #e2e8f0;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow-x: hidden;
 }
 
 .tab-btn {
@@ -436,6 +573,9 @@ html, body {
     font-weight: 500;
     font-size: 14px;
     transition: all 0.2s ease;
+    white-space: nowrap;
+    flex-shrink: 0;
+    box-sizing: border-box;
 }
 
 .tab-btn:hover {
@@ -452,6 +592,9 @@ html, body {
 .right-content {
     flex: 1;
     overflow-y: auto;
+    overflow-x: hidden;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .tab-panel {
@@ -459,6 +602,11 @@ html, body {
     padding: 20px;
     height: calc(100vh - 60px);
     overflow-y: auto;
+    overflow-x: hidden;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    min-width: 0;
 }
 
 .tab-panel.active {
@@ -491,11 +639,39 @@ html, body {
     .left-section {
         width: 240px;
         min-width: 240px;
+        max-width: 240px;
+    }
+    
+    .left-section.collapsed {
+        width: 0 !important;
+        min-width: 0 !important;
+        max-width: 0 !important;
+        overflow: visible !important;
+    }
+    
+    .left-section.collapsed > *:not(.left-section-toggle) {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
     }
     
     .right-section {
         width: 280px;
         min-width: 280px;
+        max-width: 280px;
+    }
+    
+    .right-section.collapsed {
+        width: 0 !important;
+        min-width: 0 !important;
+        max-width: 0 !important;
+        overflow: visible !important;
+    }
+    
+    .right-section.collapsed > *:not(.right-section-toggle) {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
     }
 }
 
@@ -509,7 +685,17 @@ html, body {
     }
     
     .left-section.collapsed {
-        transform: translateX(-100%);
+        transform: translateX(calc(-100% - 1px));
+        width: 0 !important;
+        min-width: 0 !important;
+        max-width: 0 !important;
+        overflow: visible !important;
+    }
+    
+    .left-section.collapsed > *:not(.left-section-toggle) {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
     }
     
     .right-section {
@@ -518,14 +704,48 @@ html, body {
         top: 0;
         z-index: 1000;
         width: 280px;
+        min-width: 280px;
+        max-width: 280px;
     }
     
     .right-section.collapsed {
-        transform: translateX(100%);
+        transform: translateX(calc(100% + 1px));
+        width: 0 !important;
+        min-width: 0 !important;
+        max-width: 0 !important;
+        overflow: visible !important;
+    }
+    
+    .right-section.collapsed > *:not(.right-section-toggle) {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
     }
     
     .chat-container {
         width: 100%;
+    }
+    
+    .left-section-toggle {
+        width: 36px;
+        height: 60px;
+        font-size: 12px;
+    }
+    
+    .left-section.collapsed .left-section-toggle {
+        width: 36px !important;
+        height: 60px !important;
+    }
+    
+    .right-section-toggle {
+        width: 36px;
+        height: 60px;
+        font-size: 12px;
+    }
+    
+    .right-section.collapsed .right-section-toggle {
+        width: 36px !important;
+        height: 60px !important;
     }
     
     .toolbar {

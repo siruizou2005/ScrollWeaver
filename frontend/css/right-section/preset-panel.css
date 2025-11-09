@@ -3,6 +3,9 @@
     flex-direction: column;
     gap: 15px;
     padding: 15px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 .preset-header {
@@ -18,12 +21,14 @@
 
 .preset-select {
     width: 100%;
+    max-width: 100%;
     padding: 8px;
     border: 1px solid #5f3737;
     border-radius: 4px;
     background-color: white;
     color: #5f3737;
     margin-bottom: 10px;
+    box-sizing: border-box;
 }
 
 .preset-select option {
@@ -39,6 +44,8 @@
     cursor: pointer;
     transition: background-color 0.3s;
     width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 .preset-submit-btn:hover {

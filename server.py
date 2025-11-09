@@ -253,18 +253,26 @@ class ConnectionManager:
         try:
             performer = self.scrollweaver.server.performers[role_code]
             current_status = self.scrollweaver.server.current_status
-            # current_status['group'] 存储的是角色代码列表
-            group_codes = current_status.get('group', [])
+            group = current_status.get('group', [])
+            
+            # 将group中的名称/代码转换为角色代码列表
+            group_codes = []
+            for item in group:
+                # 如果已经是角色代码，直接使用
+                if item in self.scrollweaver.server.role_codes:
+                    group_codes.append(item)
+                else:
+                    # 否则尝试通过名称查找角色代码
+                    code = self._get_role_code_by_name(item)
+                    if code:
+                        group_codes.append(code)
+            
+            # 确保当前角色在group中
+            if role_code not in group_codes:
+                group_codes.append(role_code)
             
             # 获取同组其他角色信息（使用Server的_get_group_members_info_dict方法）
             other_roles_info = self.scrollweaver.server._get_group_members_info_dict(group_codes)
-            
-            # 如果当前角色不在group中，确保包含自己
-            if role_code not in group_codes:
-                other_roles_info[role_code] = {
-                    "nickname": performer.nickname,
-                    "profile": performer.role_profile
-                }
             
             # 调用Performer的plan方法生成行动
             plan = performer.plan(
