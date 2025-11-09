@@ -249,7 +249,12 @@ class ConnectionManager:
         return None
     
     async def generate_auto_action(self, client_id: str, role_code: str) -> str:
-        """使用AI自动生成角色的行动"""
+        """使用AI自动生成角色的行动（单个选项，保持向后兼容）"""
+        options = await self.generate_auto_action_options(client_id, role_code, num_options=1)
+        return options[0]['text'] if options and len(options) > 0 else None
+    
+    async def generate_auto_action_options(self, client_id: str, role_code: str, num_options: int = 3) -> list:
+        """使用AI自动生成角色的多个行动选项"""
         try:
             performer = self.scrollweaver.server.performers[role_code]
             current_status = self.scrollweaver.server.current_status
@@ -271,21 +276,65 @@ class ConnectionManager:
             if role_code not in group_codes:
                 group_codes.append(role_code)
             
-            # 获取同组其他角色信息（使用Server的_get_group_members_info_dict方法）
+            # 获取同组其他角色信息
             other_roles_info = self.scrollweaver.server._get_group_members_info_dict(group_codes)
             
-            # 调用Performer的plan方法生成行动
-            plan = performer.plan(
-                other_roles_info=other_roles_info,
-                available_locations=self.scrollweaver.server.orchestrator.locations,
-                world_description=self.scrollweaver.server.orchestrator.description,
-                intervention=self.scrollweaver.server.event
-            )
+            # 定义不同风格的选项配置
+            style_configs = [
+                {
+                    'style': 'aggressive',
+                    'name': '激进',
+                    'description': '采取更直接、大胆的行动',
+                    'temperature': 1.2,
+                    'style_hint': '采取更直接、大胆、果断的行动方式。不要过于谨慎，可以承担一定风险。'
+                },
+                {
+                    'style': 'balanced',
+                    'name': '平衡',
+                    'description': '采取平衡、理性的行动',
+                    'temperature': 0.8,
+                    'style_hint': '采取平衡、理性的行动方式。综合考虑各种因素，做出合理的决策。'
+                },
+                {
+                    'style': 'conservative',
+                    'name': '保守',
+                    'description': '采取谨慎、稳妥的行动',
+                    'temperature': 0.5,
+                    'style_hint': '采取谨慎、稳妥、保守的行动方式。优先考虑安全，避免不必要的风险。'
+                }
+            ]
             
-            # 返回生成的行动详情
-            return plan.get("detail", "")
+            # 生成多个选项
+            options = []
+            for i, config in enumerate(style_configs[:num_options]):
+                try:
+                    # 调用Performer的plan方法生成行动，传入风格提示和温度
+                    plan = performer.plan_with_style(
+                        other_roles_info=other_roles_info,
+                        available_locations=self.scrollweaver.server.orchestrator.locations,
+                        world_description=self.scrollweaver.server.orchestrator.description,
+                        intervention=self.scrollweaver.server.event,
+                        style_hint=config['style_hint'],
+                        temperature=config['temperature']
+                    )
+                    
+                    detail = plan.get("detail", "")
+                    if detail:
+                        options.append({
+                            'index': i + 1,
+                            'style': config['style'],
+                            'name': config['name'],
+                            'description': config['description'],
+                            'text': detail
+                        })
+                except Exception as e:
+                    print(f"Error generating option {i+1} ({config['style']}): {e}")
+                    import traceback
+                    traceback.print_exc()
+            
+            return options if options else None
         except Exception as e:
-            print(f"Error in generate_auto_action: {e}")
+            print(f"Error in generate_auto_action_options: {e}")
             import traceback
             traceback.print_exc()
             return None
@@ -525,14 +574,16 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                     if user_role_code and client_id in manager.pending_user_inputs:
                         if not manager.pending_user_inputs[client_id].done():
                             try:
-                                # 调用AI生成角色行动
-                                auto_text = await manager.generate_auto_action(client_id, user_role_code)
-                                if auto_text:
-                                    # 将AI生成的行动作为用户输入
-                                    manager.pending_user_inputs[client_id].set_result(auto_text)
+                                # 调用AI生成多个行动选项
+                                options = await manager.generate_auto_action_options(client_id, user_role_code, num_options=3)
+                                if options and len(options) > 0:
+                                    # 发送多个选项给前端
                                     await websocket.send_json({
-                                        'type': 'auto_complete_success',
-                                        'data': {'message': 'AI已生成行动'}
+                                        'type': 'auto_complete_options',
+                                        'data': {
+                                            'options': options,
+                                            'message': 'AI已生成多个行动选项，请选择'
+                                        }
                                     })
                                 else:
                                     await websocket.send_json({
@@ -540,12 +591,42 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                                         'data': {'message': 'AI生成行动失败，请重试'}
                                     })
                             except Exception as e:
-                                print(f"Error generating auto action: {e}")
+                                print(f"Error generating auto action options: {e}")
                                 import traceback
                                 traceback.print_exc()
                                 await websocket.send_json({
                                     'type': 'error',
                                     'data': {'message': f'生成行动时出错: {str(e)}'}
+                                })
+                    else:
+                        await websocket.send_json({
+                            'type': 'error',
+                            'data': {'message': '未选择角色或不在等待输入状态'}
+                        })
+                else:
+                    await websocket.send_json({
+                        'type': 'error',
+                        'data': {'message': '当前不在等待输入状态'}
+                    })
+            
+            elif message['type'] == 'select_auto_option':
+                # 处理用户选择的AI选项
+                if client_id in manager.waiting_for_input and manager.waiting_for_input[client_id]:
+                    user_role_code = manager.user_selected_roles.get(client_id)
+                    if user_role_code and client_id in manager.pending_user_inputs:
+                        if not manager.pending_user_inputs[client_id].done():
+                            selected_text = message.get('selected_text', '')
+                            if selected_text:
+                                # 将选中的选项作为用户输入
+                                manager.pending_user_inputs[client_id].set_result(selected_text)
+                                await websocket.send_json({
+                                    'type': 'auto_complete_success',
+                                    'data': {'message': '已选择AI生成的行动'}
+                                })
+                            else:
+                                await websocket.send_json({
+                                    'type': 'error',
+                                    'data': {'message': '无效的选项'}
                                 })
                     else:
                         await websocket.send_json({

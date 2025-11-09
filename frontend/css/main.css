@@ -874,6 +874,208 @@ html, body {
     }
 }
 
+/* AI选项选择模态框样式 */
+.auto-options-modal.hidden { display: none; }
+.auto-options-modal { 
+    position: fixed; 
+    inset: 0; 
+    z-index: 2000; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    animation: fadeIn 0.3s ease;
+}
+.auto-options-modal .modal-overlay { 
+    position: absolute; 
+    inset: 0; 
+    background: rgba(0, 0, 0, 0.5); 
+    backdrop-filter: blur(8px); 
+}
+.auto-options-modal .modal-card { 
+    position: relative; 
+    z-index: 2; 
+    width: 90%; 
+    max-width: 1000px; 
+    max-height: calc(100vh - 40px);
+    border-radius: 12px; 
+    background: #fff; 
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); 
+    overflow: hidden;
+    animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid #e2e8f0;
+    display: flex;
+    flex-direction: column;
+}
+.auto-options-modal .modal-close { 
+    position: absolute; 
+    top: 16px; 
+    right: 16px; 
+    width: 36px;
+    height: 36px;
+    background: rgba(0, 0, 0, 0.05); 
+    border: none; 
+    border-radius: 50%;
+    font-size: 20px; 
+    color: #666;
+    cursor: pointer; 
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    z-index: 3;
+}
+.auto-options-modal .modal-close:hover {
+    background: rgba(0, 0, 0, 0.1);
+    color: #333;
+    transform: rotate(90deg);
+}
+.auto-options-modal .modal-content { 
+    padding: 32px; 
+    overflow-y: auto;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+.auto-options-modal .modal-header {
+    margin-bottom: 24px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid #f0f0f0;
+}
+.auto-options-modal .modal-title {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 700;
+    color: #1e293b;
+}
+.options-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.auto-option-card {
+    background: #ffffff;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 24px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.auto-option-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #1e293b 0%, #334155 50%, #1e293b 100%);
+    transform: scaleX(0);
+    transition: transform 0.3s ease;
+}
+
+.auto-option-card:hover {
+    border-color: #1e293b;
+    box-shadow: 0 8px 16px rgba(30, 41, 59, 0.15);
+    transform: translateY(-4px);
+}
+
+.auto-option-card:hover::before {
+    transform: scaleX(1);
+}
+
+.auto-option-card:active {
+    transform: translateY(-2px);
+}
+
+.option-header {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.option-style-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 2px solid;
+    font-weight: 600;
+    font-size: 14px;
+    width: fit-content;
+}
+
+.option-icon {
+    font-size: 18px;
+}
+
+.option-name {
+    font-size: 15px;
+}
+
+.option-description {
+    font-size: 13px;
+    color: #64748b;
+    font-style: italic;
+}
+
+.option-content {
+    font-size: 15px;
+    color: #1e293b;
+    line-height: 1.8;
+    margin-bottom: 20px;
+    padding: 16px;
+    background: #f8fafc;
+    border-radius: 8px;
+    border-left: 4px solid #1e293b;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.option-select-btn {
+    width: 100%;
+    padding: 12px 24px;
+    background: transparent;
+    border: 2px solid;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.option-select-btn:hover {
+    background: currentColor;
+    color: #ffffff !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.option-select-btn:active {
+    transform: translateY(0);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .auto-options-modal .modal-card {
+        width: 95%;
+        max-height: calc(100vh - 20px);
+    }
+    .auto-options-modal .modal-content {
+        padding: 20px;
+    }
+    .options-container {
+        gap: 16px;
+    }
+    .auto-option-card {
+        padding: 20px;
+    }
+}
+
 .right-toolbar {
     padding: 12px 16px;
     display: flex;

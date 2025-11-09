@@ -157,6 +157,10 @@ document.addEventListener('DOMContentLoaded', function() {
             // 故事导出成功
             showStoryModal(message.data.story, message.data.timestamp);
         }
+        else if (message.type === 'auto_complete_options') {
+            // AI生成了多个选项
+            showAutoOptionsModal(message.data.options);
+        }
         else if (message.type === 'auto_complete_success') {
             // AI自动完成成功
             if (autoCompleteBtn) {
@@ -815,5 +819,119 @@ document.addEventListener('DOMContentLoaded', function() {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
+    }
+    
+    // 显示AI选项选择模态框
+    function showAutoOptionsModal(options) {
+        const modal = document.getElementById('auto-options-modal');
+        const container = document.getElementById('autoOptionsContainer');
+        
+        if (!modal || !container) {
+            console.error('AI选项模态框元素未找到');
+            return;
+        }
+        
+        // 恢复按钮状态
+        if (autoCompleteBtn) {
+            autoCompleteBtn.disabled = false;
+            autoCompleteBtn.style.opacity = '1';
+        }
+        
+        // 清空容器
+        container.innerHTML = '';
+        
+        // 创建选项卡片
+        options.forEach((option, index) => {
+            const card = createOptionCard(option, index);
+            container.appendChild(card);
+        });
+        
+        // 显示模态框
+        modal.classList.remove('hidden');
+        modal.setAttribute('aria-hidden', 'false');
+        
+        // 设置关闭事件
+        const closeBtn = modal.querySelector('.modal-close');
+        const overlay = modal.querySelector('.modal-overlay');
+        
+        function closeModal() {
+            modal.classList.add('hidden');
+            modal.setAttribute('aria-hidden', 'true');
+            closeBtn.removeEventListener('click', closeModal);
+            if (overlay) overlay.removeEventListener('click', closeModal);
+            document.removeEventListener('keydown', onKeyDown);
+        }
+        
+        function onKeyDown(e) {
+            if (e.key === 'Escape') closeModal();
+        }
+        
+        closeBtn.addEventListener('click', closeModal);
+        if (overlay) overlay.addEventListener('click', closeModal);
+        document.addEventListener('keydown', onKeyDown);
+    }
+    
+    // 创建选项卡片
+    function createOptionCard(option, index) {
+        const card = document.createElement('div');
+        card.className = 'auto-option-card';
+        card.setAttribute('data-option-index', index);
+        
+        const styleIcons = {
+            'aggressive': '⚔️',
+            'balanced': '⚖️',
+            'conservative': '🛡️'
+        };
+        
+        const styleColors = {
+            'aggressive': '#dc2626',
+            'balanced': '#2563eb',
+            'conservative': '#059669'
+        };
+        
+        const icon = styleIcons[option.style] || '💭';
+        const color = styleColors[option.style] || '#64748b';
+        
+        card.innerHTML = `
+            <div class="option-header">
+                <div class="option-style-badge" style="background: ${color}20; color: ${color}; border-color: ${color}40;">
+                    <span class="option-icon">${icon}</span>
+                    <span class="option-name">${option.name}</span>
+                </div>
+                <div class="option-description">${option.description}</div>
+            </div>
+            <div class="option-content">${option.text}</div>
+            <button class="option-select-btn" style="border-color: ${color}; color: ${color};">
+                选择此方案
+            </button>
+        `;
+        
+        // 添加点击事件
+        const selectBtn = card.querySelector('.option-select-btn');
+        selectBtn.addEventListener('click', function() {
+            // 发送选中的选项
+            if (ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: 'select_auto_option',
+                    selected_text: option.text
+                }));
+            }
+            
+            // 关闭模态框
+            const modal = document.getElementById('auto-options-modal');
+            if (modal) {
+                modal.classList.add('hidden');
+                modal.setAttribute('aria-hidden', 'true');
+            }
+        });
+        
+        // 卡片点击也可以选择
+        card.addEventListener('click', function(e) {
+            if (e.target !== selectBtn && !selectBtn.contains(e.target)) {
+                selectBtn.click();
+            }
+        });
+        
+        return card;
     }
 });
