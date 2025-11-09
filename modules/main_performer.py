@@ -213,6 +213,70 @@ class Performer:
                       prompt=prompt)
         return plan
     
+    def plan_with_style(self, 
+             other_roles_info: Dict[str, Any], 
+             available_locations: List[str], 
+             world_description: str, 
+             intervention: str = "",
+             style_hint: str = "",
+             temperature: float = 0.8):
+        """带风格提示和温度参数的plan方法"""
+        action_history_text = self.retrieve_history(query = "", retrieve=False)
+        references = self.retrieve_references(query = action_history_text)
+        knowledges = self.retrieve_knowledges(query = action_history_text)
+        
+        if len(other_roles_info) == 1:
+            other_roles_info_text = "没有人在这里。你不能进行涉及角色的互动。" if self.language == "zh" else "No one else is here. You can not interact with roles."
+        else:
+            other_roles_info_text = self.get_other_roles_info_text(other_roles_info, if_profile = False)
+        
+        if intervention:
+            intervention = self._INTERVENTION_PROMPT.format(**{"intervention": intervention})
+        
+        # 构建基础prompt
+        prompt = self._ROLE_PLAN_PROMPT.format(**{
+            "role_name": self.role_name,
+            "nickname": self.nickname,
+            "profile": self.role_profile,
+            "goal": self.goal,
+            "status": self.status,
+            "history": action_history_text,
+            "other_roles_info": other_roles_info_text,
+            "world_description": world_description,
+            "location": self.location_name,
+            "references": references,
+            "knowledges": knowledges,
+        })
+        
+        # 添加风格提示
+        if style_hint:
+            style_prompt = f"\n\n## 行动风格要求\n{style_hint}\n" if self.language == "zh" else f"\n\n## Action Style Requirement\n{style_hint}\n"
+            prompt = prompt + style_prompt
+        
+        prompt = intervention + prompt
+        max_tries = 3
+        plan = {"action": "待机" if self.language == "zh" else "Stay", 
+                "destination": None,
+                "interact_type":'no',
+                "target_role_codes": [],
+                "target_npc_name":None,
+                "detail": f"{self.role_name}原地不动，观察情况。" if self.language == "zh" else f"{self.role_name} stays put."
+                }
+        
+        for i in range(max_tries):
+            # 使用指定的温度参数调用LLM
+            response = self.llm.chat(prompt, temperature=temperature)
+            try:
+                plan.update(json_parser(response))
+                break
+            except Exception as e:
+                print(self.role_name)
+                print(f"Parsing failure! {i+1}th tries. Error:", e)   
+                print(response)
+        plan["role_code"] = self.role_code
+        self.save_prompt(detail=plan["detail"], prompt=prompt)
+        return plan
+    
     def npc_interact(self,
                      npc_name:str,
                      npc_response:str,
