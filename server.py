@@ -30,7 +30,10 @@ PRESETS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'experime
 class ConnectionManager:
     def __init__(self):
         self.active_connections: dict[str, WebSocket] = {}  
-        self.story_tasks: dict[str, asyncio.Task] = {}  
+        self.story_tasks: dict[str, asyncio.Task] = {}
+        self.user_selected_roles: dict[str, str] = {}  # client_id -> role_code
+        self.waiting_for_input: dict[str, bool] = {}  # client_id -> bool
+        self.pending_user_inputs: dict[str, asyncio.Future] = {}  # client_id -> Future  
         if True:
             if "preset_path" in config and config["preset_path"]:
                 if os.path.exists(config["preset_path"]):
@@ -63,6 +66,16 @@ class ConnectionManager:
         if client_id in self.active_connections:
             del self.active_connections[client_id]
         self.stop_story(client_id)
+        # 清理用户选择的状态
+        if client_id in self.user_selected_roles:
+            del self.user_selected_roles[client_id]
+        if client_id in self.waiting_for_input:
+            del self.waiting_for_input[client_id]
+        if client_id in self.pending_user_inputs:
+            # 如果Future还在等待，取消它
+            if not self.pending_user_inputs[client_id].done():
+                self.pending_user_inputs[client_id].cancel()
+            del self.pending_user_inputs[client_id]
             
     def stop_story(self, client_id: str):
         if client_id in self.story_tasks:
@@ -85,14 +98,100 @@ class ConnectionManager:
             while True:
                 if client_id in self.active_connections:
                     message,status = await self.get_next_message()
+                    
+                    # 检查生成器是否已结束
+                    if message is None:
+                        await self.active_connections[client_id].send_json({
+                            'type': 'story_ended',
+                            'data': {'message': '故事已结束'}
+                        })
+                        break
+                    
+                    # 检查是否轮到用户选择的角色
+                    user_role_code = self.user_selected_roles.get(client_id)
+                    if user_role_code and message.get('type') == 'role':
+                        # 检查当前消息的角色代码是否匹配用户选择的角色
+                        # 需要通过角色名称找到角色代码
+                        current_role_code = self._get_role_code_by_name(message.get('username', ''))
+                        
+                        if current_role_code and current_role_code == user_role_code:
+                            # 暂停生成，等待用户输入
+                            self.waiting_for_input[client_id] = True
+                            await self.active_connections[client_id].send_json({
+                                'type': 'waiting_for_user_input',
+                                'data': {
+                                    'role_name': message.get('username'),
+                                    'message': '请为角色输入内容'
+                                }
+                            })
+                            
+                            # 等待用户输入
+                            if client_id not in self.pending_user_inputs:
+                                self.pending_user_inputs[client_id] = asyncio.Future()
+                            
+                            try:
+                                user_text = await asyncio.wait_for(
+                                    self.pending_user_inputs[client_id], 
+                                    timeout=None
+                                )
+                                # 用户输入已收到，用用户输入替换消息内容
+                                original_uuid = message.get('uuid')
+                                if not user_text.strip():
+                                    # 空输入，继续等待
+                                    await self.active_connections[client_id].send_json({
+                                        'type': 'error',
+                                        'data': {'message': '输入不能为空，请重新输入'}
+                                    })
+                                    # 重新创建Future继续等待
+                                    self.pending_user_inputs[client_id] = asyncio.Future()
+                                    continue
+                                
+                                message['text'] = user_text
+                                message['is_user'] = True
+                                
+                                # 更新历史记录中的detail
+                                if original_uuid:
+                                    try:
+                                        self.scrollweaver.server.history_manager.modify_record(
+                                            original_uuid, 
+                                            user_text
+                                        )
+                                    except Exception as e:
+                                        print(f"Error modifying record {original_uuid}: {e}")
+                                        # 如果修改失败，创建新记录
+                                        await self.handle_user_role_input(client_id, user_role_code, user_text)
+                                        continue
+                                else:
+                                    # 如果没有uuid，需要创建新记录
+                                    await self.handle_user_role_input(client_id, user_role_code, user_text)
+                                    # 跳过当前消息，因为已经通过handle_user_role_input发送了
+                                    continue
+                                
+                                # 清除future
+                                if client_id in self.pending_user_inputs:
+                                    del self.pending_user_inputs[client_id]
+                                self.waiting_for_input[client_id] = False
+                            except asyncio.CancelledError:
+                                break
+                            except Exception as e:
+                                print(f"Error waiting for user input: {e}")
+                                import traceback
+                                traceback.print_exc()
+                                # 清理状态并继续
+                                if client_id in self.pending_user_inputs:
+                                    del self.pending_user_inputs[client_id]
+                                self.waiting_for_input[client_id] = False
+                    
+                    # 正常发送消息
                     await self.active_connections[client_id].send_json({
                         'type': 'message',
                         'data': message
                     })
-                    await self.active_connections[client_id].send_json({
-                        'type': 'status_update',
-                        'data': status
-                    })
+                    if status is not None:
+                        await self.active_connections[client_id].send_json({
+                            'type': 'status_update',
+                            'data': status
+                        })
                     # 添加延迟，控制消息发送频率
                     await asyncio.sleep(0.2)  # 可以调整这个值
                 else:
@@ -102,6 +201,12 @@ class ConnectionManager:
             print(f"Story generation cancelled for client {client_id}")
         except Exception as e:
             print(f"Error in generate_story: {e}")
+        finally:
+            # 清理状态
+            if client_id in self.waiting_for_input:
+                del self.waiting_for_input[client_id]
+            if client_id in self.pending_user_inputs:
+                del self.pending_user_inputs[client_id]
 
     async def get_initial_data(self):
         """获取初始化数据"""
@@ -115,11 +220,78 @@ class ConnectionManager:
     
     async def get_next_message(self):
         """从ScrollWeaver获取下一条消息"""
-        message = self.scrollweaver.generate_next_message()
+        try:
+            message = self.scrollweaver.generate_next_message()
+        except StopIteration:
+            # 生成器已结束
+            return None, None
         if not os.path.exists(message["icon"]) or not is_image(message["icon"]):
             message["icon"] = default_icon_path
         status = self.scrollweaver.get_current_status()
         return message,status
+    
+    def _get_role_code_by_name(self, role_name: str) -> str:
+        """通过角色名称找到角色代码"""
+        if not role_name:
+            return None
+        try:
+            # 遍历所有角色，查找匹配的名称或昵称
+            for role_code in self.scrollweaver.server.role_codes:
+                performer = self.scrollweaver.server.performers[role_code]
+                if performer.role_name == role_name or performer.nickname == role_name:
+                    return role_code
+        except Exception as e:
+            print(f"Error finding role code for {role_name}: {e}")
+        return None
+    
+    async def handle_user_role_input(self, client_id: str, role_code: str, user_text: str):
+        """处理用户输入作为角色消息（当消息没有uuid时使用）"""
+        try:
+            # 生成record_id
+            import uuid
+            record_id = str(uuid.uuid4())
+            
+            # 记录用户输入到历史
+            self.scrollweaver.server.record(
+                role_code=role_code,
+                detail=user_text,
+                actor=role_code,
+                group=self.scrollweaver.server.current_status.get('group', [role_code]),
+                actor_type='role',
+                act_type="user_input",
+                record_id=record_id
+            )
+            
+            # 构造消息格式
+            performer = self.scrollweaver.server.performers[role_code]
+            message = {
+                'username': performer.role_name,
+                'type': 'role',
+                'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                'text': user_text,
+                'icon': performer.icon_path if os.path.exists(performer.icon_path) and is_image(performer.icon_path) else default_icon_path,
+                'uuid': record_id,
+                'scene': self.scrollweaver.server.cur_round,
+                'is_user': True  # 标记为用户输入
+            }
+            
+            # 发送消息
+            await self.active_connections[client_id].send_json({
+                'type': 'message',
+                'data': message
+            })
+            
+            # 发送状态更新
+            status = self.scrollweaver.get_current_status()
+            await self.active_connections[client_id].send_json({
+                'type': 'status_update',
+                'data': status
+            })
+            
+        except Exception as e:
+            print(f"Error handling user role input: {e}")
+            import traceback
+            traceback.print_exc()
 
 manager = ConnectionManager()
 
@@ -215,15 +387,53 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
             
             if message['type'] == 'user_message':
                 # 处理用户消息
-                await websocket.send_json({
-                    'type': 'message',
-                    'data': {
-                        'username': 'User',
-                        'timestamp': message['timestamp'],
-                        'text': message['text'],
-                        'icon': default_icon_path,
-                    }
-                })
+                if client_id in manager.waiting_for_input and manager.waiting_for_input[client_id]:
+                    # 如果正在等待用户输入，将输入传递给生成器
+                    if client_id in manager.pending_user_inputs:
+                        if not manager.pending_user_inputs[client_id].done():
+                            user_text = message.get('text', '').strip()
+                            if user_text:  # 只处理非空输入
+                                manager.pending_user_inputs[client_id].set_result(user_text)
+                            else:
+                                # 空输入，提示用户
+                                await websocket.send_json({
+                                    'type': 'error',
+                                    'data': {'message': '输入不能为空，请重新输入'}
+                                })
+                else:
+                    # 普通用户消息（未集成到故事系统）
+                    await websocket.send_json({
+                        'type': 'message',
+                        'data': {
+                            'username': 'User',
+                            'timestamp': message['timestamp'],
+                            'text': message['text'],
+                            'icon': default_icon_path,
+                        }
+                    })
+            
+            elif message['type'] == 'select_role':
+                # 处理角色选择
+                role_name = message.get('role_name')
+                if role_name:
+                    role_code = manager._get_role_code_by_name(role_name)
+                    if role_code:
+                        manager.user_selected_roles[client_id] = role_code
+                        await websocket.send_json({
+                            'type': 'role_selected',
+                            'data': {
+                                'role_name': role_name,
+                                'role_code': role_code,
+                                'message': f'已选择角色: {role_name}'
+                            }
+                        })
+                    else:
+                        await websocket.send_json({
+                            'type': 'error',
+                            'data': {
+                                'message': f'未找到角色: {role_name}'
+                            }
+                        })
                 
             elif message['type'] == 'control':
                 # 处理控制命令
