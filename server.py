@@ -218,6 +218,44 @@ class ConnectionManager:
             'history_messages':self.scrollweaver.get_history_messages(save_dir = config["save_dir"]),
         }
     
+    async def reset_session(self, client_id: str):
+        """
+        重置所有当前对话的临时session内容
+        """
+        try:
+            # 停止当前运行的故事任务
+            self.stop_story(client_id)
+            
+            # 重置ScrollWeaver的session
+            self.scrollweaver.reset_session()
+            
+            # 重新设置generator（使用空save_dir，确保不从文件加载状态）
+            # 这样重置后就是一个全新的session，不会加载之前保存的状态
+            self.scrollweaver.set_generator(
+                rounds=config["rounds"],
+                save_dir="",  # 使用空字符串，不从文件加载
+                if_save=config["if_save"],
+                mode=config["mode"],
+                scene_mode=config["scene_mode"]
+            )
+            
+            # 清理客户端状态
+            if client_id in self.user_selected_roles:
+                del self.user_selected_roles[client_id]
+            if client_id in self.waiting_for_input:
+                del self.waiting_for_input[client_id]
+            if client_id in self.pending_user_inputs:
+                if not self.pending_user_inputs[client_id].done():
+                    self.pending_user_inputs[client_id].cancel()
+                del self.pending_user_inputs[client_id]
+            
+            return True
+        except Exception as e:
+            print(f"Error resetting session: {e}")
+            import traceback
+            traceback.print_exc()
+            return False
+    
     async def get_next_message(self):
         """从ScrollWeaver获取下一条消息"""
         try:
@@ -659,6 +697,48 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                         'type': 'error',
                         'data': {
                             'message': f'生成故事时出错: {str(e)}'
+                        }
+                    })
+            
+            elif message['type'] == 'reset_session':
+                # 处理重置session请求
+                try:
+                    success = await manager.reset_session(client_id)
+                    if success:
+                        # 发送重置成功消息
+                        await websocket.send_json({
+                            'type': 'session_reset',
+                            'data': {
+                                'message': 'Session已重置，所有临时对话内容已清空',
+                                'success': True
+                            }
+                        })
+                        # 发送清空消息的指令
+                        await websocket.send_json({
+                            'type': 'clear_messages',
+                            'data': {}
+                        })
+                        # 发送更新后的初始数据
+                        initial_data = await manager.get_initial_data()
+                        await websocket.send_json({
+                            'type': 'initial_data',
+                            'data': initial_data
+                        })
+                    else:
+                        await websocket.send_json({
+                            'type': 'error',
+                            'data': {
+                                'message': '重置session失败'
+                            }
+                        })
+                except Exception as e:
+                    print(f"Error resetting session: {e}")
+                    import traceback
+                    traceback.print_exc()
+                    await websocket.send_json({
+                        'type': 'error',
+                        'data': {
+                            'message': f'重置session时出错: {str(e)}'
                         }
                     })
                 

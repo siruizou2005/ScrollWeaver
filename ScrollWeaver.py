@@ -900,6 +900,61 @@ class Server():
     def __setstate__(self, states):
         self.__dict__.update(states)
 
+    def reset_session(self):
+        """
+        重置所有当前对话的临时session内容
+        包括：历史记录、角色状态、临时内存、服务器状态等
+        """
+        # 1. 清空全局历史记录
+        self.history_manager.detailed_history = []
+        
+        # 2. 重置服务器状态
+        self.cur_round = 0
+        self.progress = "剧本刚刚开始，还什么都没有发生" if self.language == 'zh' else "The story has just begun, nothing happens yet."
+        self.moving_roles_info = {}
+        self.current_status = {
+            "location_code": "",
+            "group": self.role_codes,
+        }
+        self.scene_characters = {}
+        self.event_history = []
+        self.start_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        
+        # 3. 重置每个角色的状态和临时数据
+        for role_code in self.role_codes:
+            performer = self.performers[role_code]
+            
+            # 清空角色的历史记录
+            performer.history_manager.detailed_history = []
+            
+            # 重置角色的状态
+            performer.acted = False
+            performer.status = ""
+            performer.goal = ""
+            performer.location_code = ""
+            performer.location_name = ""
+            # 注意：motivation保留，因为它是角色初始设置的一部分
+            
+            # 重新创建角色的临时内存（清空临时数据库）
+            from modules.memory import build_performer_memory
+            performer.memory = build_performer_memory(
+                llm_name=self.role_llm_name,
+                embedding_name=self.embedding_name,
+                embedding=self.embedding,
+                db_name=performer.db_name.replace("role", "memory"),
+                language=self.language,
+                type="naive"
+            )
+            
+            # 清空角色的prompts记录
+            performer.prompts = []
+        
+        # 4. 重置orchestrator的临时数据
+        self.orchestrator.history = []
+        self.orchestrator.prompts = []
+        
+        print("Session重置完成：所有临时对话内容已清空")
+
 
 class ScrollWeaver():
     def __init__(self,
@@ -1048,6 +1103,13 @@ class ScrollWeaver():
         logs = self.server.history_manager.get_complete_history()
         story = self.server.orchestrator.log2story(logs)
         return story
+    
+    def reset_session(self):
+        """
+        重置所有当前对话的临时session内容
+        注意：调用此方法后，需要重新调用set_generator来重新初始化generator
+        """
+        self.server.reset_session()
     
 def _is_connection_issue(exc: Exception) -> bool:
     connection_error_names = {
