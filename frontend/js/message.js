@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const sendButton = document.querySelector('.send-btn');
     const controlBtn = document.getElementById('controlBtn');
     const stopBtn = document.getElementById('stopBtn');
+    const resetSessionBtn = document.getElementById('resetSessionBtn');
     const exportStoryBtn = document.getElementById('exportStoryBtn');
     
     // 生成随机的客户端ID
@@ -57,6 +58,19 @@ document.addEventListener('DOMContentLoaded', function() {
         }));
         controlBtn.innerHTML = '<i class="fas fa-play"></i><span>开始</span>';
         isPlaying = false;
+    });
+
+    // 重置会话按钮点击事件
+    resetSessionBtn.addEventListener('click', function() {
+        if (confirm('确定要重置所有当前对话的临时session内容吗？此操作不可撤销。')) {
+            // 发送重置请求
+            ws.send(JSON.stringify({
+                type: 'reset_session'
+            }));
+            // 禁用按钮，显示加载状态
+            resetSessionBtn.disabled = true;
+            resetSessionBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>重置中...</span>';
+        }
     });
 
     // WebSocket事件处理
@@ -216,6 +230,22 @@ document.addEventListener('DOMContentLoaded', function() {
             else {
                 loadHistoryMessages([]);
             }
+        }
+        else if (message.type === 'clear_messages') {
+            // 清空所有消息
+            chatMessages.innerHTML = '';
+            addSystemMessage('所有消息已清空');
+        }
+        else if (message.type === 'session_reset') {
+            // Session重置成功
+            addSystemMessage(message.data.message || 'Session已重置');
+            // 显示刷新提示
+            addSystemMessage('页面将在2秒后自动刷新...');
+            
+            // 延迟刷新页面，给用户时间看到提示信息
+            setTimeout(function() {
+                window.location.reload();
+            }, 2000);
         }
     };
 
