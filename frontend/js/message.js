@@ -712,7 +712,6 @@ document.addEventListener('DOMContentLoaded', function() {
         // Populate modal (do not show motivation)
         const nameEl = modal.querySelector('.modal-name');
         const descEl = modal.querySelector('.modal-description');
-        const avatarEl = modal.querySelector('.modal-avatar');
         const locEl = modal.querySelector('.modal-location');
         const goalEl = modal.querySelector('.modal-goal');
         const stateEl = modal.querySelector('.modal-state');
@@ -720,7 +719,6 @@ document.addEventListener('DOMContentLoaded', function() {
         if (character) {
             nameEl.textContent = character.name || character.nickname || name;
             descEl.textContent = character.description || character.brief || '';
-            avatarEl.src = character.icon || './frontend/assets/images/default-icon.jpg';
             locEl.textContent = character.location || '—';
             goalEl.textContent = character.goal || '—';
             stateEl.textContent = character.state || character.status || '—';
@@ -728,7 +726,6 @@ document.addEventListener('DOMContentLoaded', function() {
             // Minimal fallback when no character data
             nameEl.textContent = name;
             descEl.textContent = '';
-            avatarEl.src = './frontend/assets/images/default-icon.jpg';
             locEl.textContent = '—';
             goalEl.textContent = '—';
             stateEl.textContent = '—';

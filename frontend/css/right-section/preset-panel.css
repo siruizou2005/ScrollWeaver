@@ -1,8 +1,8 @@
 .preset-container {
     display: flex;
     flex-direction: column;
-    gap: 15px;
-    padding: 15px;
+    gap: 16px;
+    padding: 0;
     width: 100%;
     max-width: 100%;
     box-sizing: border-box;
@@ -12,23 +12,34 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    margin-bottom: 4px;
 }
 
 .preset-header h3 {
-    color: #5f3737;
+    color: #1e293b;
     margin: 0;
+    font-size: 1.1em;
+    font-weight: 700;
 }
 
 .preset-select {
     width: 100%;
     max-width: 100%;
-    padding: 8px;
-    border: 1px solid #5f3737;
-    border-radius: 4px;
+    padding: 10px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
     background-color: white;
-    color: #5f3737;
+    color: #1e293b;
     margin-bottom: 10px;
     box-sizing: border-box;
+    font-size: 14px;
+    transition: all 0.2s ease;
+}
+
+.preset-select:focus {
+    outline: none;
+    border-color: #cbd5e1;
+    box-shadow: 0 0 0 3px rgba(30, 41, 59, 0.1);
 }
 
 .preset-select option {
@@ -36,23 +47,26 @@
 }
 
 .preset-submit-btn {
-    padding: 10px;
-    background-color: #5f3737;
+    padding: 10px 16px;
+    background-color: #1e293b;
     color: white;
     border: none;
-    border-radius: 4px;
+    border-radius: 6px;
     cursor: pointer;
-    transition: background-color 0.3s;
+    transition: all 0.2s ease;
     width: 100%;
     max-width: 100%;
     box-sizing: border-box;
+    font-size: 14px;
+    font-weight: 500;
 }
 
 .preset-submit-btn:hover {
-    background-color: #7a4747;
+    background-color: #334155;
 }
 
 .preset-submit-btn:disabled {
-    background-color: #ccc;
+    background-color: #cbd5e1;
+    color: #94a3b8;
     cursor: not-allowed;
 }

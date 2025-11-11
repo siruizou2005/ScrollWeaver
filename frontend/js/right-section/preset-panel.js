@@ -82,37 +82,112 @@ class PresetPanel {
                     detail: { preset: this.currentPreset }
                 }));
 
+                // 检测是否为Safari浏览器
+                const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+
                 // 重新加载初始数据
-                if (window.ws && window.ws.readyState === WebSocket.OPEN) {
+                if (window.ws) {
                     // 先停止当前的故事生成
-                    window.ws.send(JSON.stringify({
-                        type: 'control',
-                        action: 'stop'
-                    }));
-
-                    // 重新连接WebSocket以获取新的初始数据
-                    const clientId = Date.now().toString();
-                    const ws = new WebSocket(`ws://${window.location.host}/ws/${clientId}`);
-                    
-                    ws.onopen = () => {
-                        console.log('WebSocket Reconnected:', clientId);
-                    };
-
-                    ws.onmessage = (event) => {
-                        const message = JSON.parse(event.data);
-                        // 触发自定义事件，让其他面板更新数据
-                        window.dispatchEvent(new CustomEvent('websocket-message', {
-                            detail: message
+                    if (window.ws.readyState === WebSocket.OPEN) {
+                        window.ws.send(JSON.stringify({
+                            type: 'control',
+                            action: 'stop'
                         }));
+                    }
+
+                    // 正确关闭旧连接
+                    const closeOldConnection = () => {
+                        return new Promise((resolve) => {
+                            if (!window.ws || window.ws.readyState === WebSocket.CLOSED) {
+                                resolve();
+                                return;
+                            }
+
+                            const oldWs = window.ws;
+                            // 移除错误处理器，避免显示错误
+                            oldWs.onerror = null;
+                            
+                            oldWs.onclose = () => {
+                                console.log('Old WebSocket connection closed');
+                                resolve();
+                            };
+
+                            if (oldWs.readyState === WebSocket.OPEN || oldWs.readyState === WebSocket.CONNECTING) {
+                                oldWs.close();
+                            } else {
+                                resolve();
+                            }
+
+                            // 超时保护
+                            setTimeout(resolve, 1000);
+                        });
                     };
 
-                    ws.onerror = (error) => {
-                        console.error('WebSocket Error:', error);
-                        alert('WebSocket connection error, please try again later.');
+                    // 创建新连接
+                    const reconnect = async () => {
+                        await closeOldConnection();
+
+                        // 使用动态协议
+                        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                        const clientId = Math.random().toString(36).substring(7);
+                        const ws = new WebSocket(`${protocol}//${window.location.host}/ws/${clientId}`);
+                        
+                        let connectionEstablished = false;
+                        let errorShown = false;
+
+                        ws.onopen = () => {
+                            connectionEstablished = true;
+                            console.log('WebSocket Reconnected:', clientId);
+                            window.ws = ws;
+                        };
+
+                        ws.onmessage = (event) => {
+                            try {
+                                const message = JSON.parse(event.data);
+                                window.dispatchEvent(new CustomEvent('websocket-message', {
+                                    detail: message
+                                }));
+                            } catch (e) {
+                                console.error('Error parsing WebSocket message:', e);
+                            }
+                        };
+
+                        // 改进的错误处理：Safari可能会触发临时错误
+                        ws.onerror = (error) => {
+                            console.warn('WebSocket connection warning (may be temporary in Safari):', error);
+                            // 在Safari中，不立即显示错误，等待连接结果
+                            // 只有在连接真正失败时才显示错误
+                        };
+
+                        ws.onclose = (event) => {
+                            // 只有在连接未成功建立且不是正常关闭时才显示错误
+                            if (!connectionEstablished && !errorShown && event.code !== 1000) {
+                                // 对于Safari，即使连接关闭，如果预设已加载，也不显示错误
+                                // 因为用户说"不影响使用"
+                                if (!isSafari) {
+                                    errorShown = true;
+                                    alert('WebSocket connection error, but preset is loaded. Please refresh the page.');
+                                } else {
+                                    // Safari: 静默处理，因为不影响使用
+                                    console.log('WebSocket connection closed in Safari (preset already loaded)');
+                                }
+                            }
+                        };
                     };
 
-                    // 更新全局WebSocket实例
-                    window.ws = ws;
+                    // 执行重连
+                    reconnect().catch(error => {
+                        console.error('Reconnection error:', error);
+                        // Safari: 不显示错误，因为不影响使用
+                        if (!isSafari) {
+                            alert('WebSocket连接错误，但预设已加载。请刷新页面以获取最新数据。');
+                        }
+                    });
+                } else {
+                    // 如果没有现有连接，直接刷新页面
+                    console.log('No existing WebSocket connection, reloading page');
+                    window.location.reload();
+                    return;
                 }
 
                 alert('Preset loaded successfully!');
