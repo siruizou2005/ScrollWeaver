@@ -135,20 +135,95 @@ class PresetPanel {
                         let connectionEstablished = false;
                         let errorShown = false;
 
+                        // 设置消息处理器（在 onopen 之前设置，以便连接建立后立即可用）
+                        // 这个处理器会在 handleWebSocketMessage 可用时使用它，否则使用回退逻辑
+                        ws.onmessage = (event) => {
+                            console.log('New connection received message');
+                            // 优先使用全局处理函数
+                            if (typeof window.handleWebSocketMessage === 'function') {
+                                window.handleWebSocketMessage(event);
+                                return;
+                            }
+                            
+                            // 回退处理：如果处理函数不可用，至少分发事件
+                            console.warn('handleWebSocketMessage not available, using fallback and event dispatch');
+                            try {
+                                const message = JSON.parse(event.data);
+                                console.log('Received message on new connection (fallback):', message.type, message);
+                                
+                                // 分发事件，让其他监听器处理（这些监听器可能在 message.js 之前加载）
+                                window.dispatchEvent(new CustomEvent('websocket-message', {
+                                    detail: message
+                                }));
+                                
+                                // 如果消息类型是 'message'，尝试直接渲染到聊天窗口
+                                if (message.type === 'message' && message.data) {
+                                    const chatMessages = document.querySelector('.chat-messages');
+                                    if (chatMessages) {
+                                        // 尝试调用 renderMessage 如果可用
+                                        if (typeof window.renderMessage === 'function') {
+                                            window.renderMessage(message.data);
+                                        } else if (typeof window.addSystemMessage === 'function') {
+                                            // 至少显示系统消息
+                                            window.addSystemMessage(message.data.text || JSON.stringify(message.data));
+                                        } else {
+                                            // 最后的回退：直接添加到 DOM
+                                            const messageElement = document.createElement('div');
+                                            messageElement.className = 'message system';
+                                            messageElement.innerHTML = `
+                                                <div class="content">
+                                                    <div class="text">${message.data.text || JSON.stringify(message.data)}</div>
+                                                </div>
+                                            `;
+                                            chatMessages.appendChild(messageElement);
+                                            chatMessages.scrollTop = chatMessages.scrollHeight;
+                                        }
+                                    } else {
+                                        console.error('chat-messages element not found');
+                                    }
+                                }
+                            } catch (e) {
+                                console.error('Error parsing WebSocket message:', e);
+                            }
+                        };
+
                         ws.onopen = () => {
                             connectionEstablished = true;
                             console.log('WebSocket Reconnected:', clientId);
                             window.ws = ws;
+                            // 重置 isPlaying 状态
+                            if (typeof window.setIsPlaying === 'function') {
+                                window.setIsPlaying(false);
+                            }
+                            // 通过事件系统通知连接已建立
+                            console.log('WebSocket connection re-established');
+                            // 确保消息处理器已设置（如果在连接建立时处理器已可用，直接使用它）
+                            if (typeof window.handleWebSocketMessage === 'function') {
+                                ws.onmessage = window.handleWebSocketMessage;
+                                console.log('Message handler attached to new connection');
+                            } else {
+                                console.warn('handleWebSocketMessage not available yet, temporary handler will delegate');
+                                // 临时处理器已经设置，它会在收到消息时检查并调用 handleWebSocketMessage
+                                // 同时，定期检查处理器是否已可用，如果可用则替换临时处理器
+                                const checkAndSetHandler = setInterval(() => {
+                                    if (typeof window.handleWebSocketMessage === 'function') {
+                                        ws.onmessage = window.handleWebSocketMessage;
+                                        console.log('Message handler attached to new connection (delayed)');
+                                        clearInterval(checkAndSetHandler);
+                                    }
+                                }, 100);
+                                // 10秒后停止检查
+                                setTimeout(() => clearInterval(checkAndSetHandler), 10000);
+                            }
                         };
 
-                        ws.onmessage = (event) => {
-                            try {
-                                const message = JSON.parse(event.data);
-                                window.dispatchEvent(new CustomEvent('websocket-message', {
-                                    detail: message
-                                }));
-                            } catch (e) {
-                                console.error('Error parsing WebSocket message:', e);
+                        ws.onclose = (event) => {
+                            console.log('New WebSocket connection closed:', event.code, event.reason);
+                            if (!connectionEstablished && !errorShown && event.code !== 1000) {
+                                if (!isSafari) {
+                                    errorShown = true;
+                                    alert('WebSocket连接错误，但预设已加载。请刷新页面。');
+                                }
                             }
                         };
 

@@ -9,6 +9,7 @@ from pathlib import Path
 from datetime import datetime
 from sw_utils import is_image, load_json_file
 from ScrollWeaver import ScrollWeaver
+# Server class is now in modules.core.server, but ScrollWeaver wrapper is still in ScrollWeaver.py
 
 app = FastAPI()
 default_icon_path = './frontend/assets/images/default-icon.jpg'
@@ -83,24 +84,34 @@ class ConnectionManager:
             del self.story_tasks[client_id]
 
     async def start_story(self, client_id: str):
+        print(f"start_story called for client {client_id}")
         if client_id in self.story_tasks:
             # 如果已经有任务在运行，先停止它
+            print(f"Stopping existing story task for client {client_id}")
             self.stop_story(client_id)
         
         # 创建新的故事任务
+        print(f"Creating new story task for client {client_id}")
         self.story_tasks[client_id] = asyncio.create_task(
             self.generate_story(client_id)
         )
+        print(f"Story task created for client {client_id}")
 
     async def generate_story(self, client_id: str):
         """持续生成故事的协程"""
+        print(f"generate_story started for client {client_id}")
         try:
             while True:
                 if client_id in self.active_connections:
+                    print(f"Getting next message for client {client_id}")
                     message,status = await self.get_next_message()
+                    print(f"Got message for client {client_id}: message is not None = {message is not None}")
+                    if message:
+                        print(f"Message details: type={message.get('type')}, username={message.get('username')}, text_preview={message.get('text', '')[:50] if message.get('text') else 'None'}")
                     
                     # 检查生成器是否已结束
                     if message is None:
+                        print(f"Message is None, sending story_ended to client {client_id}")
                         await self.active_connections[client_id].send_json({
                             'type': 'story_ended',
                             'data': {'message': '故事已结束'}
@@ -109,6 +120,7 @@ class ConnectionManager:
                     
                     # 检查是否轮到用户选择的角色
                     user_role_code = self.user_selected_roles.get(client_id)
+                    print(f"Checking user role: user_role_code={user_role_code}, message_type={message.get('type')}")
                     if user_role_code and message.get('type') == 'role':
                         # 检查当前消息的角色代码是否匹配用户选择的角色
                         # 需要通过角色名称找到角色代码
@@ -181,17 +193,33 @@ class ConnectionManager:
                                 if client_id in self.pending_user_inputs:
                                     del self.pending_user_inputs[client_id]
                                 self.waiting_for_input[client_id] = False
+                    else:
+                        print(f"Not waiting for user input: user_role_code={user_role_code}, message_type={message.get('type')}")
                     
                     # 正常发送消息
-                    await self.active_connections[client_id].send_json({
-                        'type': 'message',
-                        'data': message
-                    })
-                    if status is not None:
+                    print(f"Sending message to client {client_id}: type={message.get('type', 'unknown')}, username={message.get('username', 'unknown')}")
+                    try:
                         await self.active_connections[client_id].send_json({
-                            'type': 'status_update',
-                            'data': status
+                            'type': 'message',
+                            'data': message
                         })
+                        print(f"Message sent successfully to client {client_id}")
+                    except Exception as e:
+                        print(f"Error sending message to client {client_id}: {e}")
+                        import traceback
+                        traceback.print_exc()
+                        break
+                    
+                    if status is not None:
+                        try:
+                            await self.active_connections[client_id].send_json({
+                                'type': 'status_update',
+                                'data': status
+                            })
+                        except Exception as e:
+                            print(f"Error sending status to client {client_id}: {e}")
+                            # 继续发送消息，状态更新失败不是致命错误
+                    
                     # 添加延迟，控制消息发送频率
                     await asyncio.sleep(0.2)  # 可以调整这个值
                 else:
@@ -258,15 +286,46 @@ class ConnectionManager:
     
     async def get_next_message(self):
         """从ScrollWeaver获取下一条消息"""
+        print("get_next_message called")
         try:
-            message = self.scrollweaver.generate_next_message()
+            # Run the synchronous generator call in a thread to avoid blocking the event loop
+            loop = asyncio.get_event_loop()
+            print("Running generate_next_message in thread pool")
+            message = await loop.run_in_executor(None, self.scrollweaver.generate_next_message)
+            print(f"generate_next_message returned: message is not None = {message is not None}")
+            if message:
+                print(f"Message type: {message.get('type', 'unknown')}, username: {message.get('username', 'unknown')}")
         except StopIteration:
             # 生成器已结束
+            print("Generator exhausted (StopIteration)")
             return None, None
-        if not os.path.exists(message["icon"]) or not is_image(message["icon"]):
+        except Exception as e:
+            # 捕获其他异常，打印错误信息
+            print(f"Error in get_next_message: {e}")
+            import traceback
+            traceback.print_exc()
+            return None, None
+        
+        # Check if message is valid
+        if message is None:
+            print("Message is None, returning None, None")
+            return None, None
+        
+        # Validate message structure
+        if not isinstance(message, dict):
+            print(f"Invalid message type: {type(message)}, message: {message}")
+            return None, None
+        
+        # Validate and set default icon if needed
+        if "icon" in message:
+            if not os.path.exists(message["icon"]) or not is_image(message["icon"]):
+                message["icon"] = default_icon_path
+        else:
             message["icon"] = default_icon_path
+        
         status = self.scrollweaver.get_current_status()
-        return message,status
+        print(f"Returning message and status, message keys: {list(message.keys())}")
+        return message, status
     
     def _get_role_code_by_name(self, role_name: str) -> str:
         """通过角色名称找到角色代码（支持role_name和nickname匹配）"""
@@ -506,17 +565,49 @@ async def load_preset(request: Request):
 
 @app.websocket("/ws/{client_id}")
 async def websocket_endpoint(websocket: WebSocket, client_id: str):
+    print(f"WebSocket connection attempt for client {client_id}")
     await manager.connect(websocket, client_id)
+    print(f"WebSocket connected for client {client_id}")
     try:
+        print(f"Getting initial data for client {client_id}")
         initial_data = await manager.get_initial_data()
         await websocket.send_json({
             'type': 'initial_data',
             'data': initial_data
         })
+        print(f"Initial data sent to client {client_id}")
         
         while True:
-            data = await websocket.receive_text()
-            message = json.loads(data)
+            try:
+                data = await websocket.receive_text()
+                message = json.loads(data)
+                print(f"Received WebSocket message: {message.get('type')} for client {client_id}, full message: {message}")
+            except json.JSONDecodeError as e:
+                print(f"JSON decode error for client {client_id}: {e}")
+                try:
+                    await websocket.send_json({
+                        'type': 'error',
+                        'data': {'message': f'Invalid JSON: {str(e)}'}
+                    })
+                except:
+                    pass  # Connection might be closed
+                continue
+            except WebSocketDisconnect:
+                print(f"WebSocket disconnected for client {client_id} (during receive)")
+                break
+            except Exception as e:
+                print(f"Error receiving message for client {client_id}: {e}")
+                import traceback
+                traceback.print_exc()
+                # Check if connection is still open before breaking
+                try:
+                    await websocket.send_json({
+                        'type': 'error',
+                        'data': {'message': f'Error processing message: {str(e)}'}
+                    })
+                except:
+                    pass  # Connection might be closed
+                break
             
             if message['type'] == 'user_message':
                 # 处理用户消息
@@ -533,16 +624,19 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                                     'type': 'error',
                                     'data': {'message': '输入不能为空，请重新输入'}
                                 })
+                    else:
+                        # 没有待处理的 Future，可能状态不一致
+                        print(f"Warning: Received user message but no pending future for client {client_id}")
+                        await websocket.send_json({
+                            'type': 'error',
+                            'data': {'message': '当前不是您的回合，无法发送消息'}
+                        })
                 else:
-                    # 普通用户消息（未集成到故事系统）
+                    # 不在等待输入状态，拒绝用户消息
+                    print(f"Warning: Received user message when not waiting for input for client {client_id}")
                     await websocket.send_json({
-                        'type': 'message',
-                        'data': {
-                            'username': 'User',
-                            'timestamp': message['timestamp'],
-                            'text': message['text'],
-                            'icon': default_icon_path,
-                        }
+                        'type': 'error',
+                        'data': {'message': '当前不是您的回合，请等待轮到您选择的角色时再发送消息'}
                     })
             
             elif message['type'] == 'select_role':
@@ -580,13 +674,60 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                 
             elif message['type'] == 'control':
                 # 处理控制命令
-                if message['action'] == 'start':
-                    await manager.start_story(client_id)
-                elif message['action'] == 'pause':
-                    manager.stop_story(client_id)
-                elif message['action'] == 'stop':
-                    manager.stop_story(client_id)
-                    # 可以在这里添加额外的停止逻辑
+                print(f"Received control message: {message.get('action')} for client {client_id}")
+                try:
+                    if message['action'] == 'start':
+                        print(f"Starting story for client {client_id}")
+                        await manager.start_story(client_id)
+                        print(f"Story started for client {client_id}")
+                        # Send acknowledgment to client
+                        try:
+                            await websocket.send_json({
+                                'type': 'story_started',
+                                'data': {'message': '故事已开始'}
+                            })
+                        except Exception as e:
+                            print(f"Error sending story_started message: {e}")
+                    elif message['action'] == 'pause':
+                        print(f"Pausing story for client {client_id}")
+                        manager.stop_story(client_id)
+                        try:
+                            await websocket.send_json({
+                                'type': 'story_paused',
+                                'data': {'message': '故事已暂停'}
+                            })
+                        except Exception as e:
+                            print(f"Error sending story_paused message: {e}")
+                    elif message['action'] == 'stop':
+                        print(f"Stopping story for client {client_id}")
+                        manager.stop_story(client_id)
+                        try:
+                            await websocket.send_json({
+                                'type': 'story_stopped',
+                                'data': {'message': '故事已停止'}
+                            })
+                        except Exception as e:
+                            print(f"Error sending story_stopped message: {e}")
+                    else:
+                        print(f"Unknown control action: {message.get('action')}")
+                        try:
+                            await websocket.send_json({
+                                'type': 'error',
+                                'data': {'message': f'Unknown action: {message.get("action")}'}
+                            })
+                        except Exception as e:
+                            print(f"Error sending error message: {e}")
+                except Exception as e:
+                    print(f"Error handling control message: {e}")
+                    import traceback
+                    traceback.print_exc()
+                    try:
+                        await websocket.send_json({
+                            'type': 'error',
+                            'data': {'message': f'处理控制命令时出错: {str(e)}'}
+                        })
+                    except:
+                        pass  # Connection might be closed
                     
             elif message['type'] == 'edit_message':
                 # 处理消息编辑
@@ -741,11 +882,25 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                             'message': f'重置session时出错: {str(e)}'
                         }
                     })
+            else:
+                # Unknown message type
+                print(f"Unknown message type received: {message.get('type')} for client {client_id}")
+                await websocket.send_json({
+                    'type': 'error',
+                    'data': {'message': f'Unknown message type: {message.get("type")}'}
+                })
                 
-    except Exception as e:
-        print(f"WebSocket error: {e}")
-    finally:
+    except WebSocketDisconnect as e:
+        print(f"WebSocket disconnected for client {client_id}: {e}")
         manager.disconnect(client_id)
+    except Exception as e:
+        print(f"WebSocket error for client {client_id}: {e}")
+        import traceback
+        traceback.print_exc()
+        try:
+            manager.disconnect(client_id)
+        except:
+            pass
 
 @app.post("/api/save-config")
 async def save_config(request: Request):
