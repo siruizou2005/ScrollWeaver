@@ -7,6 +7,12 @@ import re
 import random
 import base64
 
+# Import tiktoken if available (used in count_tokens_num)
+try:
+    import tiktoken
+except ImportError:
+    tiktoken = None
+
 MODEL_NAME_DICT = {
     "gpt-3.5":"openai/gpt-3.5-turbo",
     "gpt-4":"openai/gpt-4",
@@ -35,7 +41,12 @@ os.environ.setdefault("HUGGINGFACE_HUB_CACHE", PROJECT_CACHE_DIR)
 os.environ.setdefault("TRANSFORMERS_CACHE", PROJECT_CACHE_DIR)
 os.makedirs(PROJECT_CACHE_DIR, exist_ok=True)
 
-def get_models(model_name):
+# Define key functions here for backward compatibility
+# These functions are also available in modules.utils.* but we keep them here
+# to ensure backward compatibility for code that imports from sw_utils
+
+def get_models(model_name: str):
+    """Get model instance based on model name."""
     if os.getenv("OPENROUTER_API_KEY", default="") and model_name in MODEL_NAME_DICT:
         from modules.llm.OpenRouter import OpenRouter
         return OpenRouter(model=MODEL_NAME_DICT[model_name])
@@ -61,10 +72,10 @@ def get_models(model_name):
         return Claude()
     elif model_name.startswith('qwen'):
         from modules.llm.Qwen import Qwen
-        return Qwen(model = model_name)
+        return Qwen(model=model_name)
     elif model_name.startswith('deepseek'):
         from modules.llm.DeepSeek import DeepSeek
-        return DeepSeek(model = model_name)
+        return DeepSeek(model=model_name)
     elif model_name.startswith('doubao'):
         from modules.llm.Doubao import Doubao
         return Doubao()
@@ -108,59 +119,73 @@ def get_models(model_name):
         print(f'Warning! undefined model {model_name}, use gpt-4o-mini instead.')
         from modules.llm.LangChainGPT import LangChainGPT
         return LangChainGPT()
-    
-def build_orchestrator_data(world_file_path,max_words = 30):
+
+def build_db(data, db_name, db_type, embedding, save_type="persistent"):
+    """Build database from data."""
+    if not data or not db_name:
+        return None
+    from modules.db.ChromaDB import ChromaDB
+    db = ChromaDB(embedding, save_type)
+    db.init_from_data(data, db_name)
+    return db
+
+def build_orchestrator_data(world_file_path: str, max_words: int = 30):
+    """Build orchestrator data from world file."""
     world_dir = os.path.dirname(world_file_path)
-    details_dir = os.path.join(world_dir,"./world_details")
+    details_dir = os.path.join(world_dir, "./world_details")
     data = []
     settings = []
     if os.path.exists(details_dir):
         for path in get_child_paths(details_dir):
             if os.path.splitext(path)[-1] == ".txt":
                 text = load_text_file(path)
-                data += split_text_by_max_words(text,max_words)
+                data += split_text_by_max_words(text, max_words)
             if os.path.splitext(path)[-1] == ".jsonl":
                 jsonl = load_jsonl_file(path)
                 data += [f"{dic['term']}:{dic['detail']}" for dic in jsonl]
                 settings += jsonl
-    return data,settings
+    return data, settings
 
-def build_db(data, db_name, db_type, embedding, save_type="persistent"):
-    if not data or not db_name:
-        return None
-    if True:
-        from modules.db.ChromaDB import ChromaDB
-        db = ChromaDB(embedding,save_type)
-        db_name = db_name
-        db.init_from_data(data,db_name)
-    return db
-
-def get_root_dir():
-    current_file_path = os.path.abspath(__file__)
-    root_dir = os.path.dirname(current_file_path)
-    return root_dir
-
-def create_dir(dirname):
-    if not os.path.exists(dirname):
-        os.makedirs(dirname)
-
-def get_logger(experiment_name):
+def get_logger(experiment_name: str):
+    """Get logger for experiment."""
     logger = logging.getLogger(experiment_name)
     logger.setLevel(logging.INFO)
     current_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    create_dir(f"{get_root_dir()}/log/{experiment_name}")
-    file_handler = logging.FileHandler(os.path.join(get_root_dir(),f"./log/{experiment_name}/{current_time}.log"),encoding='utf-8')
+    log_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), f"log/{experiment_name}")
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
+    file_handler = logging.FileHandler(
+        os.path.join(log_dir, f"{current_time}.log"),
+        encoding='utf-8'
+    )
     file_handler.setLevel(logging.INFO)
-    
+
     formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
     file_handler.setFormatter(formatter)
-    
+
     logger.addHandler(file_handler)
-    
+
     # Avoid logging duplication
     logger.propagate = False
 
     return logger
+
+def clean_collection_name(name: str) -> str:
+    """Clean collection name for database."""
+    cleaned_name = name.replace(' ', '_')
+    cleaned_name = cleaned_name.replace('.', '_')
+    if not all(ord(c) < 128 for c in cleaned_name):
+        encoded = base64.b64encode(cleaned_name.encode('utf-8')).decode('ascii')
+        encoded = encoded[:60] if len(encoded) > 60 else encoded
+        valid_name = f"mem_{encoded}"
+    else:
+        valid_name = cleaned_name
+    valid_name = re.sub(r'[^a-zA-Z0-9_-]', '-', valid_name)
+    valid_name = re.sub(r'\.\.+', '-', valid_name)
+    valid_name = re.sub(r'^[^a-zA-Z0-9]+', '', valid_name)  # 移除开头非法字符
+    valid_name = re.sub(r'[^a-zA-Z0-9]+$', '', valid_name)
+    valid_name = valid_name[:60]
+    return valid_name
 
 def merge_text_with_limit(text_list, max_words, language = 'en'):
     """
@@ -337,6 +362,9 @@ def dict_to_str(dic):
     return res
 
 def count_tokens_num(string, encoding_name = "cl100k_base"):
+    if tiktoken is None:
+        # Fallback to simple length calculation if tiktoken is not available
+        return len(string.split())
     encoding = tiktoken.get_encoding(encoding_name)
     num_tokens = len(encoding.encode(string))
     return num_tokens
@@ -486,22 +514,6 @@ def is_image(filepath):
 
     return False
 
-def clean_collection_name(name: str) -> str:
-    cleaned_name = name.replace(' ', '_')
-    cleaned_name = cleaned_name.replace('.', '_')
-    if not all(ord(c) < 128 for c in cleaned_name):
-        encoded = base64.b64encode(cleaned_name.encode('utf-8')).decode('ascii')
-        encoded = encoded[:60] if len(encoded) > 60 else encoded
-        valid_name = f"mem_{encoded}"
-    else:
-        valid_name = cleaned_name
-    valid_name = re.sub(r'[^a-zA-Z0-9_-]', '-', valid_name)
-    valid_name = re.sub(r'\.\.+', '-', valid_name)
-    valid_name = re.sub(r'^[^a-zA-Z0-9]+', '', valid_name)  # 移除开头非法字符
-    valid_name = re.sub(r'[^a-zA-Z0-9]+$', '', valid_name)
-    valid_name = valid_name[:60]
-    return valid_name
-    
 cache_sign = True
 cache = None 
 def cached(func):

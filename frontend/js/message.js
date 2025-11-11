@@ -16,6 +16,23 @@ document.addEventListener('DOMContentLoaded', function() {
     const ws = new WebSocket(`${protocol}//${window.location.host}/ws/${clientId}`);
     window.ws = ws
 
+    // 辅助函数：安全地发送 WebSocket 消息
+    function sendWebSocketMessage(message) {
+        if (!window.ws || window.ws.readyState !== WebSocket.OPEN) {
+            console.error('WebSocket is not connected. Message:', message);
+            addSystemMessage('WebSocket连接未建立，请稍后再试');
+            return false;
+        }
+        try {
+            window.ws.send(JSON.stringify(message));
+            return true;
+        } catch (error) {
+            console.error('Error sending WebSocket message:', error);
+            addSystemMessage('发送消息失败，请稍后再试');
+            return false;
+        }
+    }
+
     let isPlaying = false;
     // 添加场景相关属性
     let currentSceneFilter = null;
@@ -27,49 +44,66 @@ document.addEventListener('DOMContentLoaded', function() {
     let selectedRoleName = null;
     let waitingForInput = false;
     const autoCompleteBtn = document.getElementById('autoCompleteBtn');
-    // 控制按钮点击事件
+    
+    // 初始化输入框状态：默认禁用
+    textarea.disabled = true;
+    textarea.placeholder = '等待您的回合...';
+    if (autoCompleteBtn) {
+        autoCompleteBtn.style.display = 'none';
+        autoCompleteBtn.disabled = false;
+        autoCompleteBtn.style.opacity = '1';
+    }
+    
+    // 控制按钮点击事件 - 使用 sendWebSocketMessage 辅助函数
     controlBtn.addEventListener('click', function() {
         if (!isPlaying) {
             // 开始
-            ws.send(JSON.stringify({
+            console.log('Sending start message');
+            if (sendWebSocketMessage({
                 type: 'control',
                 action: 'start'
-            }));
-            startButtonText =  translations[window.i18n.currentLang]['pause']
-            controlBtn.innerHTML = `<i class="fas fa-pause"></i><span data-i18n="pause">${startButtonText}</span>`;
-            isPlaying = true;
+            })) {
+                startButtonText =  translations[window.i18n.currentLang]['pause']
+                controlBtn.innerHTML = `<i class="fas fa-pause"></i><span data-i18n="pause">${startButtonText}</span>`;
+                isPlaying = true;
+            }
         } else {
             // 暂停
-            ws.send(JSON.stringify({
+            console.log('Sending pause message');
+            if (sendWebSocketMessage({
                 type: 'control',
                 action: 'pause'
-            }));
-            startButtonText =  translations[window.i18n.currentLang]['start']
-            controlBtn.innerHTML = `<i class="fas fa-play"></i><span data-i18n="pause">${startButtonText}</span>`;
-            isPlaying = false;
+            })) {
+                startButtonText =  translations[window.i18n.currentLang]['start']
+                controlBtn.innerHTML = `<i class="fas fa-play"></i><span data-i18n="pause">${startButtonText}</span>`;
+                isPlaying = false;
+            }
         }
     });
 
-    // 停止按钮点击事件
+    // 停止按钮点击事件 - 使用 window.ws 而不是闭包中的 ws
     stopBtn.addEventListener('click', function() {
-        ws.send(JSON.stringify({
+        console.log('Sending stop message');
+        if (sendWebSocketMessage({
             type: 'control',
             action: 'stop'
-        }));
-        controlBtn.innerHTML = '<i class="fas fa-play"></i><span>开始</span>';
-        isPlaying = false;
+        })) {
+            controlBtn.innerHTML = '<i class="fas fa-play"></i><span>开始</span>';
+            isPlaying = false;
+        }
     });
 
     // 重置会话按钮点击事件
     resetSessionBtn.addEventListener('click', function() {
         if (confirm('确定要重置所有当前对话的临时session内容吗？此操作不可撤销。')) {
             // 发送重置请求
-            ws.send(JSON.stringify({
+            if (sendWebSocketMessage({
                 type: 'reset_session'
-            }));
-            // 禁用按钮，显示加载状态
-            resetSessionBtn.disabled = true;
-            resetSessionBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>重置中...</span>';
+            })) {
+                // 禁用按钮，显示加载状态
+                resetSessionBtn.disabled = true;
+                resetSessionBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>重置中...</span>';
+            }
         }
     });
 
@@ -89,9 +123,10 @@ document.addEventListener('DOMContentLoaded', function() {
         addSystemMessage('连接错误');
     };
     
-    ws.onmessage = function(event) {
+    // 将消息处理逻辑提取为函数，以便在新连接中重用
+    function handleWebSocketMessage(event) {
         const message = JSON.parse(event.data);
-        console.log('Received message:', message);
+        console.log('Received WebSocket message:', message.type, message);
         // 创建自定义事件来分发 WebSocket 消息
         const wsEvent = new CustomEvent('websocket-message', {
             detail: message
@@ -100,7 +135,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // 消息处理逻辑
         if (message.type === 'waiting_for_user_input') {
-            // 等待用户输入
+            // 等待用户输入 - 这是唯一允许用户输入的情况
+            console.log('Enabling input for user role:', message.data.role_name);
             waitingForInput = true;
             textarea.placeholder = `请输入 ${message.data.role_name} 的内容...`;
             textarea.disabled = false;
@@ -108,6 +144,8 @@ document.addEventListener('DOMContentLoaded', function() {
             // 显示AI自动完成按钮
             if (autoCompleteBtn) {
                 autoCompleteBtn.style.display = 'flex';
+                autoCompleteBtn.disabled = false;
+                autoCompleteBtn.style.opacity = '1';
                 autoCompleteBtn.title = window.i18n?.get('autoComplete') ?? 'AI自动完成';
             }
             addSystemMessage(`等待输入：${message.data.role_name} - ${message.data.message}`);
@@ -161,8 +199,19 @@ document.addEventListener('DOMContentLoaded', function() {
         else if (message.type === 'error') {
             // 错误消息
             addSystemMessage(`错误: ${message.data.message}`);
-            // 恢复自动完成按钮状态
-            if (autoCompleteBtn && waitingForInput) {
+            // 如果是"不是您的回合"的错误，确保输入框被禁用
+            if (message.data.message && message.data.message.includes('不是您的回合')) {
+                waitingForInput = false;
+                textarea.disabled = true;
+                textarea.placeholder = '等待您的回合...';
+                if (autoCompleteBtn) {
+                    autoCompleteBtn.style.display = 'none';
+                    autoCompleteBtn.disabled = false;
+                    autoCompleteBtn.style.opacity = '1';
+                }
+            }
+            // 恢复自动完成按钮状态（如果正在等待输入）
+            else if (autoCompleteBtn && waitingForInput) {
                 autoCompleteBtn.disabled = false;
                 autoCompleteBtn.style.opacity = '1';
             }
@@ -187,8 +236,18 @@ document.addEventListener('DOMContentLoaded', function() {
             addSystemMessage(message.data.message);
             isPlaying = false;
             controlBtn.innerHTML = '<i class="fas fa-play"></i><span data-i18n="start">开始</span>';
+            // 禁用输入框
+            waitingForInput = false;
+            textarea.disabled = true;
+            textarea.placeholder = '故事已结束';
+            if (autoCompleteBtn) {
+                autoCompleteBtn.style.display = 'none';
+                autoCompleteBtn.disabled = false;
+                autoCompleteBtn.style.opacity = '1';
+            }
         }
         else if (message.type === 'message') {
+            console.log('Processing message type:', message.type, 'data:', message.data);
             // 从状态中获取当前场景编号
             const sceneNumber = message.data.scene; // 确保消息中包含场景信息
             if (sceneNumber !== undefined) {
@@ -197,10 +256,40 @@ document.addEventListener('DOMContentLoaded', function() {
                     detail: { scene: sceneNumber }
                 }));
             }
+            
+            // 收到任何消息时，都应该禁用输入框（除非是 waiting_for_user_input）
+            // 只有当服务器明确发送 waiting_for_user_input 时，才会重新启用输入框
+            // 这确保了用户只能在轮到自己的角色时才能输入
+            // 注意：用户输入的消息（is_user: true）在用户发送后已经禁用了输入框，
+            // 但为了安全起见，这里再次检查并确保输入框被禁用
+            if (waitingForInput) {
+                console.log('Disabling input: received message while waiting for input, message is_user:', message.data.is_user);
+                waitingForInput = false;
+                textarea.disabled = true;
+                textarea.placeholder = '等待中...';
+                if (autoCompleteBtn) {
+                    autoCompleteBtn.style.display = 'none';
+                    autoCompleteBtn.disabled = false;
+                    autoCompleteBtn.style.opacity = '1';
+                }
+            } else if (!textarea.disabled && !message.data.is_user) {
+                // 额外的安全措施：如果输入框意外启用（不应该发生），收到非用户消息时禁用它
+                console.warn('Input box was enabled when it should be disabled, disabling it now');
+                textarea.disabled = true;
+                textarea.placeholder = '等待您的回合...';
+                if (autoCompleteBtn) {
+                    autoCompleteBtn.style.display = 'none';
+                    autoCompleteBtn.disabled = false;
+                    autoCompleteBtn.style.opacity = '1';
+                }
+            }
+            
             if (message.data.type === 'system') {
+                console.log('Rendering system message:', message.data.text);
                 addSystemMessage(message.data.text);
             } 
             else if (message.data.type === 'story') {
+                console.log('Rendering story message');
                 // 为故事消息添加特殊样式
                 const messageElement = document.createElement('div');
                 messageElement.className = 'message story-message';
@@ -217,12 +306,23 @@ document.addEventListener('DOMContentLoaded', function() {
                 chatMessages.scrollTop = chatMessages.scrollHeight;
             }
             else {
+                console.log('Rendering regular message:', message.data.username, message.data.text?.substring(0, 50));
                 renderMessage(message.data);
             }
         }
         else if (message.type === 'initial_data') {
             // 清空现有消息，处理初始数据
             chatMessages.innerHTML = '';
+            
+            // 初始化时禁用输入框
+            waitingForInput = false;
+            textarea.disabled = true;
+            textarea.placeholder = '等待您的回合...';
+            if (autoCompleteBtn) {
+                autoCompleteBtn.style.display = 'none';
+                autoCompleteBtn.disabled = false;
+                autoCompleteBtn.style.opacity = '1';
+            }
             
             if (message.data.history_messages) {
                 loadHistoryMessages(message.data.history_messages);
@@ -247,7 +347,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 window.location.reload();
             }, 2000);
         }
-    };
+    }
+    
+    // 将处理函数和辅助函数暴露到全局，以便新连接使用
+    window.handleWebSocketMessage = handleWebSocketMessage;
+    window.renderMessage = renderMessage;
+    window.addSystemMessage = addSystemMessage;
+    
+    // 为原始连接设置消息处理器
+    ws.onmessage = handleWebSocketMessage;
 
     function loadHistoryMessages(messages) {
         // 清空现有消息
@@ -321,10 +429,10 @@ document.addEventListener('DOMContentLoaded', function() {
         messageElement.querySelector('.save-btn').addEventListener('click', () => {
             const newText = textElement.textContent.trim();
             if (newText !== originalText) {
-                ws.send(JSON.stringify({
+                sendWebSocketMessage({
                     type: 'edit_message',
                     data: { uuid: message.uuid, text: newText }
-                }));
+                });
                 currentEditingOriginalText = newText;
             }
             exitEditMode(messageElement, false);
@@ -393,32 +501,37 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 发送消息
     function sendMessage() {
-        const text = textarea.value.trim();
-        if (!text) {
-            // 空输入提示
-            if (waitingForInput) {
-                alert('请输入内容');
-            }
+        // 只有当等待用户输入时才能发送消息
+        if (!waitingForInput) {
+            console.warn('Cannot send message: not waiting for user input');
+            addSystemMessage('当前不是您的回合，无法发送消息');
             return;
         }
         
-        if (ws.readyState === WebSocket.OPEN) {
-            const message = {
-                type: 'user_message',
-                text: text,
-                timestamp: new Date().toLocaleString()
-            };
-            ws.send(JSON.stringify(message));
+        const text = textarea.value.trim();
+        if (!text) {
+            // 空输入提示
+            alert('请输入内容');
+            return;
+        }
+        
+        const message = {
+            type: 'user_message',
+            text: text,
+            timestamp: new Date().toLocaleString()
+        };
+        if (sendWebSocketMessage(message)) {
             textarea.value = '';
             
-            // 如果正在等待输入，重置状态
-            if (waitingForInput) {
-                waitingForInput = false;
-                textarea.placeholder = 'input';
-                // 隐藏AI自动完成按钮
-                if (autoCompleteBtn) {
-                    autoCompleteBtn.style.display = 'none';
-                }
+            // 发送消息后，禁用输入框，等待服务器响应
+            waitingForInput = false;
+            textarea.disabled = true;
+            textarea.placeholder = '等待中...';
+            // 隐藏AI自动完成按钮
+            if (autoCompleteBtn) {
+                autoCompleteBtn.style.display = 'none';
+                autoCompleteBtn.disabled = false;
+                autoCompleteBtn.style.opacity = '1';
             }
         }
     }
@@ -426,17 +539,18 @@ document.addEventListener('DOMContentLoaded', function() {
     // AI自动完成按钮点击事件
     if (autoCompleteBtn) {
         autoCompleteBtn.addEventListener('click', function() {
-            if (waitingForInput && ws.readyState === WebSocket.OPEN) {
+            if (waitingForInput) {
                 // 发送自动完成请求
-                ws.send(JSON.stringify({
+                if (sendWebSocketMessage({
                     type: 'auto_complete',
                     timestamp: new Date().toLocaleString()
-                }));
-                // 禁用按钮，防止重复点击
-                autoCompleteBtn.disabled = true;
-                autoCompleteBtn.style.opacity = '0.6';
-                const generatingMsg = window.i18n?.get('generatingAction') ?? '正在生成AI行动...';
-                addSystemMessage(generatingMsg);
+                })) {
+                    // 禁用按钮，防止重复点击
+                    autoCompleteBtn.disabled = true;
+                    autoCompleteBtn.style.opacity = '0.6';
+                    const generatingMsg = window.i18n?.get('generatingAction') ?? '正在生成AI行动...';
+                    addSystemMessage(generatingMsg);
+                }
             }
         });
     }
@@ -511,9 +625,9 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (profiles.length === 0) {
             // 从服务器请求
-            ws.send(JSON.stringify({
+            sendWebSocketMessage({
                 type: 'request_characters'
-            }));
+            });
             alert('正在加载角色列表，请稍后再试');
             return;
         }
@@ -608,10 +722,10 @@ document.addEventListener('DOMContentLoaded', function() {
         selectedRoleName = roleName;
         
         // 发送角色选择消息
-        ws.send(JSON.stringify({
+        sendWebSocketMessage({
             type: 'select_role',
             role_name: roleName
-        }));
+        });
         
         // 更新按钮
         selectRoleBtn.innerHTML = `<i class="fas fa-user-check"></i><span>${roleName}</span>`;
@@ -664,11 +778,24 @@ document.addEventListener('DOMContentLoaded', function() {
     // 绑定发送按钮点击事件
     sendButton.addEventListener('click', sendMessage);
 
-    // 绑定回车键发送
+    // 绑定回车键发送（只有在输入框启用时才能发送）
     textarea.addEventListener('keypress', function(e) {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
-            sendMessage();
+            // 只有在等待输入时才能发送
+            if (waitingForInput && !textarea.disabled) {
+                sendMessage();
+            } else {
+                // 如果输入框被禁用，提示用户
+                addSystemMessage('当前不是您的回合，无法发送消息');
+            }
+        }
+    });
+    
+    // 防止在输入框禁用时输入（额外的保护）
+    textarea.addEventListener('input', function(e) {
+        if (textarea.disabled) {
+            textarea.value = '';
         }
     });
     
@@ -774,14 +901,14 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // 添加导出故事按钮的点击事件
-    exportStoryBtn.addEventListener('click', function() {
+        exportStoryBtn.addEventListener('click', function() {
         // 显示加载状态
-        exportStoryBtn.disabled = true;
-        exportStoryBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>生成中...</span>';
-        
-        ws.send(JSON.stringify({
+        if (sendWebSocketMessage({
             type: 'generate_story'
-        }));
+        })) {
+            exportStoryBtn.disabled = true;
+            exportStoryBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>生成中...</span>';
+        }
     });
     
     // 显示故事模态框
@@ -937,12 +1064,10 @@ document.addEventListener('DOMContentLoaded', function() {
         const selectBtn = card.querySelector('.option-select-btn');
         selectBtn.addEventListener('click', function() {
             // 发送选中的选项
-            if (ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({
-                    type: 'select_auto_option',
-                    selected_text: option.text
-                }));
-            }
+            sendWebSocketMessage({
+                type: 'select_auto_option',
+                selected_text: option.text
+            });
             
             // 关闭模态框
             const modal = document.getElementById('auto-options-modal');
