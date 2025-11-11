@@ -172,14 +172,12 @@ class CharacterProfiles {
         if (!modal) return;
         const nameEl = modal.querySelector('.modal-name');
         const descEl = modal.querySelector('.modal-description');
-        const avatarEl = modal.querySelector('.modal-avatar');
         const locEl = modal.querySelector('.modal-location');
         const goalEl = modal.querySelector('.modal-goal');
         const stateEl = modal.querySelector('.modal-state');
 
         nameEl.textContent = character.name || character.nickname || character.id || 'Unknown';
         descEl.textContent = character.description || character.brief || '';
-        avatarEl.src = character.icon || './frontend/assets/images/default-icon.jpg';
         locEl.textContent = character.location || '—';
         goalEl.textContent = character.goal || '—';
         stateEl.textContent = character.state || character.status || '—';
