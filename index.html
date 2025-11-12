@@ -32,7 +32,13 @@
                 </div>
             </div>
             <div class="character-profiles">
-                <h3 class="profiles-title" data-i18n="characterProfiles">角色档案</h3>
+                <div class="profiles-header">
+                    <h3 class="profiles-title" data-i18n="characterProfiles">角色档案</h3>
+                    <div class="profiles-toggle" id="profilesViewToggle" role="group" aria-label="角色视图切换">
+                        <button class="toggle-btn" data-mode="runtime_current" data-i18n="viewCurrentScene">当幕角色</button>
+                        <button class="toggle-btn active" data-mode="runtime_all" data-i18n="viewAllCharacters">全部角色</button>
+                    </div>
+                </div>
                 <div class="profiles-container">
                     <!-- 角色档案将动态插入这里 -->
                 </div>
@@ -129,6 +135,7 @@
                     <div class="scenes-container">
                         <div class="scenes-header">
                             <h3 data-i18n="scenesList">场景列表</h3>
+                            <button class="clear-selection-btn disabled" disabled data-i18n="backToRuntime">返回运行视图</button>
                         </div>
                         <div class="scene-buttons">
                             <!-- 场景按钮将通过JS动态添加 -->

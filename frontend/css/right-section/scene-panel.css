@@ -73,3 +73,29 @@
     color: white;
 }
 
+.scene-btn.runtime-current {
+    border-color: #2563eb;
+    color: #2563eb;
+    box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.2);
+}
+
+.scene-btn.active.runtime-current {
+    color: white;
+    box-shadow: none;
+}
+
+.scene-btn.disabled,
+.scene-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+    background-color: #f1f5f9;
+    color: #94a3b8;
+    border-color: #e2e8f0;
+}
+
+.clear-selection-btn.disabled,
+.clear-selection-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+

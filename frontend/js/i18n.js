@@ -30,6 +30,15 @@ const translations = {
         generatingAction: "Generating AI action...",
         download: "Download",
         selectRole: "Select Role",
+        viewCurrentScene: "Current Scene",
+        viewAllCharacters: "All Characters",
+        expand: "Expand",
+        collapse: "Collapse",
+        loadingCurrentScene: "Loading characters for the current scene...",
+        loadingSelectedScene: "Loading characters for the selected scene...",
+        noSceneCharacters: "No characters found for this scene",
+        noCharactersAvailable: "No character information available",
+        backToRuntime: "Back to Live View",
     },
     zh: {
         start: "开始",
@@ -62,6 +71,15 @@ const translations = {
         generatingAction: "正在生成AI行动...",
         download: "下载",
         selectRole: "选择角色",
+        viewCurrentScene: "当幕角色",
+        viewAllCharacters: "全部角色",
+        expand: "展开",
+        collapse: "收起",
+        loadingCurrentScene: "正在加载当前幕的角色...",
+        loadingSelectedScene: "正在加载选定幕的角色...",
+        noSceneCharacters: "该幕暂无角色信息",
+        noCharactersAvailable: "暂无角色信息",
+        backToRuntime: "返回运行视图",
     }
 };
 

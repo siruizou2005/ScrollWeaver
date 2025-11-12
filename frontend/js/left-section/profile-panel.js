@@ -10,23 +10,51 @@ class CharacterProfiles {
             }
         ];
         this.characters = this.defaultCharacters;
-        this.allCharacters = []; // 存储所有角色信息
+        this.allCharacters = [];
+        this.displayCharacters = [];
+        this.currentSceneCharacters = [];
+        this.manualSceneCharacters = [];
+        this.pendingSceneContext = null;
+        this.currentSceneId = null;
+        this.manualSceneId = null;
+        this.runtimeMode = 'all';
+        this.mode = 'runtime';
+        this.isPlaying = typeof window.getIsPlaying === 'function' ? window.getIsPlaying() : false;
+        this.requestedRuntimeScene = null;
+        this.container = null;
+        this.viewToggle = null;
+        this.toggleButtons = [];
         this.init();
     }
+
+    t(key, fallback) {
+        if (window.i18n && typeof window.i18n.get === 'function') {
+            const value = window.i18n.get(key);
+            if (value && value !== key) {
+                return value;
+            }
+        }
+        return fallback;
+    }
+
     init() {
         document.addEventListener('DOMContentLoaded', () => {
-            const container = document.querySelector('.profiles-container');
-            if (!container) {
+            this.container = document.querySelector('.profiles-container');
+            if (!this.container) {
                 console.error('找不到角色档案容器元素');
                 return;
             }
-            
-            // 先渲染默认数据
+
+            this.viewToggle = document.getElementById('profilesViewToggle');
+            if (this.viewToggle) {
+                this.initToggleButtons();
+            }
+
             this.updateCharacters(this.defaultCharacters);
 
-            // WebSocket消息处理
             window.addEventListener('websocket-message', (event) => {
                 const message = event.detail;
+                if (!message) return;
 
                 if (message.type === 'initial_data') {
                     if (message.data.characters) this.updateCharacters(message.data.characters);
@@ -34,7 +62,6 @@ class CharacterProfiles {
                 }
 
                 if (message.type === 'scene_characters') {
-                    // 处理服务器返回的场景角色数据
                     this.updateCharacters(message.data, true);
                 }
 
@@ -44,30 +71,182 @@ class CharacterProfiles {
                 }
             });
 
-            // 绑定点击事件
-            container.addEventListener('click', (e) => this.handleCardClick(e));
+            window.addEventListener('scene-update', (event) => this.handleSceneUpdate(event));
+            window.addEventListener('scene-view-state-change', (event) => this.handleSceneViewStateChange(event));
+            window.addEventListener('simulation-state-change', (event) => this.handleSimulationStateChange(event));
+            window.addEventListener('language-changed', () => this.updateToggleUI());
+            window.addEventListener('status-sync', (event) => this.handleStatusSync(event.detail?.status, event.detail?.origin));
+
+            this.container.addEventListener('click', (e) => this.handleCardClick(e));
         });
     }
+
+    initToggleButtons() {
+        this.toggleButtons = Array.from(this.viewToggle.querySelectorAll('button[data-mode]'));
+        this.toggleButtons.forEach(button => {
+            button.addEventListener('click', (e) => {
+                e.preventDefault();
+                const modeKey = button.getAttribute('data-mode');
+                if (!modeKey || this.mode === 'manual') return;
+                this.handleToggleChange(modeKey);
+            });
+        });
+        this.updateToggleUI();
+    }
+
+    handleToggleChange(modeKey) {
+        const runtimeMode = modeKey === 'runtime_all' ? 'all' : 'current';
+        if (this.runtimeMode === runtimeMode) return;
+        this.runtimeMode = runtimeMode;
+        this.updateToggleUI();
+        if (this.runtimeMode === 'current') {
+            this.requestRuntimeSceneCharacters();
+        }
+        this.applyView();
+        window.dispatchEvent(new CustomEvent('character-view-mode-change', {
+            detail: { mode: this.runtimeMode }
+        }));
+    }
+
+    updateToggleUI() {
+        if (!this.toggleButtons || !this.toggleButtons.length) return;
+        this.toggleButtons.forEach(button => {
+            const modeKey = button.getAttribute('data-mode');
+            const runtimeMode = modeKey === 'runtime_all' ? 'all' : 'current';
+            button.classList.toggle('active', this.runtimeMode === runtimeMode);
+            const disabled = this.mode === 'manual';
+            button.disabled = disabled;
+            button.classList.toggle('disabled', disabled);
+        });
+        if (this.viewToggle) {
+            this.viewToggle.classList.toggle('manual-mode', this.mode === 'manual');
+        }
+    }
+
+    handleSceneUpdate(event) {
+        const { scene, source } = event.detail || {};
+        if (scene === undefined) return;
+        if (source === 'runtime') {
+            this.currentSceneId = scene;
+            if (this.mode === 'runtime' && this.runtimeMode === 'current') {
+                this.requestRuntimeSceneCharacters();
+            }
+        }
+    }
+
+    handleSceneViewStateChange(event) {
+        const { mode, scene, origin } = event.detail || {};
+        if (!mode) return;
+        if (mode === 'manual') {
+            this.mode = 'manual';
+            this.manualSceneId = scene !== undefined ? scene : this.manualSceneId;
+            this.updateToggleUI();
+            if (this.pendingSceneContext?.type !== 'manual') {
+                this.applyView();
+            } else {
+                this.renderCharacters([], { placeholder: this.t('loadingSelectedScene', '正在加载选定幕的角色...') });
+            }
+        } else if (mode === 'runtime') {
+            this.mode = 'runtime';
+            this.manualSceneId = null;
+            this.manualSceneCharacters = [];
+            this.updateToggleUI();
+            if (this.runtimeMode === 'current' && origin === 'runtime') {
+                this.requestRuntimeSceneCharacters();
+            }
+            this.applyView();
+        }
+    }
+
+    handleStatusSync(statusData) {
+        if (!statusData) return;
+        if (statusData.current_scene !== undefined && statusData.current_scene !== null) {
+            const normalized = this.toSceneIdentifier(statusData.current_scene);
+            if (normalized !== null) {
+                this.currentSceneId = normalized;
+                if (this.mode === 'runtime' && this.runtimeMode === 'current') {
+                    this.requestRuntimeSceneCharacters(true);
+                }
+            }
+        }
+    }
+
+    handleSimulationStateChange(event) {
+        const { playing } = event.detail || {};
+        this.isPlaying = Boolean(playing);
+        if (this.isPlaying && this.mode !== 'runtime') {
+            this.mode = 'runtime';
+            this.manualSceneId = null;
+            this.manualSceneCharacters = [];
+            this.updateToggleUI();
+            if (this.runtimeMode === 'current') {
+                this.requestRuntimeSceneCharacters();
+            }
+            this.applyView();
+        }
+    }
+
+    setPendingSceneContext(context, sceneId) {
+        this.pendingSceneContext = { type: context, sceneId };
+        if (context === 'runtime') {
+            this.requestedRuntimeScene = sceneId;
+        }
+    }
+
+    toSceneIdentifier(sceneValue) {
+        if (sceneValue === undefined || sceneValue === null || sceneValue === '') {
+            return null;
+        }
+        const numeric = Number(sceneValue);
+        if (Number.isFinite(numeric)) {
+            return numeric;
+        }
+        return sceneValue;
+    }
+
+    requestRuntimeSceneCharacters(force = false) {
+        if (this.currentSceneId === null || this.currentSceneId === undefined) {
+            this.currentSceneCharacters = [];
+            if (typeof window.requestSceneCharacters === 'function') {
+                window.requestSceneCharacters(null, 'runtime');
+            }
+            return;
+        }
+        if (!force && this.pendingSceneContext && this.pendingSceneContext.type === 'runtime' && this.pendingSceneContext.sceneId === this.currentSceneId) {
+            return;
+        }
+        this.setPendingSceneContext('runtime', this.currentSceneId);
+        if (typeof window.requestSceneCharacters === 'function') {
+            window.requestSceneCharacters(this.currentSceneId, 'runtime');
+        }
+    }
+
     createCharacterCard(character) {
-        const maxLength = 20; // 设置折叠时显示的最大字符数
-        const needsExpand = character.description.length > maxLength;
-        const shortDesc = needsExpand ? character.description.substring(0, maxLength) + '...' : character.description;
-        
+        const description = character.description || character.brief || '';
+        const maxLength = 20;
+        const needsExpand = description.length > maxLength;
+        const shortDesc = needsExpand ? description.substring(0, maxLength) + '...' : description;
+        const name = character.name || character.nickname || character.id || 'Undefined';
+        const identifier = character.id ?? character.name ?? character.nickname ?? name;
+        const location = character.location || 'Empty';
+        const goal = character.goal || 'Empty';
+        const state = character.state || character.status || 'Empty';
+
         return `
-            <div class="character-card" data-id="${character.id}">
+            <div class="character-card" data-id="${identifier}">
                 <div class="character-info">
-                    <div class="character-name">${character.name}</div>
+                    <div class="character-name">${name}</div>
                     <div class="character-description">
                         <span class="short-desc">${shortDesc}</span>
                         ${needsExpand ? `
-                            <span class="full-desc" style="display: none;">${character.description}</span>
-                            <span class="expand-btn">展开</span>
+                            <span class="full-desc" style="display: none;">${description}</span>
+                            <span class="expand-btn">${this.t('expand', '展开')}</span>
                         ` : ''}
                     </div>
                     <div class="character-details">
-                        <div class="character-location">📍 ${character.location || 'Empty'}</div>
-                        <div class="character-goal">🎯 ${character.goal || 'Empty'}</div>
-                        <div class="character-state">⚡ ${character.state || 'Empty'}</div>
+                        <div class="character-location">📍 ${location}</div>
+                        <div class="character-goal">🎯 ${goal}</div>
+                        <div class="character-state">⚡ ${state}</div>
                     </div>
                 </div>
             </div>
@@ -75,7 +254,6 @@ class CharacterProfiles {
     }
 
     handleCardClick(e) {
-        // 处理展开/收起按钮点击
         if (e.target.classList.contains('expand-btn')) {
             const descContainer = e.target.closest('.character-description');
             const shortDesc = descContainer.querySelector('.short-desc');
@@ -83,90 +261,163 @@ class CharacterProfiles {
             const expandBtn = descContainer.querySelector('.expand-btn');
 
             if (shortDesc.style.display !== 'none') {
-                // 展开
                 shortDesc.style.display = 'none';
-                fullDesc.style.display = 'block';
-                expandBtn.textContent = '收起';
+                if (fullDesc) fullDesc.style.display = 'block';
+                expandBtn.textContent = this.t('collapse', '收起');
                 descContainer.classList.add('expanded');
             } else {
-                // 收起
                 shortDesc.style.display = 'block';
-                fullDesc.style.display = 'none';
-                expandBtn.textContent = '展开';
+                if (fullDesc) fullDesc.style.display = 'none';
+                expandBtn.textContent = this.t('expand', '展开');
                 descContainer.classList.remove('expanded');
             }
-            return; // 防止触发卡片的其他点击事件
+            return;
         }
 
-        // 原有的卡片点击处理逻辑
         const card = e.target.closest('.character-card');
-        if (card) {
-            const characterId = card.dataset.id;
-            const character = this.characters.find(c => c.id === parseInt(characterId));
-            if (character) {
-                this.showCharacterDetails(character);
-            }
+        if (!card) return;
+        const identifier = card.dataset.id;
+        const character = (this.displayCharacters || []).find(c =>
+            String(c.id) === String(identifier) ||
+            String(c.name) === String(identifier) ||
+            String(c.nickname) === String(identifier)
+        );
+        if (character) {
+            this.showCharacterDetails(character);
         }
     }
+
     updateCharacters(charactersData, scene = false) {
-        if (scene) {
-            if (charactersData) {
-                this.renderCharacters(charactersData);
+        if (!scene) {
+            this.allCharacters = Array.isArray(charactersData) ? [...charactersData] : [];
+            if (this.mode !== 'manual') {
+                this.applyView();
             }
-            else{
-                this.renderCharacters(this.allCharacters);
-            }
-        }
-        else {
-            this.characters = charactersData;
-            this.allCharacters = [...charactersData];
-            this.renderCharacters(this.characters);
+            return;
         }
 
-    }
-    renderCharacters(characters) {
-        const container = document.querySelector('.profiles-container');
-        if (container) {
-            container.innerHTML = '';
-            characters.forEach(character => {
-                container.innerHTML += this.createCharacterCard(character);
-            });
+        const context = this.pendingSceneContext?.type || 'runtime';
+        const sceneId = this.pendingSceneContext?.sceneId ?? null;
+        if (context === 'manual') {
+            this.manualSceneId = sceneId;
+            this.manualSceneCharacters = Array.isArray(charactersData) ? charactersData : [];
+            this.pendingSceneContext = null;
+            if (this.mode === 'manual') {
+                this.applyView();
+            }
+        } else {
+            this.currentSceneId = sceneId !== null ? sceneId : this.currentSceneId;
+            this.currentSceneCharacters = Array.isArray(charactersData) ? charactersData : [];
+            this.requestedRuntimeScene = this.currentSceneId;
+            this.pendingSceneContext = null;
+            if (this.mode === 'runtime' && this.runtimeMode === 'current') {
+                this.applyView();
+            }
         }
     }
 
-    // 更新所有角色的状态字段（statusData 可以是数组或对象）
+    renderCharacters(characters, options = {}) {
+        if (!this.container) return;
+        const list = Array.isArray(characters) ? characters : [];
+        this.displayCharacters = list;
+        this.characters = list;
+        if (!list.length) {
+            const placeholder = options.placeholder || this.t('noCharactersAvailable', '暂无角色信息');
+            this.container.innerHTML = `<div class="profiles-empty">${placeholder}</div>`;
+            return;
+        }
+        this.container.innerHTML = list.map(character => this.createCharacterCard(character)).join('');
+    }
+
+    applyView() {
+        if (!this.container) return;
+
+        if (this.mode === 'manual') {
+            if (this.pendingSceneContext?.type === 'manual') {
+                this.renderCharacters([], { placeholder: this.t('loadingSelectedScene', '正在加载选定幕的角色...') });
+                return;
+            }
+            if (this.manualSceneCharacters && this.manualSceneCharacters.length) {
+                this.renderCharacters(this.manualSceneCharacters);
+                return;
+            }
+            if (this.manualSceneId !== null && this.manualSceneId !== undefined) {
+                this.renderCharacters([], { placeholder: this.t('noSceneCharacters', '该幕暂无角色信息') });
+                return;
+            }
+            this.renderCharacters(this.allCharacters);
+            return;
+        }
+
+        if (this.runtimeMode === 'current') {
+            if (this.pendingSceneContext?.type === 'runtime' && this.pendingSceneContext.sceneId === this.currentSceneId) {
+                this.renderCharacters([], { placeholder: this.t('loadingCurrentScene', '正在加载当前幕的角色...') });
+                return;
+            }
+            if (this.currentSceneCharacters && this.currentSceneCharacters.length) {
+                this.renderCharacters(this.currentSceneCharacters);
+                return;
+            }
+            if (this.currentSceneId !== null && this.currentSceneId !== undefined) {
+                this.requestRuntimeSceneCharacters();
+                this.renderCharacters([], { placeholder: this.t('loadingCurrentScene', '正在加载当前幕的角色...') });
+                return;
+            }
+        }
+
+        if (this.allCharacters && this.allCharacters.length) {
+            this.renderCharacters(this.allCharacters);
+        } else {
+            this.renderCharacters([], { placeholder: this.t('noCharactersAvailable', '暂无角色信息') });
+        }
+    }
+
     updateAllStatus(statusData) {
         if (!statusData) return;
-        // 支持数组或 map
-        if (Array.isArray(statusData)) {
-            statusData.forEach(s => {
-                const id = s.id || s.character_id || s.name;
-                const target = this.characters.find(c => String(c.id) === String(id) || String(c.name) === String(id) || String(c.nickname) === String(id));
-                if (target) {
-                    if (s.state) target.state = s.state;
-                    if (s.status) target.state = s.status;
-                    if (s.location) target.location = s.location;
-                    if (s.goal) target.goal = s.goal;
+        const statusList = Array.isArray(statusData)
+            ? statusData
+            : Object.keys(statusData).map(key => ({ key, ...statusData[key] }));
+
+        const applyUpdates = (list) => {
+            if (!Array.isArray(list)) return;
+            list.forEach(item => {
+                if (!item) return;
+                const candidates = [
+                    item.id,
+                    item.name,
+                    item.nickname
+                ].map(val => (val !== undefined && val !== null) ? String(val) : null).filter(Boolean);
+
+                for (const key of candidates) {
+                    const update = statusList.find(s => {
+                        const identifiers = [
+                            s.id,
+                            s.character_id,
+                            s.name,
+                            s.nickname,
+                            s.key
+                        ].map(val => (val !== undefined && val !== null) ? String(val) : null).filter(Boolean);
+                        return identifiers.includes(key);
+                    });
+                    if (update) {
+                        if (update.state) item.state = update.state;
+                        if (update.status) item.state = update.status;
+                        if (update.location) item.location = update.location;
+                        if (update.goal) item.goal = update.goal;
+                        break;
+                    }
                 }
             });
-        } else {
-            // object map: key -> status
-            Object.keys(statusData).forEach(key => {
-                const s = statusData[key];
-                const target = this.characters.find(c => String(c.id) === String(key) || String(c.name) === String(key) || String(c.nickname) === String(key));
-                if (target) {
-                    if (s.state) target.state = s.state;
-                    if (s.status) target.state = s.status;
-                    if (s.location) target.location = s.location;
-                    if (s.goal) target.goal = s.goal;
-                }
-            });
-        }
-        // 重新渲染
-        this.renderCharacters(this.characters);
+        };
+
+        applyUpdates(this.allCharacters);
+        applyUpdates(this.currentSceneCharacters);
+        applyUpdates(this.manualSceneCharacters);
+        applyUpdates(this.displayCharacters);
+
+        this.applyView();
     }
 
-    // 显示角色详情到全局 modal（不显示动机字段）
     showCharacterDetails(character) {
         const modal = document.getElementById('profile-modal');
         if (!modal) return;
@@ -198,9 +449,6 @@ class CharacterProfiles {
         overlay.addEventListener('click', close);
         document.addEventListener('keydown', onKeyDown);
     }
-
-
-    
 }
 const characterProfiles = new CharacterProfiles();
 window.characterProfiles = characterProfiles;

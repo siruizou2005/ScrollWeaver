@@ -54,7 +54,12 @@ class EmbeddingModel(EmbeddingFunction[Documents]):
         embeddings = outputs.last_hidden_state[:, 0, :].tolist()
         return embeddings
 
-    def embed_query(self, text: str) -> List[float]:
+    def embed_query(self, text: str = None, **kwargs) -> List[float]:
+        # Handle case where 'input' keyword argument is passed instead of positional
+        if text is None and 'input' in kwargs:
+            text = kwargs['input']
+        if text is None:
+            raise ValueError("embed_query requires 'text' or 'input' argument")
         return self.embed_documents([text])[0]
 
     def _hash_embed(self, text: str) -> List[float]:
