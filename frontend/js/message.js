@@ -34,9 +34,129 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     let isPlaying = false;
+    let currentRuntimeScene = null;
     // 添加场景相关属性
     let currentSceneFilter = null;
-    let startButtonText =  translations[window.i18n.currentLang]['start'];
+    const getTranslation = (key) => {
+        if (window.i18n && typeof window.i18n.get === 'function') {
+            return window.i18n.get(key);
+        }
+        const lang = window.i18n?.currentLang || 'zh';
+        return (translations?.[lang]?.[key]) ?? key;
+    };
+    const updateControlButtonUI = () => {
+        if (!controlBtn) return;
+        if (isPlaying) {
+            const pauseLabel = getTranslation('pause');
+            controlBtn.innerHTML = `<i class="fas fa-pause"></i><span data-i18n="pause">${pauseLabel}</span>`;
+        } else {
+            const startLabel = getTranslation('start');
+            controlBtn.innerHTML = `<i class="fas fa-play"></i><span data-i18n="start">${startLabel}</span>`;
+        }
+    };
+    const applySceneFilter = () => {
+        const hasFilter = currentSceneFilter !== null && currentSceneFilter !== undefined;
+        const filterValue = hasFilter ? String(currentSceneFilter) : null;
+        document.querySelectorAll('.message').forEach(msg => {
+            if (!hasFilter) {
+                msg.style.display = '';
+            } else {
+                const msgScene = msg.dataset.scene;
+                // Normalize both values to strings for comparison
+                const msgSceneStr = msgScene !== undefined && msgScene !== null ? String(msgScene) : '';
+                msg.style.display = (msgSceneStr === filterValue) ? '' : 'none';
+            }
+        });
+        if (!hasFilter) return;
+        const visibleMessages = Array.from(document.querySelectorAll('.message')).filter(msg => msg.style.display === '');
+        if (visibleMessages.length > 0) {
+            visibleMessages[0].scrollIntoView({ behavior: 'smooth' });
+        } else {
+            // If no messages visible, log for debugging
+            console.log(`No messages found for scene ${filterValue}. Total messages: ${document.querySelectorAll('.message').length}`);
+        }
+    };
+    const updatePlayingState = (playing, source = 'ui') => {
+        const normalized = Boolean(playing);
+        if (isPlaying === normalized) {
+            if (source === 'language-change') {
+                updateControlButtonUI();
+            }
+            return;
+        }
+        isPlaying = normalized;
+        updateControlButtonUI();
+        if (isPlaying) {
+            currentSceneFilter = null;
+            applySceneFilter();
+        }
+        window.dispatchEvent(new CustomEvent('simulation-state-change', {
+            detail: {
+                playing: isPlaying,
+                source
+            }
+        }));
+    };
+    window.setIsPlaying = (playing, source = 'external') => updatePlayingState(playing, source);
+    window.getIsPlaying = () => isPlaying;
+    window.getCurrentRuntimeScene = () => currentRuntimeScene;
+    window.requestSceneCharacters = function(scene, context = 'runtime') {
+        if (!window.ws || window.ws.readyState !== WebSocket.OPEN) {
+            console.warn('Cannot request scene characters: WebSocket not connected');
+            return false;
+        }
+        try {
+            window.ws.send(JSON.stringify({
+                type: 'request_scene_characters',
+                scene,
+                context
+            }));
+            return true;
+        } catch (err) {
+            console.error('Failed to request scene characters:', err);
+            return false;
+        }
+    };
+    const normalizeSceneIdentifier = (sceneValue) => {
+        if (sceneValue === undefined || sceneValue === null || sceneValue === '') {
+            return null;
+        }
+        const numeric = Number(sceneValue);
+        if (Number.isFinite(numeric)) {
+            return numeric;
+        }
+        return sceneValue;
+    };
+    const broadcastStatus = (statusData, origin = 'status_update') => {
+        if (!statusData) return;
+        const sceneIdentifier = normalizeSceneIdentifier(statusData.current_scene);
+        if (sceneIdentifier !== null) {
+            window.dispatchEvent(new CustomEvent('scene-update', {
+                detail: {
+                    scene: sceneIdentifier,
+                    source: origin === 'initial' ? 'status-initial' : 'status-update'
+                }
+            }));
+            currentRuntimeScene = sceneIdentifier;
+        } else if (currentRuntimeScene !== null) {
+            currentRuntimeScene = null;
+            window.dispatchEvent(new CustomEvent('scene-update', {
+                detail: {
+                    scene: null,
+                    source: origin === 'initial' ? 'status-initial' : 'status-update'
+                }
+            }));
+        }
+        window.dispatchEvent(new CustomEvent('status-sync', {
+            detail: {
+                status: statusData,
+                origin
+            }
+        }));
+    };
+    window.addEventListener('language-changed', () => {
+        updatePlayingState(isPlaying, 'language-change');
+    });
     // 全局编辑状态，避免为每条消息注册 document 监听
     let currentEditingMessage = null;
     let currentEditingOriginalText = '';
@@ -63,9 +183,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 type: 'control',
                 action: 'start'
             })) {
-                startButtonText =  translations[window.i18n.currentLang]['pause']
-                controlBtn.innerHTML = `<i class="fas fa-pause"></i><span data-i18n="pause">${startButtonText}</span>`;
-                isPlaying = true;
+                updatePlayingState(true, 'ui');
             }
         } else {
             // 暂停
@@ -74,9 +192,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 type: 'control',
                 action: 'pause'
             })) {
-                startButtonText =  translations[window.i18n.currentLang]['start']
-                controlBtn.innerHTML = `<i class="fas fa-play"></i><span data-i18n="pause">${startButtonText}</span>`;
-                isPlaying = false;
+                updatePlayingState(false, 'ui');
             }
         }
     });
@@ -88,8 +204,7 @@ document.addEventListener('DOMContentLoaded', function() {
             type: 'control',
             action: 'stop'
         })) {
-            controlBtn.innerHTML = '<i class="fas fa-play"></i><span>开始</span>';
-            isPlaying = false;
+            updatePlayingState(false, 'stop');
         }
     });
 
@@ -188,6 +303,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
         }
+        else if (message.type === 'role_cleared') {
+            selectedRoleName = null;
+            addSystemMessage(message.data?.message || '已取消角色选择');
+            resetSelectedCharacterUI();
+        }
         else if (message.type === 'characters_list') {
             // 收到角色列表，更新本地数据
             if (window.characterProfiles && message.data.characters) {
@@ -231,15 +351,69 @@ document.addEventListener('DOMContentLoaded', function() {
                 autoCompleteBtn.style.opacity = '1';
             }
         }
+        else if (message.type === 'story_started') {
+            if (message.data?.message) {
+                addSystemMessage(message.data.message);
+            }
+            updatePlayingState(true, 'server');
+            textarea.disabled = true;
+            textarea.placeholder = '等待中...';
+            if (autoCompleteBtn) {
+                autoCompleteBtn.style.display = 'none';
+                autoCompleteBtn.disabled = false;
+                autoCompleteBtn.style.opacity = '1';
+            }
+        }
+        else if (message.type === 'story_paused') {
+            if (message.data?.message) {
+                addSystemMessage(message.data.message);
+            }
+            updatePlayingState(false, 'server');
+            waitingForInput = false;
+            textarea.disabled = true;
+            textarea.placeholder = '故事已暂停';
+            if (autoCompleteBtn) {
+                autoCompleteBtn.style.display = 'none';
+                autoCompleteBtn.disabled = false;
+                autoCompleteBtn.style.opacity = '1';
+            }
+        }
+        else if (message.type === 'story_stopped') {
+            if (message.data?.message) {
+                addSystemMessage(message.data.message);
+            }
+            updatePlayingState(false, 'server');
+            waitingForInput = false;
+            textarea.disabled = true;
+            textarea.placeholder = '故事已停止';
+            if (autoCompleteBtn) {
+                autoCompleteBtn.style.display = 'none';
+                autoCompleteBtn.disabled = false;
+                autoCompleteBtn.style.opacity = '1';
+            }
+        }
         else if (message.type === 'story_ended') {
-            // 故事结束
-            addSystemMessage(message.data.message);
-            isPlaying = false;
-            controlBtn.innerHTML = '<i class="fas fa-play"></i><span data-i18n="start">开始</span>';
+            const endData = message.data || {};
+            const primaryMessage = endData.message || '故事已结束';
+            addSystemMessage(primaryMessage);
+            if (endData.reason === 'error') {
+                const detailParts = [endData.error_type, endData.error_message, endData.error_cause].filter(Boolean);
+                if (detailParts.length > 0) {
+                    addSystemMessage(`异常详情：${detailParts.join('；')}`);
+                }
+            } else if (endData.reason === 'invalid_message' && endData.detail) {
+                addSystemMessage(`异常详情：${endData.detail}`);
+            }
+            updatePlayingState(false, 'story_ended');
             // 禁用输入框
             waitingForInput = false;
             textarea.disabled = true;
-            textarea.placeholder = '故事已结束';
+            if (endData.reason === 'error') {
+                const placeholderDetail = endData.error_message || endData.error_type || primaryMessage;
+                textarea.placeholder = `故事异常：${placeholderDetail}`;
+            } else {
+                textarea.placeholder = primaryMessage;
+            }
             if (autoCompleteBtn) {
                 autoCompleteBtn.style.display = 'none';
                 autoCompleteBtn.disabled = false;
@@ -250,10 +424,11 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('Processing message type:', message.type, 'data:', message.data);
             // 从状态中获取当前场景编号
             const sceneNumber = message.data.scene; // 确保消息中包含场景信息
-            if (sceneNumber !== undefined) {
-                // 触发场景更新事件
+            const normalizedScene = normalizeSceneIdentifier(sceneNumber);
+            if (normalizedScene !== null) {
+                currentRuntimeScene = normalizedScene;
                 window.dispatchEvent(new CustomEvent('scene-update', {
-                    detail: { scene: sceneNumber }
+                    detail: { scene: normalizedScene, source: 'runtime' }
                 }));
             }
             
@@ -330,6 +505,13 @@ document.addEventListener('DOMContentLoaded', function() {
             else {
                 loadHistoryMessages([]);
             }
+
+            if (message.data.status) {
+                broadcastStatus(message.data.status, 'initial');
+            }
+        }
+        else if (message.type === 'status_update') {
+            broadcastStatus(message.data, 'status_update');
         }
         else if (message.type === 'clear_messages') {
             // 清空所有消息
@@ -379,9 +561,9 @@ document.addEventListener('DOMContentLoaded', function() {
         messageElement.dataset.timestamp = message.timestamp;
         messageElement.dataset.username = message.username;
         
-        // 添加场景属性
-        if (message.scene !== undefined) {
-            messageElement.dataset.scene = message.scene;
+        // 添加场景属性（确保转换为字符串）
+        if (message.scene !== undefined && message.scene !== null) {
+            messageElement.dataset.scene = String(message.scene);
             console.log(`Rendering message for scene ${message.scene}`);
         }
         
@@ -719,8 +901,19 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // 处理角色选择的函数
     function handleRoleSelection(roleName, characterData) {
+        if (selectedRoleName && selectedRoleName === roleName) {
+            // 再次点击同一角色 => 取消选择
+            sendWebSocketMessage({
+                type: 'select_role',
+                role_name: null
+            });
+            selectedRoleName = null;
+            resetSelectedCharacterUI();
+            return;
+        }
+
         selectedRoleName = roleName;
-        
+
         // 发送角色选择消息
         sendWebSocketMessage({
             type: 'select_role',
@@ -772,6 +965,24 @@ document.addEventListener('DOMContentLoaded', function() {
                 card.style.opacity = '0.5';
                 card.style.border = '2px solid #1e293b';
             }
+        });
+    }
+
+    function resetSelectedCharacterUI() {
+        const selectedSection = document.getElementById('selectedCharacterSection');
+        const selectedCard = document.getElementById('selectedCharacterCard');
+        if (selectedSection && selectedCard) {
+            selectedCard.innerHTML = '';
+            selectedSection.style.display = 'none';
+        }
+        if (selectRoleBtn) {
+            selectRoleBtn.innerHTML = `<i class="fas fa-user"></i><span data-i18n="selectRole">${window.i18n?.get('selectRole') ?? '选择角色'}</span>`;
+            selectRoleBtn.style.background = '';
+        }
+        const allCards = document.querySelectorAll('.character-card');
+        allCards.forEach(card => {
+            card.style.opacity = '';
+            card.style.border = '';
         });
     }
 
@@ -880,24 +1091,12 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // 监听场景选择事件
     window.addEventListener('scene-selected', (event) => {
-        const selectedScene = event.detail.scene;
-        currentSceneFilter = selectedScene;
-        
-        // 更新所有消息的显示状态
-        document.querySelectorAll('.message').forEach(msg => {
-            if (selectedScene === null) {
-                msg.style.display = '';
-            } else {
-                msg.style.display = 
-                    (msg.dataset.scene === String(selectedScene)) ? '' : 'none';
-            }
-        });
-        
-        // 滚动到可见的第一条消息
-        const visibleMessages = document.querySelectorAll('.message[style=""]');
-        if (visibleMessages.length > 0) {
-            visibleMessages[0].scrollIntoView({ behavior: 'smooth' });
-        }
+        const { scene: selectedScene, origin } = event.detail || {};
+        const shouldFilter = origin === 'manual' && selectedScene !== null && selectedScene !== undefined;
+        // Normalize scene value to ensure consistent comparison
+        currentSceneFilter = shouldFilter ? (selectedScene !== null && selectedScene !== undefined ? String(selectedScene) : null) : null;
+        console.log(`Scene filter updated: ${currentSceneFilter}, origin: ${origin}`);
+        applySceneFilter();
     });
 
     // 添加导出故事按钮的点击事件

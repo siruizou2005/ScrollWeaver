@@ -104,7 +104,7 @@ class ConnectionManager:
             while True:
                 if client_id in self.active_connections:
                     print(f"Getting next message for client {client_id}")
-                    message,status = await self.get_next_message()
+                    message, meta = await self.get_next_message()
                     print(f"Got message for client {client_id}: message is not None = {message is not None}")
                     if message:
                         print(f"Message details: type={message.get('type')}, username={message.get('username')}, text_preview={message.get('text', '')[:50] if message.get('text') else 'None'}")
@@ -112,9 +112,37 @@ class ConnectionManager:
                     # 检查生成器是否已结束
                     if message is None:
                         print(f"Message is None, sending story_ended to client {client_id}")
+                        end_payload = {'message': '故事已结束'}
+                        if isinstance(meta, dict):
+                            reason = meta.get('reason')
+                            if reason:
+                                end_payload['reason'] = reason
+                            if reason == 'error':
+                                error_type = meta.get('error_type')
+                                error_message = meta.get('error_message')
+                                error_cause = meta.get('error_cause') or meta.get('error_detail')
+                                detail_parts = [part for part in [error_type, error_message, error_cause] if part]
+                                if detail_parts:
+                                    end_payload['message'] = f"故事运行过程中出现错误：{'；'.join(detail_parts)}"
+                                else:
+                                    end_payload['message'] = '故事运行过程中出现错误，请检查服务器日志。'
+                                if error_type:
+                                    end_payload['error_type'] = error_type
+                                if error_message:
+                                    end_payload['error_message'] = error_message
+                                if error_cause:
+                                    end_payload['error_cause'] = error_cause
+                            elif reason == 'completed':
+                                end_payload['message'] = end_payload['message']
+                            elif reason == 'invalid_message':
+                                detail = meta.get('detail')
+                                if detail:
+                                    end_payload['message'] = f"故事终止：收到无效消息（{detail}）"
+                            elif reason == 'empty':
+                                end_payload['message'] = "故事终止：未收到有效的剧情消息。"
                         await self.active_connections[client_id].send_json({
                             'type': 'story_ended',
-                            'data': {'message': '故事已结束'}
+                            'data': end_payload
                         })
                         break
                     
@@ -198,6 +226,7 @@ class ConnectionManager:
                     
                     # 正常发送消息
                     print(f"Sending message to client {client_id}: type={message.get('type', 'unknown')}, username={message.get('username', 'unknown')}")
+                    status = meta
                     try:
                         await self.active_connections[client_id].send_json({
                             'type': 'message',
@@ -239,7 +268,7 @@ class ConnectionManager:
     async def get_initial_data(self):
         """获取初始化数据"""
         return {
-            'characters': self.scrollweaver.get_characters_info(),
+            'characters': self.scrollweaver.get_characters_info(use_selected=False),
             'map': self.scrollweaver.get_map_info(),
             'settings': self.scrollweaver.get_settings_info(),
             'status': self.scrollweaver.get_current_status(),
@@ -287,34 +316,50 @@ class ConnectionManager:
     async def get_next_message(self):
         """从ScrollWeaver获取下一条消息"""
         print("get_next_message called")
+        error_info = None
         try:
             # Run the synchronous generator call in a thread to avoid blocking the event loop
             loop = asyncio.get_event_loop()
             print("Running generate_next_message in thread pool")
             message = await loop.run_in_executor(None, self.scrollweaver.generate_next_message)
             print(f"generate_next_message returned: message is not None = {message is not None}")
+            # Check if generator is exhausted (returns None)
+            if message is None:
+                print("Generator exhausted (returned None)")
+                return None, {'reason': 'completed'}
             if message:
                 print(f"Message type: {message.get('type', 'unknown')}, username: {message.get('username', 'unknown')}")
         except StopIteration:
-            # 生成器已结束
+            # 生成器已结束（legacy handling, should not occur with new implementation)
             print("Generator exhausted (StopIteration)")
-            return None, None
+            return None, {'reason': 'completed'}
         except Exception as e:
             # 捕获其他异常，打印错误信息
             print(f"Error in get_next_message: {e}")
             import traceback
             traceback.print_exc()
-            return None, None
+            error_info = {
+                'reason': 'error',
+                'error_type': e.__class__.__name__,
+                'error_message': str(e)
+            }
+            cause = getattr(e, '__cause__', None)
+            if cause:
+                error_info['error_cause'] = str(cause)
+            return None, error_info
         
         # Check if message is valid
         if message is None:
             print("Message is None, returning None, None")
-            return None, None
+            return None, {'reason': 'empty'}
         
         # Validate message structure
         if not isinstance(message, dict):
             print(f"Invalid message type: {type(message)}, message: {message}")
-            return None, None
+            return None, {
+                'reason': 'invalid_message',
+                'detail': str(type(message))
+            }
         
         # Validate and set default icon if needed
         if "icon" in message:
@@ -661,10 +706,19 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                                 'message': f'未找到角色: {role_name}'
                             }
                         })
+                else:
+                    if client_id in manager.user_selected_roles:
+                        del manager.user_selected_roles[client_id]
+                    await websocket.send_json({
+                        'type': 'role_cleared',
+                        'data': {
+                            'message': '已取消角色选择'
+                        }
+                    })
             
             elif message['type'] == 'request_characters':
                 # 请求角色列表
-                characters = manager.scrollweaver.get_characters_info()
+                characters = manager.scrollweaver.get_characters_info(use_selected=False)
                 await websocket.send_json({
                     'type': 'characters_list',
                     'data': {
@@ -739,8 +793,16 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                 )
                 
             elif message['type'] == 'request_scene_characters':
-                manager.scrollweaver.select_scene(message['scene'])
-                scene_characters = manager.scrollweaver.get_characters_info()
+                context = message.get('context', 'runtime')
+                scene = message.get('scene')
+                if context == 'manual':
+                    manager.scrollweaver.select_scene(scene)
+                else:
+                    manager.scrollweaver.select_scene(None)
+                scene_characters = manager.scrollweaver.get_characters_info(
+                    scene_number=scene,
+                    use_selected=(context == 'manual' and scene is None)
+                )
                 await websocket.send_json({
                     'type': 'scene_characters',
                     'data': scene_characters

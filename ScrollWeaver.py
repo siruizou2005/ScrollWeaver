@@ -69,12 +69,21 @@ class ScrollWeaver():
         else:
             self.selected_scene = str(scene_number)
         
-    def get_characters_info(self):
+    def get_characters_info(self, scene_number=None, use_selected=True):
         characters_info = []
-        if self.selected_scene == None:
+        target_scene = None
+        if scene_number is not None and scene_number != "":
+            target_scene = str(scene_number)
+        elif use_selected and self.selected_scene is not None:
+            target_scene = str(self.selected_scene)
+
+        if target_scene is None:
             codes = self.server.role_codes
         else:
-            codes = self.server.scene_characters[str(self.selected_scene)]
+            codes = self.server.scene_characters.get(target_scene)
+            if not codes:
+                # 如果当前幕没有缓存角色，返回空列表而不是抛出异常
+                codes = []
         for (i, code) in enumerate(codes):
             agent = self.server.performers[code]
             location = agent.location_name
@@ -100,9 +109,9 @@ class ScrollWeaver():
             message_type, code, text, message_id = next(self.generator)
             print(f"Got from generator: type={message_type}, code={code}, text_length={len(text) if text else 0}, id={message_id}")
         except StopIteration:
-            # Generator exhausted, re-raise to be handled by caller
+            # Generator exhausted, return None instead of raising to avoid issues in async context
             print("Generator exhausted in generate_next_message")
-            raise
+            return None
         except Exception as e:
             # Log other exceptions and re-raise
             print(f"Error in generate_next_message: {e}")
@@ -147,7 +156,21 @@ class ScrollWeaver():
         else:
             location_name,location_description = self.server.orchestrator.find_location_name(location_code),self.server.orchestrator.locations_info[location_code]["description"]
         status['location'] = {'name': location_name, 'description': location_description}
-        status['characters'] = self.get_characters_info()
+        status['characters'] = self.get_characters_info(use_selected=False)
+        status['current_scene'] = self.server.cur_round
+        try:
+            available_scene_keys = {
+                int(key) if str(key).isdigit() else key
+                for key in self.server.scene_manager.scene_characters.keys()
+            }
+        except ValueError:
+            available_scene_keys = {str(key) for key in self.server.scene_manager.scene_characters.keys()}
+        available_scene_keys.add(status['current_scene'])
+        try:
+            available_scene_keys = sorted(available_scene_keys, key=lambda value: value)
+        except TypeError:
+            available_scene_keys = sorted([str(key) for key in available_scene_keys])
+        status['available_scenes'] = available_scene_keys
         return status
     
     def handle_message_edit(self,record_id,new_text):
