@@ -371,13 +371,21 @@ class ConnectionManager:
         
         # 清理消息文本中的 Markdown 格式
         if "text" in message and message["text"]:
-            message["text"] = remove_markdown(message["text"])
+            original_text = message["text"]
+            message["text"] = remove_markdown(original_text)
+            if not message["text"].strip():
+                print("Warning: Markdown cleanup removed all content; falling back to original text.")
+                message["text"] = original_text
         
         status = self.scrollweaver.get_current_status()
         # 清理状态中的事件描述（如果有）
         if status and isinstance(status, dict):
             if "event" in status and status["event"]:
-                status["event"] = remove_markdown(status["event"])
+                original_event = status["event"]
+                status["event"] = remove_markdown(original_event)
+                if not status["event"].strip():
+                    print("Warning: Markdown cleanup removed all status event content; falling back to original text.")
+                    status["event"] = original_event
         
         print(f"Returning message and status, message keys: {list(message.keys())}")
         return message, status

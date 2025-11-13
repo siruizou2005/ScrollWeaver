@@ -107,14 +107,14 @@ def get_models(model_name: str):
 
         from modules.llm.Gemini import Gemini
         if model_name.startswith('gemini-2.0'):
-            return Gemini(model="gemini-2.0-flash")
+            return Gemini(model="gemini-2.0-flash", display_name=model_name)
         elif model_name.startswith('gemini-1.5'):
-            return Gemini(model="gemini-1.5-flash")
+            return Gemini(model="gemini-1.5-flash", display_name=model_name)
         elif model_name.startswith('gemini-2.5-flash'):
-            return Gemini(model="gemini-2.5-flash-preview-04-17")
+            return Gemini(model="gemini-2.5-flash-preview-04-17", display_name=model_name)
         elif model_name.startswith('gemini-2.5-pro'):
-            return Gemini(model="gemini-2.5-pro-preview-05-06")
-        return Gemini()
+            return Gemini(model="gemini-2.5-pro-preview-05-06", display_name=model_name)
+        return Gemini(display_name=model_name)
     else:
         print(f'Warning! undefined model {model_name}, use gpt-4o-mini instead.')
         from modules.llm.LangChainGPT import LangChainGPT
