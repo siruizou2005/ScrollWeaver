@@ -131,6 +131,7 @@ document.addEventListener('DOMContentLoaded', function() {
     };
     const broadcastStatus = (statusData, origin = 'status_update') => {
         if (!statusData) return;
+        window.__lastStatusData = statusData;
         const sceneIdentifier = normalizeSceneIdentifier(statusData.current_scene);
         if (sceneIdentifier !== null) {
             window.dispatchEvent(new CustomEvent('scene-update', {

@@ -19,6 +19,9 @@ class ScenesPanel {
         window.addEventListener('language-changed', () => this.renderSceneButtons());
         window.addEventListener('status-sync', (event) => this.syncFromStatus(event.detail?.status, event.detail?.origin));
         this.updateButtonsInteractivity();
+        if (window.__lastStatusData) {
+            this.syncFromStatus(window.__lastStatusData, 'cached');
+        }
     }
 
     initEventListeners() {
@@ -74,15 +77,18 @@ class ScenesPanel {
         if (sceneNumber !== null) {
             this.addScene(sceneNumber);
             if (detail.source !== 'manual') {
+                const previousScene = this.runtimeScene;
                 this.runtimeScene = sceneNumber;
                 if (!this.manualMode) {
+                    if (previousScene !== this.runtimeScene) {
+                        window.dispatchEvent(new CustomEvent('scene-runtime-changed', {
+                            detail: {
+                                scene: this.runtimeScene,
+                                origin: detail.source || 'runtime'
+                            }
+                        }));
+                    }
                     this.applyRuntimeHighlight();
-                    window.dispatchEvent(new CustomEvent('scene-runtime-changed', {
-                        detail: {
-                            scene: this.runtimeScene,
-                            origin: detail.source || 'runtime'
-                        }
-                    }));
                 }
             }
         }
