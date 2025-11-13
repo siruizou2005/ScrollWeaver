@@ -893,7 +893,10 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
             elif message['type'] == 'generate_story':
                 # 生成故事文本
                 try:
-                    story_text = manager.scrollweaver.generate_story()
+                    scene = message.get('scene')
+                    if scene == "" or scene is False:
+                        scene = None
+                    story_text = manager.scrollweaver.generate_story(scene_number=scene)
                     # 清理故事文本中的 Markdown 格式
                     if story_text:
                         story_text = remove_markdown(story_text)
