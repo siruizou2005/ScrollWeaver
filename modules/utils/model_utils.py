@@ -94,15 +94,30 @@ def get_models(model_name: str):
                 print(f"VertexGemini import failed ({e}), falling back to generic Gemini client")
 
         from modules.llm.Gemini import Gemini
-        if model_name.startswith('gemini-2.0'):
+        # 如果模型名称包含 "preview-" 或看起来是完整的模型名称（包含版本号），直接使用
+        # 例如：gemini-2.5-flash-preview-09-2025, gemini-1.5-pro-002 等
+        if 'preview-' in model_name or (len(model_name.split('-')) >= 5 and model_name.split('-')[-1].isdigit()):
+            # 完整的模型名称，直接使用用户配置的
+            return Gemini(model=model_name)
+        elif model_name.startswith('gemini-2.0'):
             return Gemini(model="gemini-2.0-flash")
         elif model_name.startswith('gemini-1.5'):
             return Gemini(model="gemini-1.5-flash")
         elif model_name.startswith('gemini-2.5-flash'):
-            return Gemini(model="gemini-2.5-flash-preview-04-17")
+            # 如果只是 gemini-2.5-flash（简短名称），使用默认映射
+            # 否则使用用户配置的完整名称
+            if model_name == 'gemini-2.5-flash':
+                return Gemini(model="gemini-2.0-flash")
+            else:
+                # 用户配置了完整名称，直接使用
+                return Gemini(model=model_name)
         elif model_name.startswith('gemini-2.5-pro'):
-            return Gemini(model="gemini-2.5-pro-preview-05-06")
-        return Gemini()
+            if model_name == 'gemini-2.5-pro':
+                return Gemini(model="gemini-1.5-pro")
+            else:
+                return Gemini(model=model_name)
+        # 默认情况：直接使用用户配置的模型名称
+        return Gemini(model=model_name)
     else:
         print(f'Warning! undefined model {model_name}, use gpt-4o-mini instead.')
         from modules.llm.LangChainGPT import LangChainGPT

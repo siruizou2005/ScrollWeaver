@@ -14,11 +14,11 @@
     font-weight: 700;
     color: #1e293b;
     margin: 0;
-    width: 100%;
-    max-width: 100%;
+    flex: 0 0 auto;
+    white-space: nowrap;
     box-sizing: border-box;
-    word-wrap: break-word;
-    overflow-wrap: break-word;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .profiles-toggle {
