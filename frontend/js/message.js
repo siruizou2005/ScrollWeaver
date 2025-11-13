@@ -1189,11 +1189,13 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // 添加导出故事按钮的点击事件
-        exportStoryBtn.addEventListener('click', function() {
-        // 显示加载状态
-        if (sendWebSocketMessage({
-            type: 'generate_story'
-        })) {
+    exportStoryBtn.addEventListener('click', function() {
+        const payload = { type: 'generate_story' };
+        if (currentSceneFilter !== null && currentSceneFilter !== undefined) {
+            payload.scene = String(currentSceneFilter);
+        }
+
+        if (sendWebSocketMessage(payload)) {
             exportStoryBtn.disabled = true;
             exportStoryBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>生成中...</span>';
         }

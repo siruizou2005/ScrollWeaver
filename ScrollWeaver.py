@@ -78,9 +78,14 @@ class ScrollWeaver():
             target_scene = str(self.selected_scene)
 
         if target_scene is None:
-            codes = self.server.role_codes
+            current_scene_key = str(self.server.cur_round)
+            codes = list(self.server.scene_manager.scene_characters.get(current_scene_key, []))
+            if not codes:
+                codes = list(self.server.current_status.get('group', []))
+            if not codes:
+                codes = list(self.server.role_codes)
         else:
-            codes = self.server.scene_characters.get(target_scene)
+            codes = list(self.server.scene_characters.get(target_scene, []))
             if not codes:
                 # 如果当前幕没有缓存角色，返回空列表而不是抛出异常
                 codes = []
@@ -202,9 +207,26 @@ class ScrollWeaver():
             })
         return messages
     
-    def generate_story(self):
-        logs = self.server.history_manager.get_complete_history()
-        story = self.server.orchestrator.log2story(logs)
+    def generate_story(self, scene_number=None):
+        target_scene = None
+        if scene_number not in (None, ""):
+            target_scene = str(scene_number)
+        elif self.selected_scene not in (None, ""):
+            target_scene = str(self.selected_scene)
+
+        if target_scene is not None:
+            filtered_logs = [
+                record["detail"]
+                for record in self.server.history_manager.detailed_history
+                if str(record.get("cur_round")) == target_scene
+            ]
+        else:
+            filtered_logs = self.server.history_manager.get_complete_history()
+
+        if not filtered_logs:
+            return "当前幕暂无故事内容。" if getattr(self.server, "language", "zh") == "zh" else "No story available for the selected scene."
+
+        story = self.server.orchestrator.log2story(filtered_logs)
         return story
     
     def reset_session(self):
