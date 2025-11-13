@@ -25,7 +25,8 @@ class Gemini(BaseLLM):
         
         Args:
             model: 模型名称，默认为 gemini-2.0-flash
-            timeout: API 调用超时时间（秒），默认 120 秒
+            timeout: API 调用超时时间（秒），默认 20 秒
+            display_name: 用于日志输出的模型名称
         """
         super(Gemini, self).__init__()
         self.model_name = model
@@ -44,8 +45,6 @@ class Gemini(BaseLLM):
         # 先配置第一个 key，确保后续调用正常
         initial_key = self.api_keys[0]
         self._configure_client(initial_key)
-        if len(self.api_keys) > 1:
-            self._api_key_index = 1
         # 先不创建 client，在需要时根据 system_instruction 创建
 
     def _load_api_keys(self) -> List[str]:
