@@ -470,6 +470,16 @@ class Server:
         self.event_manager.event_history = []
         self.start_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         
+        # 重置事件管理器状态
+        # 重新从config读取intervention和script（如果config中有的话）
+        # 如果没有，则重置为空字符串
+        intervention_from_config = self.config.get("intervention", "")
+        script_from_config = self.config.get("script", "")
+        self.event_manager.set_intervention(intervention_from_config)
+        self.event_manager.set_script(script_from_config)
+        # 重置当前事件为空（会在下次启动时重新生成）
+        self.event_manager.event = ""
+        
         # 3. Reset each role's state
         for role_code in self.role_codes:
             performer = self.performers[role_code]
@@ -481,6 +491,7 @@ class Server:
             performer.acted = False
             performer.status = ""
             performer.goal = ""
+            performer.motivation = ""  # 重置动机
             performer.location_code = ""
             performer.location_name = ""
             

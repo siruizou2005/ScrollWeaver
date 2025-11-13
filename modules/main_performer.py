@@ -151,10 +151,18 @@ class Performer:
             )
             prompt = intervention + prompt + "\n**注意: 在你的动机中考虑全局事件的影响**" if self.language == "zh" else intervention + prompt + "\n**Notice that: You should take the global event into consideration.**"
         
-        motivation = self.llm.chat(prompt)
-        self.save_prompt(prompt = prompt, detail = motivation)
-        self.motivation = motivation
-        return motivation
+        print(f"[Performer] 开始为角色 {self.role_name} 设置动机...")
+        try:
+            motivation = self.llm.chat(prompt)
+            print(f"[Performer] 角色 {self.role_name} 动机设置成功: {motivation[:50]}...")
+            self.save_prompt(prompt = prompt, detail = motivation)
+            self.motivation = motivation
+            return motivation
+        except Exception as e:
+            print(f"[Performer] 角色 {self.role_name} 动机设置失败: {e}")
+            import traceback
+            traceback.print_exc()
+            raise
     
     def plan(self, 
              other_roles_info: Dict[str, Any], 

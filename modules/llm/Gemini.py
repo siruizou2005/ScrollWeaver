@@ -2,6 +2,8 @@ from .BaseLLM import BaseLLM
 import google.generativeai as genai
 import os
 import time
+import threading
+from typing import Optional
 
 class Gemini(BaseLLM):
     """
@@ -16,17 +18,20 @@ class Gemini(BaseLLM):
     - gemini-2.5-pro-preview-05-06
     """
     
-    def __init__(self, model="gemini-2.0-flash"):
+    def __init__(self, model="gemini-2.0-flash", timeout: Optional[int] = 120):
         """
         初始化 Gemini 客户端。
         
         Args:
             model: 模型名称，默认为 gemini-2.0-flash
+            timeout: API 调用超时时间（秒），默认 120 秒
         """
         super(Gemini, self).__init__()
         self.model_name = model
         self.messages = []
         self.system_instruction = None
+        self.timeout = timeout
+        self.max_retries = 3  # 最大重试次数
         
         # 配置 API Key
         api_key = os.getenv("GEMINI_API_KEY")
@@ -70,7 +75,7 @@ class Gemini(BaseLLM):
 
     def get_response(self, temperature=0.8):
         """
-        获取模型响应。
+        获取模型响应，带超时和重试机制。
         
         Args:
             temperature: 温度参数，控制输出的随机性，默认 0.8
@@ -78,45 +83,107 @@ class Gemini(BaseLLM):
         Returns:
             模型生成的文本响应
         """
-        try:
-            # 创建模型实例，如果有 system_instruction 则传入
-            if self.system_instruction:
-                model = genai.GenerativeModel(
-                    model_name=self.model_name,
-                    system_instruction=self.system_instruction
-                )
-            else:
-                model = genai.GenerativeModel(model_name=self.model_name)
-            
-            # 构建生成配置
-            generation_config = genai.types.GenerationConfig(temperature=temperature)
-            
-            # 如果有历史消息，使用聊天模式
-            if len(self.messages) > 1:
-                # 转换消息格式为 Gemini 格式
-                history = []
-                for msg in self.messages[:-1]:
-                    if msg["role"] == "user":
-                        history.append({"role": "user", "parts": [msg["content"]]})
-                    elif msg["role"] == "model":
-                        history.append({"role": "model", "parts": [msg["content"]]})
+        last_exception = None
+        
+        # 重试机制
+        for attempt in range(self.max_retries):
+            try:
+                print(f"[Gemini] 开始 API 调用（尝试 {attempt + 1}/{self.max_retries}），模型: {self.model_name}，超时: {self.timeout}秒")
+                # 创建模型实例，如果有 system_instruction 则传入
+                if self.system_instruction:
+                    model = genai.GenerativeModel(
+                        model_name=self.model_name,
+                        system_instruction=self.system_instruction
+                    )
+                else:
+                    model = genai.GenerativeModel(model_name=self.model_name)
                 
-                # 创建聊天会话
-                chat = model.start_chat(history=history)
-                # 发送最后一条消息
-                last_message = self.messages[-1]["content"]
-                response = chat.send_message(last_message, generation_config=generation_config)
-            else:
-                # 单次对话，直接生成
-                prompt = self.messages[0]["content"] if self.messages else ""
-                response = model.generate_content(prompt, generation_config=generation_config)
-            
-            return response.text
-        except Exception as e:
-            print(f"Gemini API 调用错误: {e}")
-            import traceback
-            traceback.print_exc()
-            raise
+                # 构建生成配置
+                generation_config = genai.types.GenerationConfig(temperature=temperature)
+                
+                # 使用 threading 实现跨平台超时
+                response_result = [None]
+                exception_result = [None]
+                
+                def api_call():
+                    """执行 API 调用的函数"""
+                    try:
+                        # 如果有历史消息，使用聊天模式
+                        if len(self.messages) > 1:
+                            # 转换消息格式为 Gemini 格式
+                            history = []
+                            for msg in self.messages[:-1]:
+                                if msg["role"] == "user":
+                                    history.append({"role": "user", "parts": [msg["content"]]})
+                                elif msg["role"] == "model":
+                                    history.append({"role": "model", "parts": [msg["content"]]})
+                            
+                            # 创建聊天会话
+                            chat = model.start_chat(history=history)
+                            # 发送最后一条消息
+                            last_message = self.messages[-1]["content"]
+                            response_result[0] = chat.send_message(last_message, generation_config=generation_config)
+                        else:
+                            # 单次对话，直接生成
+                            prompt = self.messages[0]["content"] if self.messages else ""
+                            response_result[0] = model.generate_content(prompt, generation_config=generation_config)
+                    except Exception as e:
+                        exception_result[0] = e
+                
+                # 在单独线程中执行 API 调用
+                api_thread = threading.Thread(target=api_call)
+                api_thread.daemon = True
+                api_thread.start()
+                api_thread.join(timeout=self.timeout)
+                
+                # 检查是否超时
+                if api_thread.is_alive():
+                    raise TimeoutError(f"Gemini API 调用超时（{self.timeout}秒）")
+                
+                # 检查是否有异常
+                if exception_result[0]:
+                    raise exception_result[0]
+                
+                # 获取响应
+                response = response_result[0]
+                
+                # 检查响应是否有效
+                if not response or not hasattr(response, 'text'):
+                    raise ValueError("Gemini API 返回了无效的响应")
+                
+                print(f"[Gemini] API 调用成功，响应长度: {len(response.text) if response.text else 0} 字符")
+                return response.text
+                
+            except TimeoutError as e:
+                last_exception = e
+                print(f"Gemini API 调用超时（尝试 {attempt + 1}/{self.max_retries}）: {e}")
+                if attempt < self.max_retries - 1:
+                    wait_time = (attempt + 1) * 2  # 递增等待时间：2秒、4秒、6秒
+                    print(f"等待 {wait_time} 秒后重试...")
+                    time.sleep(wait_time)
+                else:
+                    raise
+            except Exception as e:
+                last_exception = e
+                error_msg = str(e).lower()
+                # 检查是否是网络错误或可重试的错误
+                retryable_errors = ['timeout', 'connection', 'network', 'rate limit', '429', '503', '502', '500']
+                is_retryable = any(keyword in error_msg for keyword in retryable_errors)
+                
+                if is_retryable and attempt < self.max_retries - 1:
+                    print(f"Gemini API 调用错误（尝试 {attempt + 1}/{self.max_retries}）: {e}")
+                    wait_time = (attempt + 1) * 2
+                    print(f"等待 {wait_time} 秒后重试...")
+                    time.sleep(wait_time)
+                else:
+                    print(f"Gemini API 调用错误: {e}")
+                    import traceback
+                    traceback.print_exc()
+                    raise
+        
+        # 如果所有重试都失败
+        if last_exception:
+            raise last_exception
     
     def chat(self, text, temperature=0.8):
         """

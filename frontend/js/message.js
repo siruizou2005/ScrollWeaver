@@ -37,6 +37,8 @@ document.addEventListener('DOMContentLoaded', function() {
     let currentRuntimeScene = null;
     // 添加场景相关属性
     let currentSceneFilter = null;
+    // 跟踪是否正在加载（用于显示加载动画）
+    let isLoadingStory = false;
     const getTranslation = (key) => {
         if (window.i18n && typeof window.i18n.get === 'function') {
             return window.i18n.get(key);
@@ -174,6 +176,25 @@ document.addEventListener('DOMContentLoaded', function() {
         autoCompleteBtn.style.opacity = '1';
     }
     
+    // 加载覆盖层相关函数
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    const loadingText = document.getElementById('loadingText');
+    const loadingSubtext = document.getElementById('loadingSubtext');
+    
+    function showLoadingOverlay(text = '正在初始化...', subtext = '请稍候，这可能需要一些时间') {
+        if (loadingOverlay && loadingText && loadingSubtext) {
+            loadingText.textContent = text;
+            loadingSubtext.textContent = subtext;
+            loadingOverlay.classList.add('active');
+        }
+    }
+    
+    function hideLoadingOverlay() {
+        if (loadingOverlay) {
+            loadingOverlay.classList.remove('active');
+        }
+    }
+    
     // 控制按钮点击事件 - 使用 sendWebSocketMessage 辅助函数
     controlBtn.addEventListener('click', function() {
         if (!isPlaying) {
@@ -183,6 +204,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 type: 'control',
                 action: 'start'
             })) {
+                // 显示加载动画
+                isLoadingStory = true;
+                showLoadingOverlay('正在启动故事...', '正在设立角色动机，请稍候');
+                controlBtn.classList.add('loading');
+                controlBtn.disabled = true;
                 updatePlayingState(true, 'ui');
             }
         } else {
@@ -355,6 +381,13 @@ document.addEventListener('DOMContentLoaded', function() {
             if (message.data?.message) {
                 addSystemMessage(message.data.message);
             }
+            // 隐藏加载动画
+            isLoadingStory = false;
+            hideLoadingOverlay();
+            if (controlBtn) {
+                controlBtn.classList.remove('loading');
+                controlBtn.disabled = false;
+            }
             updatePlayingState(true, 'server');
             textarea.disabled = true;
             textarea.placeholder = '等待中...';
@@ -365,6 +398,15 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         else if (message.type === 'story_paused') {
+            // 隐藏加载动画（如果还在显示）
+            if (isLoadingStory) {
+                isLoadingStory = false;
+                hideLoadingOverlay();
+                if (controlBtn) {
+                    controlBtn.classList.remove('loading');
+                    controlBtn.disabled = false;
+                }
+            }
             if (message.data?.message) {
                 addSystemMessage(message.data.message);
             }
@@ -379,6 +421,15 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         else if (message.type === 'story_stopped') {
+            // 隐藏加载动画（如果还在显示）
+            if (isLoadingStory) {
+                isLoadingStory = false;
+                hideLoadingOverlay();
+                if (controlBtn) {
+                    controlBtn.classList.remove('loading');
+                    controlBtn.disabled = false;
+                }
+            }
             if (message.data?.message) {
                 addSystemMessage(message.data.message);
             }
@@ -393,6 +444,16 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         else if (message.type === 'story_ended') {
+            // 隐藏加载动画（如果还在显示）
+            if (isLoadingStory) {
+                isLoadingStory = false;
+                hideLoadingOverlay();
+                if (controlBtn) {
+                    controlBtn.classList.remove('loading');
+                    controlBtn.disabled = false;
+                }
+            }
+            
             const endData = message.data || {};
             const primaryMessage = endData.message || '故事已结束';
             addSystemMessage(primaryMessage);
@@ -422,6 +483,17 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         else if (message.type === 'message') {
             console.log('Processing message type:', message.type, 'data:', message.data);
+            
+            // 如果是第一条消息，隐藏加载动画
+            if (isLoadingStory) {
+                isLoadingStory = false;
+                hideLoadingOverlay();
+                if (controlBtn) {
+                    controlBtn.classList.remove('loading');
+                    controlBtn.disabled = false;
+                }
+            }
+            
             // 从状态中获取当前场景编号
             const sceneNumber = message.data.scene; // 确保消息中包含场景信息
             const normalizedScene = normalizeSceneIdentifier(sceneNumber);
