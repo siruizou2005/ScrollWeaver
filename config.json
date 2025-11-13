@@ -1,6 +1,6 @@
 {
-    "role_llm_name": "gemini-2.5-flash-preview-09-2025",
-    "world_llm_name": "gemini-2.5-flash-preview-09-2025",
+    "role_llm_name": "gemini-2.5-flash",
+    "world_llm_name": "gemini-2.5-flash",
     "embedding_model_name":"bge-small",
     "preset_path":"./experiment_presets/experiment_icefire.json",
     "if_save": 0,
@@ -9,8 +9,8 @@
     "save_dir": "",
     "mode": "free",
 
-    "OPENAI_API_KEY":"REDACTED",
-    "OPENAI_API_BASE":"https://api.apiyi.com/v1",
+    "OPENAI_API_KEY":"",
+    "OPENAI_API_BASE":"",
     "GEMINI_API_KEY":"REDACTED",
     "ANTHROPIC_API_KEY":"",
     "OPENROUTER_API_KEY":"",
