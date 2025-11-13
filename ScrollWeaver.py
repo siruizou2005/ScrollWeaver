@@ -70,28 +70,7 @@ class ScrollWeaver():
         else:
             self.selected_scene = str(scene_number)
         
-    def get_characters_info(self, scene_number=None, use_selected=True):
-        characters_info = []
-        target_scene = None
-        if scene_number is not None and scene_number != "":
-            target_scene = str(scene_number)
-        elif use_selected and self.selected_scene is not None:
-            target_scene = str(self.selected_scene)
-
-        if target_scene is None:
-            current_scene_key = str(self.server.cur_round)
-            codes = list(self.server.scene_manager.scene_characters.get(current_scene_key, []))
-            if not codes:
-                codes = list(self.server.current_status.get('group', []))
-            if not codes:
-                codes = list(self.server.role_codes)
-        else:
-            codes = list(self.server.scene_characters.get(target_scene, []))
-            if not codes:
-                # 如果当前幕没有缓存角色，返回空列表而不是抛出异常
-                codes = []
-
-        # 统一转换为角色代码，避免名称导致的 KeyError
+    def _normalize_role_codes(self, codes):
         converted_codes = name2code(codes, self.server.performers, self.server.role_codes, self.server.language)
         if isinstance(converted_codes, list):
             codes = converted_codes
@@ -103,11 +82,32 @@ class ScrollWeaver():
             if code in self.server.performers:
                 valid_codes.append(code)
             else:
-                # 如果转换后仍然不是有效的角色代码，则忽略
                 print(f"[ScrollWeaver] Warning: Invalid role identifier '{code}' encountered when gathering character info.")
-        codes = valid_codes
-        if not codes and target_scene is None:
-            codes = list(self.server.role_codes)
+        return valid_codes
+
+    def get_characters_info(self, scene_number=None, use_selected=True, scene_mode=False):
+        characters_info = []
+        target_scene = None
+        if scene_number is not None and scene_number != "":
+            target_scene = str(scene_number)
+        elif use_selected and self.selected_scene is not None:
+            target_scene = str(self.selected_scene)
+
+        if target_scene is None:
+            if scene_mode:
+                current_scene_key = str(self.server.cur_round)
+                codes = list(self.server.scene_manager.scene_characters.get(current_scene_key, []))
+                codes = self._normalize_role_codes(codes)
+                if not codes:
+                    return []
+            else:
+                codes = list(self.server.role_codes)
+                codes = self._normalize_role_codes(codes)
+        else:
+            codes = list(self.server.scene_characters.get(target_scene, []))
+            codes = self._normalize_role_codes(codes)
+            if not codes:
+                return []
         for (i, code) in enumerate(codes):
             agent = self.server.performers[code]
             location = agent.location_name
@@ -180,7 +180,7 @@ class ScrollWeaver():
         else:
             location_name,location_description = self.server.orchestrator.find_location_name(location_code),self.server.orchestrator.locations_info[location_code]["description"]
         status['location'] = {'name': location_name, 'description': location_description}
-        status['characters'] = self.get_characters_info(use_selected=False)
+        status['characters'] = self.get_characters_info(scene_number=None, use_selected=False, scene_mode=True)
         status['current_scene'] = self.server.cur_round
         try:
             available_scene_keys = {
