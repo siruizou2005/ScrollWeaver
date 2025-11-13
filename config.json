@@ -1,6 +1,6 @@
 {
-    "role_llm_name": "gemini-2.5-flash-lite-preview-09-2025",
-    "world_llm_name": "gemini-2.5-flash-lite-preview-09-2025",
+    "role_llm_name": "gemini-2.5-flash-preview-09-2025",
+    "world_llm_name": "gemini-2.5-flash-preview-09-2025",
     "embedding_model_name":"bge-small",
     "preset_path":"./experiment_presets/experiment_icefire.json",
     "if_save": 0,
