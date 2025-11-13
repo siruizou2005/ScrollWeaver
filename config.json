@@ -9,9 +9,9 @@
     "save_dir": "",
     "mode": "free",
 
-    "OPENAI_API_KEY":"",
-    "OPENAI_API_BASE":"",
-    "GEMINI_API_KEY":"REDACTED,REDACTED,REDACTED,REDACTED",
+    "OPENAI_API_KEY":"REDACTED",
+    "OPENAI_API_BASE":"https://www.chataiapi.com/v1",
+    "GEMINI_API_KEY":"",
     "ANTHROPIC_API_KEY":"",
     "OPENROUTER_API_KEY":"",
     "DASHSCOPE_API_KEY":"",
