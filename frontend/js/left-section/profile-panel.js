@@ -19,6 +19,8 @@ class CharacterProfiles {
         this.manualSceneId = null;
         this.runtimeMode = 'all';
         this.mode = 'runtime';
+        this.currentGroupMembers = [];
+        this.lastRenderSignature = null;
         this.isPlaying = typeof window.getIsPlaying === 'function' ? window.getIsPlaying() : false;
         this.requestedRuntimeScene = null;
         this.container = null;
@@ -343,6 +345,18 @@ class CharacterProfiles {
     renderCharacters(characters, options = {}) {
         if (!this.container) return;
         const list = Array.isArray(characters) ? characters : [];
+        const placeholderKey = options.placeholder ? String(options.placeholder) : '';
+        const signature = JSON.stringify(list.map(character => ({
+            id: character?.id ?? character?.name ?? character?.nickname ?? '',
+            state: character?.state ?? character?.status ?? '',
+            location: character?.location ?? '',
+            goal: character?.goal ?? '',
+            description: character?.description ?? character?.brief ?? ''
+        }))) + `|${placeholderKey}`;
+        if (signature === this.lastRenderSignature) {
+            return;
+        }
+        this.lastRenderSignature = signature;
         this.displayCharacters = list;
         this.characters = list;
         if (!list.length) {
@@ -378,6 +392,11 @@ class CharacterProfiles {
                 this.renderCharacters([], { placeholder: this.t('loadingCurrentScene', '正在加载当前幕的角色...') });
                 return;
             }
+            const groupCharacters = this.getCurrentGroupCharacters();
+            if (groupCharacters && groupCharacters.length) {
+                this.renderCharacters(groupCharacters);
+                return;
+            }
             if (this.currentSceneCharacters && this.currentSceneCharacters.length) {
                 this.renderCharacters(this.currentSceneCharacters);
                 return;
@@ -394,6 +413,53 @@ class CharacterProfiles {
         } else {
             this.renderCharacters([], { placeholder: this.t('noCharactersAvailable', '暂无角色信息') });
         }
+    }
+
+    findCharacterByIdentifier(identifier) {
+        if (!identifier && identifier !== 0) return null;
+        const normalized = String(identifier).trim();
+        if (!normalized) return null;
+        const collections = [
+            this.currentSceneCharacters,
+            this.manualSceneCharacters,
+            this.allCharacters,
+            this.displayCharacters,
+            this.defaultCharacters
+        ];
+        for (const list of collections) {
+            if (!Array.isArray(list)) continue;
+            for (const character of list) {
+                if (!character) continue;
+                const candidates = [
+                    character.id,
+                    character.character_id,
+                    character.name,
+                    character.nickname,
+                    character.title
+                ].map(val => (val !== undefined && val !== null) ? String(val).trim() : null).filter(Boolean);
+                if (candidates.includes(normalized)) {
+                    return character;
+                }
+            }
+        }
+        return null;
+    }
+
+    getCurrentGroupCharacters() {
+        if (!Array.isArray(this.currentGroupMembers) || !this.currentGroupMembers.length) return null;
+        const result = [];
+        const seen = new Set();
+        this.currentGroupMembers.forEach(member => {
+            if (!member) return;
+            const normalized = String(member).trim();
+            if (!normalized || seen.has(normalized)) return;
+            const character = this.findCharacterByIdentifier(normalized);
+            if (character) {
+                result.push(character);
+                seen.add(normalized);
+            }
+        });
+        return result.length ? result : null;
     }
 
     updateAllStatus(statusData) {
@@ -438,6 +504,10 @@ class CharacterProfiles {
         applyUpdates(this.currentSceneCharacters);
         applyUpdates(this.manualSceneCharacters);
         applyUpdates(this.displayCharacters);
+
+        this.currentGroupMembers = Array.isArray(statusData.group)
+            ? statusData.group.map(member => (member !== undefined && member !== null) ? String(member).trim() : null).filter(Boolean)
+            : [];
 
         this.applyView();
     }
