@@ -34,9 +34,9 @@ html, body {
 }
 
 .left-section {
-    width: 280px;
-    min-width: 280px;
-    max-width: 280px;
+    width: 300px;
+    min-width: 300px;
+    max-width: 300px;
     height: 100vh;
     display: flex;
     flex-direction: column;
@@ -1178,9 +1178,9 @@ html, body {
 /* 响应式设计 */
 @media (max-width: 1024px) {
     .left-section {
-        width: 240px;
-        min-width: 240px;
-        max-width: 240px;
+        width: 260px;
+        min-width: 260px;
+        max-width: 260px;
     }
     
     .left-section.collapsed {
@@ -1222,7 +1222,7 @@ html, body {
         left: 0;
         top: 0;
         z-index: 1000;
-        width: 280px;
+        width: 300px;
     }
     
     .left-section.collapsed {
