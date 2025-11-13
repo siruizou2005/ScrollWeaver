@@ -9,6 +9,7 @@ import uuid
 
 from sw_utils import *
 from modules.core.server import Server
+from modules.utils.role_utils import name2code
 import argparse
 from datetime import datetime
 
@@ -89,6 +90,24 @@ class ScrollWeaver():
             if not codes:
                 # 如果当前幕没有缓存角色，返回空列表而不是抛出异常
                 codes = []
+
+        # 统一转换为角色代码，避免名称导致的 KeyError
+        converted_codes = name2code(codes, self.server.performers, self.server.role_codes, self.server.language)
+        if isinstance(converted_codes, list):
+            codes = converted_codes
+        else:
+            codes = [converted_codes] if converted_codes else []
+
+        valid_codes = []
+        for code in codes:
+            if code in self.server.performers:
+                valid_codes.append(code)
+            else:
+                # 如果转换后仍然不是有效的角色代码，则忽略
+                print(f"[ScrollWeaver] Warning: Invalid role identifier '{code}' encountered when gathering character info.")
+        codes = valid_codes
+        if not codes and target_scene is None:
+            codes = list(self.server.role_codes)
         for (i, code) in enumerate(codes):
             agent = self.server.performers[code]
             location = agent.location_name
