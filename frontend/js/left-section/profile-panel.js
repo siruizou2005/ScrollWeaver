@@ -132,7 +132,7 @@ class CharacterProfiles {
         const { scene, source } = event.detail || {};
         if (scene === undefined) return;
         if (source === 'runtime') {
-            this.currentSceneId = scene;
+            this.currentSceneId = this.toSceneIdentifier(scene);
             if (this.mode === 'runtime' && this.runtimeMode === 'current') {
                 this.requestRuntimeSceneCharacters();
             }
@@ -141,8 +141,9 @@ class CharacterProfiles {
 
     handleRuntimeSceneChange(event) {
         const { scene } = event.detail || {};
-        if (scene === undefined || scene === null) return;
-        this.currentSceneId = scene;
+        const normalized = this.toSceneIdentifier(scene);
+        if (normalized === null) return;
+        this.currentSceneId = normalized;
         if (this.mode === 'runtime' && this.runtimeMode === 'current') {
             this.requestRuntimeSceneCharacters(true);
         }
@@ -226,7 +227,8 @@ class CharacterProfiles {
             }
             return;
         }
-        if (!force && this.pendingSceneContext && this.pendingSceneContext.type === 'runtime' && this.pendingSceneContext.sceneId === this.currentSceneId) {
+        this.currentSceneId = this.toSceneIdentifier(this.currentSceneId);
+        if (!force && this.pendingSceneContext && this.pendingSceneContext.type === 'runtime' && String(this.pendingSceneContext.sceneId) === String(this.currentSceneId)) {
             return;
         }
         this.setPendingSceneContext('runtime', this.currentSceneId);
