@@ -136,29 +136,53 @@ class Simulator:
             if self.mode == "free":
                 # Get all performers info for motivation setting
                 all_performers_dict = self.state_manager.get_group_members_info_dict(self.role_codes)
-                for role_code in self.role_codes:
-                    motivation = self.performers[role_code].set_motivation(
-                        world_description=self.orchestrator.description,
-                        other_roles_info=all_performers_dict,
-                        intervention=self.event_manager.event,
-                        script=self.event_manager.script
-                    )
-                    info_text = (f"{self.performers[role_code].nickname} 设立了动机: {motivation}"
-                               if self.language == "zh"
-                               else f"{self.performers[role_code].nickname} has set the motivation: {motivation}")
-                    
-                    record_id = str(uuid.uuid4())
-                    self.logger.info(info_text)
-                    self.record_manager.record(
-                        role_code=role_code,
-                        detail=info_text,
-                        actor=role_code,
-                        group=[role_code],
-                        actor_type='role',
-                        act_type="goal setting",
-                        record_id=record_id
-                    )
-                    yield ("role", role_code, info_text, record_id)
+                print(f"[Simulator] 开始为 {len(self.role_codes)} 个角色设置动机...")
+                for idx, role_code in enumerate(self.role_codes):
+                    print(f"[Simulator] 正在为角色 {idx + 1}/{len(self.role_codes)} ({self.performers[role_code].role_name}) 设置动机...")
+                    try:
+                        motivation = self.performers[role_code].set_motivation(
+                            world_description=self.orchestrator.description,
+                            other_roles_info=all_performers_dict,
+                            intervention=self.event_manager.event,
+                            script=self.event_manager.script
+                        )
+                        info_text = (f"{self.performers[role_code].nickname} 设立了动机: {motivation}"
+                                   if self.language == "zh"
+                                   else f"{self.performers[role_code].nickname} has set the motivation: {motivation}")
+                        
+                        record_id = str(uuid.uuid4())
+                        self.logger.info(info_text)
+                        self.record_manager.record(
+                            role_code=role_code,
+                            detail=info_text,
+                            actor=role_code,
+                            group=[role_code],
+                            actor_type='role',
+                            act_type="goal setting",
+                            record_id=record_id
+                        )
+                        print(f"[Simulator] 角色 {self.performers[role_code].role_name} 动机设置完成")
+                        yield ("role", role_code, info_text, record_id)
+                    except Exception as e:
+                        print(f"[Simulator] 角色 {self.performers[role_code].role_name} 动机设置失败: {e}")
+                        import traceback
+                        traceback.print_exc()
+                        # 继续处理下一个角色，而不是完全失败
+                        error_text = (f"{self.performers[role_code].nickname} 动机设置失败: {str(e)}"
+                                    if self.language == "zh"
+                                    else f"{self.performers[role_code].nickname} failed to set motivation: {str(e)}")
+                        record_id = str(uuid.uuid4())
+                        self.record_manager.record(
+                            role_code=role_code,
+                            detail=error_text,
+                            actor=role_code,
+                            group=[role_code],
+                            actor_type='role',
+                            act_type="goal setting",
+                            record_id=record_id
+                        )
+                        yield ("role", role_code, error_text, record_id)
+                print(f"[Simulator] 所有角色动机设置完成")
             
             if hasattr(self, '_server_instance'):
                 self.persistence.save_current_simulation(

@@ -31,7 +31,7 @@ ROLE_MOVE_PROMPT = """
 输出字段：
 “if_move”，true or false,是否进行移动。
 “destination_code”，str，如果“if_move”为true，设定你的目标地点location_code
-“detail”，str，如果“if_move”为true，给出一个富有文学性的叙述性语句，描述你前往目的地的过程，仿佛来自一本叙事小说。不应过长，控制在60字以内。如果“if_move”为false则不需要任何输出。
+"detail"，str，如果"if_move"为true，给出一个富有文学性的叙述性语句，描述你前往目的地的过程，仿佛来自一本叙事小说。不应过长，控制在60字以内。如果"if_move"为false则不需要任何输出。注意：detail字段必须是纯文本，禁止使用任何Markdown格式。
 """
 
 ROLE_NPC_RESPONSE_PROMPT = """
@@ -64,13 +64,15 @@ ROLE_NPC_RESPONSE_PROMPT = """
 
 4. 言之有物：确保你的回应具有实质性，创造紧张，解决或戏剧性的转变。
 
-5. 禁止重复：禁止重复对话历史中已有信息，避免模糊或通用的回应。避免“准备”、“询问他人意见”、“确认”，立刻行动和得出结论。
+5. 禁止重复：禁止重复对话历史中已有信息，避免模糊或通用的回应。避免"准备"、"询问他人意见"、"确认"，立刻行动和得出结论。
+
+6. **禁止使用Markdown格式**：输出必须是纯文本，禁止使用任何Markdown格式标记，包括但不限于：**粗体**、*斜体*、`代码`、#标题、[链接](url)、```代码块```等。直接使用普通文本表达即可。
 
 以JSON格式返回你的回答. 它应该能够被 eval() 解析。 
 
 输出字段：
-“if_end_interaction”，true or false，如果认为这段互动是时候结束了，则设置为true
-“detail”，str，一个富有文学性的叙述性语句，包含你的思考、讲话和行动。
+"if_end_interaction"，true or false，如果认为这段互动是时候结束了，则设置为true
+"detail"，str，一个富有文学性的叙述性语句，包含你的思考、讲话和行动。注意：detail字段必须是纯文本，禁止使用任何Markdown格式。
 """ 
 
 ROLE_SINGLE_ROLE_RESPONSE_PROMPT = """
@@ -109,15 +111,17 @@ ROLE_SINGLE_ROLE_RESPONSE_PROMPT = """
 
 4. 言之有物：确保你的回应具有实质性，创造紧张，解决或戏剧性的转变。
 
-5. 禁止重复：禁止重复对话历史中已有信息，避免模糊或通用的回应。避免“准备”、“询问他人意见”、“确认”，立刻行动和得出结论。
+5. 禁止重复：禁止重复对话历史中已有信息，避免模糊或通用的回应。避免"准备"、"询问他人意见"、"确认"，立刻行动和得出结论。
+
+6. **禁止使用Markdown格式**：输出必须是纯文本，禁止使用任何Markdown格式标记，包括但不限于：**粗体**、*斜体*、`代码`、#标题、[链接](url)、```代码块```等。直接使用普通文本表达即可。
 
 以JSON格式返回你的回答. 它应该能够被 eval() 解析。 
 
 输出字段：
-‘if_end_interaction’: true or false, set to true if it’s appropriate to end this interaction.
-‘extra_interact_type’: ‘environment’ or ‘npc’ or ‘no’. ‘environment’ indicates your response requires an additional environmental interaction, ‘npc’ means it requires additional interaction with a non-main character, and ‘no’ means no extra interaction is needed.
-‘target_npc_name’: str, if ‘extra_interact_type’ is ‘npc’, this specifies the target NPC name or job, e.g., "shopkeeper."
-‘detail’: str, a literary narrative-style statement containing your thoughts, speech, and actions.
+'if_end_interaction': true or false, set to true if it's appropriate to end this interaction.
+'extra_interact_type': 'environment' or 'npc' or 'no'. 'environment' indicates your response requires an additional environmental interaction, 'npc' means it requires additional interaction with a non-main character, and 'no' means no extra interaction is needed.
+'target_npc_name': str, if 'extra_interact_type' is 'npc', this specifies the target NPC name or job, e.g., "shopkeeper."
+'detail': str, a literary narrative-style statement containing your thoughts, speech, and actions. 注意：detail字段必须是纯文本，禁止使用任何Markdown格式。
 """ 
 
 ROLE_MULTI_ROLE_RESPONSE_PROMPT = """
@@ -158,15 +162,17 @@ ROLE_MULTI_ROLE_RESPONSE_PROMPT = """
 
 4. 言之有物：确保你的回应具有实质性，创造紧张，解决或戏剧性的转变。
 
-5. 禁止重复：禁止重复对话历史中已有信息，避免模糊或通用的回应。避免“准备”、“询问他人意见”、“确认”，立刻行动和得出结论。
+5. 禁止重复：禁止重复对话历史中已有信息，避免模糊或通用的回应。避免"准备"、"询问他人意见"、"确认"，立刻行动和得出结论。
+
+6. **禁止使用Markdown格式**：输出必须是纯文本，禁止使用任何Markdown格式标记，包括但不限于：**粗体**、*斜体*、`代码`、#标题、[链接](url)、```代码块```等。直接使用普通文本表达即可。
 
 以JSON格式返回你的回答. 它应该能够被 eval() 解析。 
 
 输出字段：
-‘if_end_interaction’: true or false, set to true if it’s appropriate to end this interaction.
-‘extra_interact_type’，‘environment’ or ‘npc’ or ‘no’. ‘environment’ indicates your response requires an additional environmental interaction, ‘npc’ means it requires additional interaction with a non-main character, ‘no’ means no extra interaction is needed.
-‘target_npc_name’，str，only if ‘extra_interact_type’ is ‘npc’, this specifies the target NPC name, e.g., "shopkeeper".
-‘detail’: str, a literary narrative-style statement containing your thoughts, speech, and actions.
+'if_end_interaction': true or false, set to true if it's appropriate to end this interaction.
+'extra_interact_type'，'environment' or 'npc' or 'no'. 'environment' indicates your response requires an additional environmental interaction, 'npc' means it requires additional interaction with a non-main character, 'no' means no extra interaction is needed.
+'target_npc_name'，str，only if 'extra_interact_type' is 'npc', this specifies the target NPC name, e.g., "shopkeeper".
+'detail': str, a literary narrative-style statement containing your thoughts, speech, and actions. 注意：detail字段必须是纯文本，禁止使用任何Markdown格式。
 """ 
 
 ROLE_PLAN_PROMPT = """
@@ -207,7 +213,9 @@ ROLE_PLAN_PROMPT = """
 
 4. 言之有物：确保你的回应具有实质性，创造紧张，解决或戏剧性的转变。
 
-5. 禁止重复：禁止重复对话历史中已有信息，避免模糊或通用的回应。避免“准备”、“询问他人意见”、“确认”，立刻行动和得出结论。
+5. 禁止重复：禁止重复对话历史中已有信息，避免模糊或通用的回应。避免"准备"、"询问他人意见"、"确认"，立刻行动和得出结论。
+
+6. **禁止使用Markdown格式**：输出必须是纯文本，禁止使用任何Markdown格式标记，包括但不限于：**粗体**、*斜体*、`代码`、#标题、[链接](url)、```代码块```等。直接使用普通文本表达即可。
 
 以JSON格式返回你的回答. 它应该能够被 json.loads() 解析。 
 
@@ -222,7 +230,7 @@ ROLE_PLAN_PROMPT = """
   - "no": Indicates no interaction is required.
 "target_role_codes": list of str. If "interact_type" is "single" or "multi", it represents the list of target character codes, e.g., ["John-zh", "Sam-zh"]. For "single", this list should have exactly one element.
 "target_npc_name": str. If "interact_type" is "npc", this represents the target NPC name, e.g., "shopkeeper."
-"detail": str. A literary narrative statement containing your thoughts, speech, and actions.
+"detail": str. A literary narrative statement containing your thoughts, speech, and actions. 注意：detail字段必须是纯文本，禁止使用任何Markdown格式。
 
 """
 

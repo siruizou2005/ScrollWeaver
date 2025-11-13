@@ -9,6 +9,7 @@ from pathlib import Path
 from datetime import datetime
 from sw_utils import is_image, load_json_file
 from ScrollWeaver import ScrollWeaver
+from modules.utils.text_utils import remove_markdown
 # Server class is now in modules.core.server, but ScrollWeaver wrapper is still in ScrollWeaver.py
 
 app = FastAPI()
@@ -368,7 +369,16 @@ class ConnectionManager:
         else:
             message["icon"] = default_icon_path
         
+        # 清理消息文本中的 Markdown 格式
+        if "text" in message and message["text"]:
+            message["text"] = remove_markdown(message["text"])
+        
         status = self.scrollweaver.get_current_status()
+        # 清理状态中的事件描述（如果有）
+        if status and isinstance(status, dict):
+            if "event" in status and status["event"]:
+                status["event"] = remove_markdown(status["event"])
+        
         print(f"Returning message and status, message keys: {list(message.keys())}")
         return message, status
     
@@ -884,6 +894,9 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                 # 生成故事文本
                 try:
                     story_text = manager.scrollweaver.generate_story()
+                    # 清理故事文本中的 Markdown 格式
+                    if story_text:
+                        story_text = remove_markdown(story_text)
                     # 发送生成的故事
                     await websocket.send_json({
                         'type': 'story_exported',
