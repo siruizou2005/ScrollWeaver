@@ -9,9 +9,9 @@
     "save_dir": "",
     "mode": "free",
 
-    "OPENAI_API_KEY":"",
-    "OPENAI_API_BASE":"",
-    "GEMINI_API_KEY":"AIzaSyDaF7rAiQXiGQaB3GdmFC2B3CtzgfxLpcc,AIzaSyBDwEHO2hwhq7lj84NdRm2AP_vx_igT5rI,AIzaSyDgsEbvDUmoOLr5aydcIX4-unWHKy8ntj0,AIzaSyCrOM5DJE84p5e_IPsFVW3vucczIht6Rkg",
+    "OPENAI_API_KEY":"sk-WumUMG1dMrQXMhidtYuWHq5Mv6DVtrN72LQfwQGMdzJIwErq",
+    "OPENAI_API_BASE":"https://www.chataiapi.com/v1",
+    "GEMINI_API_KEY":"",
     "ANTHROPIC_API_KEY":"",
     "OPENROUTER_API_KEY":"",
     "DASHSCOPE_API_KEY":"",
