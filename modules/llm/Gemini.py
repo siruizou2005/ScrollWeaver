@@ -3,7 +3,8 @@ import google.generativeai as genai
 import os
 import time
 import threading
-from typing import Optional
+import json
+from typing import Optional, List
 
 class Gemini(BaseLLM):
     """
@@ -18,7 +19,7 @@ class Gemini(BaseLLM):
     - gemini-2.5-pro-preview-05-06
     """
     
-    def __init__(self, model="gemini-2.0-flash", timeout: Optional[int] = 120):
+    def __init__(self, model="gemini-2.0-flash", timeout: Optional[int] = 20, display_name: Optional[str] = None):
         """
         初始化 Gemini 客户端。
         
@@ -28,18 +29,73 @@ class Gemini(BaseLLM):
         """
         super(Gemini, self).__init__()
         self.model_name = model
+        self.display_model_name = display_name or model
         self.messages = []
         self.system_instruction = None
         self.timeout = timeout
         self.max_retries = 3  # 最大重试次数
+
+        # 配置 API Key（支持多个 key 轮换）
+        self.api_keys: List[str] = self._load_api_keys()
+        self._api_key_lock = threading.Lock()
+        self._api_key_index = 0
+        self._current_api_key = None
         
-        # 配置 API Key
-        api_key = os.getenv("GEMINI_API_KEY")
-        if not api_key:
-            raise ValueError("GEMINI_API_KEY 环境变量未设置。请在 config.json 中配置 GEMINI_API_KEY 或设置环境变量。")
-        
-        genai.configure(api_key=api_key)
+        # 先配置第一个 key，确保后续调用正常
+        initial_key = self.api_keys[0]
+        self._configure_client(initial_key)
+        if len(self.api_keys) > 1:
+            self._api_key_index = 1
         # 先不创建 client，在需要时根据 system_instruction 创建
+
+    def _load_api_keys(self) -> List[str]:
+        """
+        从环境变量中加载 API Key。支持以下格式：
+        - GEMINI_API_KEYS: JSON 数组或逗号/分号分隔的字符串
+        - GEMINI_API_KEY: 单个 key 或逗号/分号分隔的多个 key
+        """
+        raw_value = os.getenv("GEMINI_API_KEYS") or os.getenv("GEMINI_API_KEY")
+        if not raw_value:
+            raise ValueError(
+                "未检测到 GEMINI_API_KEY 或 GEMINI_API_KEYS。请在 config.json 或环境变量中配置。"
+            )
+
+        keys: List[str] = []
+        raw_value = raw_value.strip()
+        if raw_value.startswith("["):
+            try:
+                parsed = json.loads(raw_value)
+                if isinstance(parsed, list):
+                    keys = [str(item).strip() for item in parsed if str(item).strip()]
+            except json.JSONDecodeError:
+                pass
+
+        if not keys:
+            separators = [",", ";"]
+            temp_value = raw_value
+            for sep in separators:
+                temp_value = temp_value.replace(sep, ",")
+            keys = [item.strip() for item in temp_value.split(",") if item.strip()]
+
+        if not keys:
+            raise ValueError("未找到有效的 Gemini API Key，请检查配置。")
+
+        return keys
+
+    def _get_next_api_key(self) -> str:
+        """轮询获取下一个 API Key。"""
+        with self._api_key_lock:
+            key = self.api_keys[self._api_key_index]
+            self._api_key_index = (self._api_key_index + 1) % len(self.api_keys)
+            return key
+
+    def _configure_client(self, api_key: str):
+        """使用指定 key 配置 Gemini 客户端。"""
+        if api_key != self._current_api_key:
+            genai.configure(api_key=api_key)
+            self._current_api_key = api_key
+            masked_key = api_key[:4] + "..." if len(api_key) > 8 else "****"
+            print(f"[Gemini] 切换 API Key: {masked_key}")
 
     def initialize_message(self):
         """初始化消息列表。"""
@@ -88,7 +144,10 @@ class Gemini(BaseLLM):
         # 重试机制
         for attempt in range(self.max_retries):
             try:
-                print(f"[Gemini] 开始 API 调用（尝试 {attempt + 1}/{self.max_retries}），模型: {self.model_name}，超时: {self.timeout}秒")
+                api_key = self._get_next_api_key()
+                self._configure_client(api_key)
+
+                print(f"[Gemini] 开始 API 调用（尝试 {attempt + 1}/{self.max_retries}），模型: {self.display_model_name}，超时: {self.timeout}秒")
                 # 创建模型实例，如果有 system_instruction 则传入
                 if self.system_instruction:
                     model = genai.GenerativeModel(
