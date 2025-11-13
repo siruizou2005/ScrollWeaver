@@ -15,6 +15,7 @@ class CharacterProfiles {
         this.currentSceneCharacters = [];
         this.manualSceneCharacters = [];
         this.pendingSceneContext = null;
+        this.pendingRuntimeBackgroundScenes = new Set();
         this.currentSceneId = null;
         this.manualSceneId = null;
         this.runtimeMode = 'all';
@@ -140,13 +141,21 @@ class CharacterProfiles {
         const previousSceneId = this.currentSceneId;
         this.currentSceneId = normalized;
         if (source === 'runtime' || source === 'status-update' || source === 'status-initial') {
-            if (this.mode === 'runtime' && this.runtimeMode === 'current' && previousSceneId !== this.currentSceneId) {
-                this.applyView();
+            if (this.mode === 'runtime') {
+                if (this.runtimeMode === 'current' && previousSceneId !== this.currentSceneId) {
+                    this.applyView();
+                } else if (this.runtimeMode !== 'current' && previousSceneId !== this.currentSceneId) {
+                    this.requestRuntimeSceneCharacters(true, true);
+                }
             }
             return;
         }
-        if (this.mode === 'runtime' && this.runtimeMode === 'current' && previousSceneId !== this.currentSceneId) {
-            this.applyView();
+        if (this.mode === 'runtime') {
+            if (this.runtimeMode === 'current' && previousSceneId !== this.currentSceneId) {
+                this.applyView();
+            } else if (this.runtimeMode !== 'current' && previousSceneId !== this.currentSceneId) {
+                this.requestRuntimeSceneCharacters(true, true);
+            }
         }
     }
 
@@ -211,10 +220,14 @@ class CharacterProfiles {
         }
     }
 
-    setPendingSceneContext(context, sceneId) {
-        this.pendingSceneContext = { type: context, sceneId };
+    setPendingSceneContext(context, sceneId, options = {}) {
+        const { background = false } = options;
+        this.pendingSceneContext = { type: context, sceneId, background };
         if (context === 'runtime') {
             this.requestedRuntimeScene = sceneId;
+            if (background && sceneId !== null && sceneId !== undefined) {
+                this.pendingRuntimeBackgroundScenes.add(String(sceneId));
+            }
         }
     }
 
@@ -229,7 +242,7 @@ class CharacterProfiles {
         return sceneValue;
     }
 
-    requestRuntimeSceneCharacters(force = false) {
+    requestRuntimeSceneCharacters(force = false, background = false) {
         if (this.currentSceneId === null || this.currentSceneId === undefined) {
             this.currentSceneCharacters = [];
             if (typeof window.requestSceneCharacters === 'function') {
@@ -238,10 +251,24 @@ class CharacterProfiles {
             return;
         }
         this.currentSceneId = this.toSceneIdentifier(this.currentSceneId);
-        if (!force && this.pendingSceneContext && this.pendingSceneContext.type === 'runtime' && String(this.pendingSceneContext.sceneId) === String(this.currentSceneId)) {
+        const sceneKey = this.currentSceneId !== null && this.currentSceneId !== undefined
+            ? String(this.currentSceneId)
+            : null;
+        if (background && sceneKey !== null && !force && this.pendingRuntimeBackgroundScenes.has(sceneKey)) {
             return;
         }
-        this.setPendingSceneContext('runtime', this.currentSceneId);
+        const pendingMatches = this.pendingSceneContext && this.pendingSceneContext.type === 'runtime' && String(this.pendingSceneContext.sceneId) === String(this.currentSceneId);
+        if (!force && pendingMatches) {
+            if (background && !this.pendingSceneContext.background) {
+                // Upgrade to background without resending
+                this.pendingSceneContext.background = true;
+                if (this.currentSceneId !== null && this.currentSceneId !== undefined) {
+                    this.pendingRuntimeBackgroundScenes.add(String(this.currentSceneId));
+                }
+            }
+            return;
+        }
+        this.setPendingSceneContext('runtime', this.currentSceneId, { background });
         if (typeof window.requestSceneCharacters === 'function') {
             window.requestSceneCharacters(this.currentSceneId, 'runtime');
         }
@@ -341,6 +368,9 @@ class CharacterProfiles {
             const hasChanged = !this.areCharacterListsEqual(this.currentSceneCharacters, normalized);
             this.currentSceneCharacters = normalized;
             this.requestedRuntimeScene = this.currentSceneId;
+            if (sceneId !== null && sceneId !== undefined) {
+                this.pendingRuntimeBackgroundScenes.delete(String(sceneId));
+            }
             this.pendingSceneContext = null;
             if (hasChanged && this.mode === 'runtime' && this.runtimeMode === 'current') {
                 this.applyView();
@@ -353,6 +383,9 @@ class CharacterProfiles {
         const normalized = this.normalizeCharacterList(charactersData);
         const hasChanged = !this.areCharacterListsEqual(this.currentSceneCharacters, normalized);
         this.currentSceneCharacters = normalized;
+        if (this.currentSceneId !== null && this.currentSceneId !== undefined) {
+            this.pendingRuntimeBackgroundScenes.delete(String(this.currentSceneId));
+        }
         if (hasChanged && this.mode === 'runtime' && this.runtimeMode === 'current') {
             this.applyView();
         }
@@ -413,16 +446,22 @@ class CharacterProfiles {
         }
 
         if (this.runtimeMode === 'current') {
-            if (this.pendingSceneContext?.type === 'runtime' && this.pendingSceneContext.sceneId === this.currentSceneId) {
-                this.renderCharacters([], { placeholder: this.t('loadingCurrentScene', '正在加载当前幕的角色...') });
-                return;
-            }
+            const isPendingRuntime = this.pendingSceneContext?.type === 'runtime' && this.pendingSceneContext.sceneId === this.currentSceneId;
             if (this.currentSceneCharacters && this.currentSceneCharacters.length) {
                 this.renderCharacters(this.currentSceneCharacters);
                 return;
             }
             if (this.currentSceneId !== null && this.currentSceneId !== undefined) {
-                this.requestRuntimeSceneCharacters();
+                if (isPendingRuntime) {
+                    if (this.pendingSceneContext.background) {
+                        this.pendingSceneContext.background = false;
+                        if (this.currentSceneId !== null && this.currentSceneId !== undefined) {
+                            this.pendingRuntimeBackgroundScenes.delete(String(this.currentSceneId));
+                        }
+                    }
+                } else {
+                    this.requestRuntimeSceneCharacters();
+                }
                 this.renderCharacters([], { placeholder: this.t('loadingCurrentScene', '正在加载当前幕的角色...') });
                 return;
             }
@@ -467,6 +506,12 @@ class CharacterProfiles {
 
         if (dataChanged) {
             this.applyView();
+        }
+
+        if (this.mode === 'runtime' && this.runtimeMode !== 'current') {
+            if (this.currentSceneId !== null && this.currentSceneId !== undefined && !this.currentSceneCharacters.length) {
+                this.requestRuntimeSceneCharacters(false, true);
+            }
         }
     }
 
@@ -570,6 +615,9 @@ class CharacterProfiles {
         const hasChanged = !this.areCharacterListsEqual(this.currentSceneCharacters, normalized);
         if (hasChanged) {
             this.currentSceneCharacters = normalized;
+        }
+        if (this.currentSceneId !== null && this.currentSceneId !== undefined) {
+            this.pendingRuntimeBackgroundScenes.delete(String(this.currentSceneId));
         }
         return hasChanged;
     }
