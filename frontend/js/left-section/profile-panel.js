@@ -537,9 +537,29 @@ class CharacterProfiles {
             ? this.allCharacters
             : this.normalizeCharacterList(statusData.characters || []);
 
-        const matched = sourceCharacters.filter(character => {
-            const candidateIds = this.extractIdentifiers(character);
-            return candidateIds.some(id => identifiers.has(id));
+        const matched = [];
+        const usedIndices = new Set();
+
+        groupList.forEach((rawIdentifier, index) => {
+            const normalizedIdentifier = this.normalizeIdentifier(rawIdentifier);
+            if (!normalizedIdentifier) {
+                matched.push(this.createStubCharacter(rawIdentifier, index));
+                return;
+            }
+
+            const characterIndex = sourceCharacters.findIndex((character, candidateIdx) => {
+                if (usedIndices.has(candidateIdx)) return false;
+                const candidateIds = this.extractIdentifiers(character);
+                return candidateIds.some(id => id === normalizedIdentifier);
+            });
+
+            if (characterIndex !== -1) {
+                const character = sourceCharacters[characterIndex];
+                matched.push(character);
+                usedIndices.add(characterIndex);
+            } else {
+                matched.push(this.createStubCharacter(normalizedIdentifier, index));
+            }
         });
 
         return this.replaceRuntimeCharacters(matched);
@@ -557,6 +577,23 @@ class CharacterProfiles {
     normalizeIdentifier(value) {
         if (value === undefined || value === null) return '';
         return String(value).trim();
+    }
+
+    createStubCharacter(identifier, index = 0) {
+        const safeId = identifier || `stub-${index}`;
+        const displayName = identifier || this.t('unknownCharacter', '未知角色');
+        return {
+            id: safeId,
+            character_id: safeId,
+            code: safeId,
+            role_code: safeId,
+            name: displayName,
+            nickname: displayName,
+            description: '',
+            goal: '',
+            state: '',
+            location: ''
+        };
     }
 
     extractIdentifiers(character) {

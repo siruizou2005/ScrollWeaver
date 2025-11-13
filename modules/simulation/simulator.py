@@ -203,6 +203,8 @@ class Simulator:
         for current_round in range(start_round, rounds):
             self.cur_round = current_round
             self.record_manager.update_cur_round(current_round)
+            if hasattr(self, '_server_instance'):
+                self._server_instance.cur_round = current_round
             self.logger.info(f"========== Round {current_round+1} Started ==========")
             
             if self.event_manager.event and current_round >= 1:
