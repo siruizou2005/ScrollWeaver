@@ -182,16 +182,33 @@ document.addEventListener('DOMContentLoaded', function() {
     const loadingSubtext = document.getElementById('loadingSubtext');
     
     function showLoadingOverlay(text = '正在初始化...', subtext = '请稍候，这可能需要一些时间') {
+        console.log('[Loading] 显示加载覆盖层:', text, subtext);
         if (loadingOverlay && loadingText && loadingSubtext) {
             loadingText.textContent = text;
             loadingSubtext.textContent = subtext;
             loadingOverlay.classList.add('active');
+            console.log('[Loading] 覆盖层元素状态:', {
+                hasOverlay: !!loadingOverlay,
+                hasText: !!loadingText,
+                hasSubtext: !!loadingSubtext,
+                hasActiveClass: loadingOverlay.classList.contains('active')
+            });
+        } else {
+            console.error('[Loading] 加载覆盖层元素未找到:', {
+                overlay: !!loadingOverlay,
+                text: !!loadingText,
+                subtext: !!loadingSubtext
+            });
         }
     }
     
     function hideLoadingOverlay() {
+        console.log('[Loading] 隐藏加载覆盖层');
         if (loadingOverlay) {
             loadingOverlay.classList.remove('active');
+            console.log('[Loading] 覆盖层 active 类已移除');
+        } else {
+            console.error('[Loading] 加载覆盖层元素未找到');
         }
     }
     
