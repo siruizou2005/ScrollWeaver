@@ -77,6 +77,12 @@ class ScenesPanel {
                 this.runtimeScene = sceneNumber;
                 if (!this.manualMode) {
                     this.applyRuntimeHighlight();
+                    window.dispatchEvent(new CustomEvent('scene-runtime-changed', {
+                        detail: {
+                            scene: this.runtimeScene,
+                            origin: detail.source || 'runtime'
+                        }
+                    }));
                 }
             }
         }
@@ -110,6 +116,13 @@ class ScenesPanel {
         if (this.isPlaying) {
             this.exitManualMode({ origin: 'runtime' });
         }
+
+        window.dispatchEvent(new CustomEvent('scene-runtime-changed', {
+            detail: {
+                scene: this.runtimeScene,
+                origin: 'simulation-state'
+            }
+        }));
     }
 
     addScene(sceneNumber) {

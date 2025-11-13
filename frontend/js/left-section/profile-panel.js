@@ -57,8 +57,10 @@ class CharacterProfiles {
                 if (!message) return;
 
                 if (message.type === 'initial_data') {
-                    if (message.data.characters) this.updateCharacters(message.data.characters);
-                    if (message.data.status) this.updateAllStatus(message.data.status);
+                const statusData = message.data;
+                if (statusData.characters) this.updateCharacters(statusData.characters);
+                if (statusData.scene_characters) this.updateRuntimeSceneCharacters(statusData.scene_characters);
+                this.updateAllStatus(statusData);
                 }
 
                 if (message.type === 'scene_characters') {
@@ -66,12 +68,15 @@ class CharacterProfiles {
                 }
 
                 if (message.type === 'status_update') {
-                    if (message.data.characters) this.updateCharacters(message.data.characters);
-                    if (message.data.status) this.updateAllStatus(message.data.status);
+                const statusData = message.data.status || message.data;
+                if (statusData.characters) this.updateCharacters(statusData.characters);
+                if (statusData.scene_characters) this.updateRuntimeSceneCharacters(statusData.scene_characters);
+                this.updateAllStatus(statusData);
                 }
             });
 
-            window.addEventListener('scene-update', (event) => this.handleSceneUpdate(event));
+        window.addEventListener('scene-update', (event) => this.handleSceneUpdate(event));
+        window.addEventListener('scene-runtime-changed', (event) => this.handleRuntimeSceneChange(event));
             window.addEventListener('scene-view-state-change', (event) => this.handleSceneViewStateChange(event));
             window.addEventListener('simulation-state-change', (event) => this.handleSimulationStateChange(event));
             window.addEventListener('language-changed', () => this.updateToggleUI());
@@ -131,6 +136,15 @@ class CharacterProfiles {
             if (this.mode === 'runtime' && this.runtimeMode === 'current') {
                 this.requestRuntimeSceneCharacters();
             }
+        }
+    }
+
+    handleRuntimeSceneChange(event) {
+        const { scene } = event.detail || {};
+        if (scene === undefined || scene === null) return;
+        this.currentSceneId = scene;
+        if (this.mode === 'runtime' && this.runtimeMode === 'current') {
+            this.requestRuntimeSceneCharacters(true);
         }
     }
 
@@ -313,6 +327,14 @@ class CharacterProfiles {
             if (this.mode === 'runtime' && this.runtimeMode === 'current') {
                 this.applyView();
             }
+        }
+    }
+
+    updateRuntimeSceneCharacters(charactersData) {
+        this.currentSceneId = this.currentSceneId ?? null;
+        this.currentSceneCharacters = Array.isArray(charactersData) ? charactersData : [];
+        if (this.mode === 'runtime' && this.runtimeMode === 'current') {
+            this.applyView();
         }
     }
 

@@ -165,7 +165,7 @@ class ScrollWeaver():
         return self.server.orchestrator.world_settings
     
     def get_current_status(self):
-        status = self.server.current_status
+        status = dict(self.server.current_status)
         status['event'] = self.server.event
         group = []
         for code in status['group']:
@@ -180,7 +180,8 @@ class ScrollWeaver():
         else:
             location_name,location_description = self.server.orchestrator.find_location_name(location_code),self.server.orchestrator.locations_info[location_code]["description"]
         status['location'] = {'name': location_name, 'description': location_description}
-        status['characters'] = self.get_characters_info(scene_number=None, use_selected=False, scene_mode=True)
+        status['characters'] = self.get_characters_info(scene_number=None, use_selected=False, scene_mode=False)
+        status['scene_characters'] = self.get_characters_info(scene_number=None, use_selected=False, scene_mode=True)
         status['current_scene'] = self.server.cur_round
         try:
             available_scene_keys = {
