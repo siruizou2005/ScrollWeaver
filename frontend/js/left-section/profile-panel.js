@@ -19,13 +19,13 @@ class CharacterProfiles {
         this.manualSceneId = null;
         this.runtimeMode = 'all';
         this.mode = 'runtime';
-        this.currentGroupMembers = [];
-        this.lastRenderSignature = null;
         this.isPlaying = typeof window.getIsPlaying === 'function' ? window.getIsPlaying() : false;
         this.requestedRuntimeScene = null;
         this.container = null;
         this.viewToggle = null;
         this.toggleButtons = [];
+        this.lastRenderSignatures = null;
+        this.lastPlaceholderKey = null;
         this.init();
     }
 
@@ -59,10 +59,12 @@ class CharacterProfiles {
                 if (!message) return;
 
                 if (message.type === 'initial_data') {
-                const statusData = message.data;
-                if (statusData.characters) this.updateCharacters(statusData.characters);
-                if (statusData.scene_characters) this.updateRuntimeSceneCharacters(statusData.scene_characters);
-                this.updateAllStatus(statusData);
+                    const payload = message.data || {};
+                    if (payload.status) {
+                        this.updateAllStatus(payload.status, { origin: 'initial', fallbackCharacters: payload.characters });
+                    } else if (payload.characters) {
+                        this.updateCharacters(payload.characters);
+                    }
                 }
 
                 if (message.type === 'scene_characters') {
@@ -70,10 +72,10 @@ class CharacterProfiles {
                 }
 
                 if (message.type === 'status_update') {
-                const statusData = message.data.status || message.data;
-                if (statusData.characters) this.updateCharacters(statusData.characters);
-                if (statusData.scene_characters) this.updateRuntimeSceneCharacters(statusData.scene_characters);
-                this.updateAllStatus(statusData);
+                    const statusData = message.data?.status || message.data;
+                    if (statusData) {
+                        this.updateAllStatus(statusData, { origin: 'status_update' });
+                    }
                 }
             });
 
@@ -133,11 +135,18 @@ class CharacterProfiles {
     handleSceneUpdate(event) {
         const { scene, source } = event.detail || {};
         if (scene === undefined) return;
-        if (source === 'runtime') {
-            this.currentSceneId = this.toSceneIdentifier(scene);
-            if (this.mode === 'runtime' && this.runtimeMode === 'current') {
-                this.requestRuntimeSceneCharacters();
+        const normalized = this.toSceneIdentifier(scene);
+        if (normalized === null) return;
+        const previousSceneId = this.currentSceneId;
+        this.currentSceneId = normalized;
+        if (source === 'runtime' || source === 'status-update' || source === 'status-initial') {
+            if (this.mode === 'runtime' && this.runtimeMode === 'current' && previousSceneId !== this.currentSceneId) {
+                this.applyView();
             }
+            return;
+        }
+        if (this.mode === 'runtime' && this.runtimeMode === 'current' && previousSceneId !== this.currentSceneId) {
+            this.applyView();
         }
     }
 
@@ -145,9 +154,10 @@ class CharacterProfiles {
         const { scene } = event.detail || {};
         const normalized = this.toSceneIdentifier(scene);
         if (normalized === null) return;
+        const previousSceneId = this.currentSceneId;
         this.currentSceneId = normalized;
-        if (this.mode === 'runtime' && this.runtimeMode === 'current') {
-            this.requestRuntimeSceneCharacters(true);
+        if (this.mode === 'runtime' && this.runtimeMode === 'current' && previousSceneId !== this.currentSceneId) {
+            this.applyView();
         }
     }
 
@@ -180,9 +190,10 @@ class CharacterProfiles {
         if (statusData.current_scene !== undefined && statusData.current_scene !== null) {
             const normalized = this.toSceneIdentifier(statusData.current_scene);
             if (normalized !== null) {
+                const previousSceneId = this.currentSceneId;
                 this.currentSceneId = normalized;
-                if (this.mode === 'runtime' && this.runtimeMode === 'current') {
-                    this.requestRuntimeSceneCharacters(true);
+                if (this.mode === 'runtime' && this.runtimeMode === 'current' && previousSceneId !== this.currentSceneId) {
+                    this.applyView();
                 }
             }
         }
@@ -196,9 +207,6 @@ class CharacterProfiles {
             this.manualSceneId = null;
             this.manualSceneCharacters = [];
             this.updateToggleUI();
-            if (this.runtimeMode === 'current') {
-                this.requestRuntimeSceneCharacters();
-            }
             this.applyView();
         }
     }
@@ -307,8 +315,10 @@ class CharacterProfiles {
 
     updateCharacters(charactersData, scene = false) {
         if (!scene) {
-            this.allCharacters = Array.isArray(charactersData) ? [...charactersData] : [];
-            if (this.mode !== 'manual') {
+            const changed = this.storeAllCharacters(charactersData);
+            if (changed && this.mode !== 'manual') {
+                this.applyView();
+            } else if (!this.currentSceneCharacters.length && this.mode !== 'manual' && this.runtimeMode === 'current') {
                 this.applyView();
             }
             return;
@@ -318,17 +328,21 @@ class CharacterProfiles {
         const sceneId = this.pendingSceneContext?.sceneId ?? null;
         if (context === 'manual') {
             this.manualSceneId = sceneId;
-            this.manualSceneCharacters = Array.isArray(charactersData) ? charactersData : [];
+            const normalized = this.normalizeCharacterList(charactersData);
+            const hasChanged = !this.areCharacterListsEqual(this.manualSceneCharacters, normalized);
+            this.manualSceneCharacters = normalized;
             this.pendingSceneContext = null;
-            if (this.mode === 'manual') {
+            if (this.mode === 'manual' && hasChanged) {
                 this.applyView();
             }
         } else {
             this.currentSceneId = sceneId !== null ? sceneId : this.currentSceneId;
-            this.currentSceneCharacters = Array.isArray(charactersData) ? charactersData : [];
+            const normalized = this.normalizeCharacterList(charactersData);
+            const hasChanged = !this.areCharacterListsEqual(this.currentSceneCharacters, normalized);
+            this.currentSceneCharacters = normalized;
             this.requestedRuntimeScene = this.currentSceneId;
             this.pendingSceneContext = null;
-            if (this.mode === 'runtime' && this.runtimeMode === 'current') {
+            if (hasChanged && this.mode === 'runtime' && this.runtimeMode === 'current') {
                 this.applyView();
             }
         }
@@ -336,8 +350,10 @@ class CharacterProfiles {
 
     updateRuntimeSceneCharacters(charactersData) {
         this.currentSceneId = this.currentSceneId ?? null;
-        this.currentSceneCharacters = Array.isArray(charactersData) ? charactersData : [];
-        if (this.mode === 'runtime' && this.runtimeMode === 'current') {
+        const normalized = this.normalizeCharacterList(charactersData);
+        const hasChanged = !this.areCharacterListsEqual(this.currentSceneCharacters, normalized);
+        this.currentSceneCharacters = normalized;
+        if (hasChanged && this.mode === 'runtime' && this.runtimeMode === 'current') {
             this.applyView();
         }
     }
@@ -345,25 +361,34 @@ class CharacterProfiles {
     renderCharacters(characters, options = {}) {
         if (!this.container) return;
         const list = Array.isArray(characters) ? characters : [];
-        const placeholderKey = options.placeholder ? String(options.placeholder) : '';
-        const signature = JSON.stringify(list.map(character => ({
-            id: character?.id ?? character?.name ?? character?.nickname ?? '',
-            state: character?.state ?? character?.status ?? '',
-            location: character?.location ?? '',
-            goal: character?.goal ?? '',
-            description: character?.description ?? character?.brief ?? ''
-        }))) + `|${placeholderKey}`;
-        if (signature === this.lastRenderSignature) {
-            return;
-        }
-        this.lastRenderSignature = signature;
-        this.displayCharacters = list;
-        this.characters = list;
+        const placeholder = options.placeholder || this.t('noCharactersAvailable', '暂无角色信息');
+
         if (!list.length) {
-            const placeholder = options.placeholder || this.t('noCharactersAvailable', '暂无角色信息');
+            const placeholderKey = `empty:${placeholder}`;
+            if (!this.displayCharacters.length && this.lastPlaceholderKey === placeholderKey) {
+                return;
+            }
+            this.displayCharacters = [];
+            this.characters = [];
+            this.lastRenderSignatures = [];
+            this.lastPlaceholderKey = placeholderKey;
             this.container.innerHTML = `<div class="profiles-empty">${placeholder}</div>`;
             return;
         }
+
+        const signatures = list.map(character => this.characterSignature(character));
+        if (Array.isArray(this.lastRenderSignatures)
+            && signatures.length === this.lastRenderSignatures.length
+            && signatures.every((sig, idx) => sig === this.lastRenderSignatures[idx])) {
+            this.displayCharacters = list;
+            this.characters = list;
+            return;
+        }
+
+        this.displayCharacters = list;
+        this.characters = list;
+        this.lastRenderSignatures = signatures;
+        this.lastPlaceholderKey = null;
         this.container.innerHTML = list.map(character => this.createCharacterCard(character)).join('');
     }
 
@@ -392,11 +417,6 @@ class CharacterProfiles {
                 this.renderCharacters([], { placeholder: this.t('loadingCurrentScene', '正在加载当前幕的角色...') });
                 return;
             }
-            const groupCharacters = this.getCurrentGroupCharacters();
-            if (groupCharacters && groupCharacters.length) {
-                this.renderCharacters(groupCharacters);
-                return;
-            }
             if (this.currentSceneCharacters && this.currentSceneCharacters.length) {
                 this.renderCharacters(this.currentSceneCharacters);
                 return;
@@ -415,101 +435,167 @@ class CharacterProfiles {
         }
     }
 
-    findCharacterByIdentifier(identifier) {
-        if (!identifier && identifier !== 0) return null;
-        const normalized = String(identifier).trim();
-        if (!normalized) return null;
-        const collections = [
-            this.currentSceneCharacters,
-            this.manualSceneCharacters,
-            this.allCharacters,
-            this.displayCharacters,
-            this.defaultCharacters
-        ];
-        for (const list of collections) {
-            if (!Array.isArray(list)) continue;
-            for (const character of list) {
-                if (!character) continue;
-                const candidates = [
-                    character.id,
-                    character.character_id,
-                    character.name,
-                    character.nickname,
-                    character.title
-                ].map(val => (val !== undefined && val !== null) ? String(val).trim() : null).filter(Boolean);
-                if (candidates.includes(normalized)) {
-                    return character;
-                }
+    updateAllStatus(statusData, { origin = 'status_update', fallbackCharacters = null } = {}) {
+        if (!statusData) return;
+        const charactersPayload = Array.isArray(statusData.characters)
+            ? statusData.characters
+            : Array.isArray(fallbackCharacters)
+                ? fallbackCharacters
+                : null;
+
+        let dataChanged = false;
+        if (charactersPayload) {
+            dataChanged = this.storeAllCharacters(charactersPayload) || dataChanged;
+        }
+
+        const runtimeChanged = this.syncRuntimeCharactersFromStatus(statusData);
+        dataChanged = dataChanged || runtimeChanged;
+
+        if (this.mode === 'manual') {
+            if (dataChanged && this.pendingSceneContext?.type !== 'manual') {
+                this.applyView();
+            }
+            return;
+        }
+
+        if (this.runtimeMode === 'current') {
+            if (runtimeChanged || (dataChanged && !this.currentSceneCharacters.length)) {
+                this.applyView();
+            }
+            return;
+        }
+
+        if (dataChanged) {
+            this.applyView();
+        }
+    }
+
+    storeAllCharacters(charactersData) {
+        const normalized = this.normalizeCharacterList(charactersData);
+        const hasChanged = !this.areCharacterListsEqual(this.allCharacters, normalized);
+        this.allCharacters = normalized;
+        return hasChanged;
+    }
+
+    normalizeCharacterList(charactersData) {
+        if (!Array.isArray(charactersData)) return [];
+        return charactersData.map((character, index) => this.normalizeCharacterPayload(character, index));
+    }
+
+    normalizeCharacterPayload(character, fallbackIndex = 0) {
+        if (!character || typeof character !== 'object') {
+            return {
+                id: `unknown-${fallbackIndex}`,
+                name: 'Undefined',
+                nickname: 'Undefined',
+                description: '',
+                goal: '',
+                state: '',
+                location: ''
+            };
+        }
+        const normalized = { ...character };
+        if (normalized.id === undefined || normalized.id === null) {
+            const identifier = normalized.character_id ?? normalized.code ?? normalized.role_code ?? normalized.name ?? normalized.nickname;
+            normalized.id = identifier !== undefined ? identifier : `char-${fallbackIndex}`;
+        }
+        if (normalized.name === undefined && normalized.nickname !== undefined) {
+            normalized.name = normalized.nickname;
+        }
+        normalized.description = normalized.description ?? normalized.brief ?? '';
+        normalized.goal = normalized.goal ?? normalized.motivation ?? '';
+        normalized.state = normalized.state ?? normalized.status ?? '';
+        normalized.location = normalized.location ?? '';
+        return normalized;
+    }
+
+    syncRuntimeCharactersFromStatus(statusData) {
+        const sceneCharacters = Array.isArray(statusData.scene_characters)
+            ? statusData.scene_characters
+            : null;
+
+        if (sceneCharacters && sceneCharacters.length) {
+            return this.replaceRuntimeCharacters(sceneCharacters);
+        }
+
+        const groupList = Array.isArray(statusData.group) ? statusData.group : [];
+        if (!groupList.length) {
+            if (this.currentSceneCharacters.length) {
+                this.currentSceneCharacters = [];
+                return true;
+            }
+            return false;
+        }
+
+        const identifiers = new Set(
+            groupList
+                .map(value => this.normalizeIdentifier(value))
+                .filter(Boolean)
+        );
+
+        const sourceCharacters = this.allCharacters.length
+            ? this.allCharacters
+            : this.normalizeCharacterList(statusData.characters || []);
+
+        const matched = sourceCharacters.filter(character => {
+            const candidateIds = this.extractIdentifiers(character);
+            return candidateIds.some(id => identifiers.has(id));
+        });
+
+        return this.replaceRuntimeCharacters(matched);
+    }
+
+    replaceRuntimeCharacters(charactersData) {
+        const normalized = this.normalizeCharacterList(charactersData);
+        const hasChanged = !this.areCharacterListsEqual(this.currentSceneCharacters, normalized);
+        if (hasChanged) {
+            this.currentSceneCharacters = normalized;
+        }
+        return hasChanged;
+    }
+
+    normalizeIdentifier(value) {
+        if (value === undefined || value === null) return '';
+        return String(value).trim();
+    }
+
+    extractIdentifiers(character) {
+        if (!character || typeof character !== 'object') return [];
+        return [
+            character.id,
+            character.character_id,
+            character.code,
+            character.role_code,
+            character.name,
+            character.nickname
+        ].map(value => this.normalizeIdentifier(value)).filter(Boolean);
+    }
+
+    characterSignature(character) {
+        if (!character || typeof character !== 'object') return '';
+        return [
+            character.id,
+            character.character_id,
+            character.code,
+            character.role_code,
+            character.name,
+            character.nickname,
+            character.location,
+            character.goal,
+            character.state,
+            character.description
+        ].map(value => (value === undefined || value === null) ? '' : String(value)).join('|');
+    }
+
+    areCharacterListsEqual(a, b) {
+        if (!Array.isArray(a) || !Array.isArray(b)) return false;
+        if (a.length !== b.length) return false;
+        for (let i = 0; i < a.length; i += 1) {
+            if (this.characterSignature(a[i]) !== this.characterSignature(b[i])) {
+                return false;
             }
         }
-        return null;
-    }
-
-    getCurrentGroupCharacters() {
-        if (!Array.isArray(this.currentGroupMembers) || !this.currentGroupMembers.length) return null;
-        const result = [];
-        const seen = new Set();
-        this.currentGroupMembers.forEach(member => {
-            if (!member) return;
-            const normalized = String(member).trim();
-            if (!normalized || seen.has(normalized)) return;
-            const character = this.findCharacterByIdentifier(normalized);
-            if (character) {
-                result.push(character);
-                seen.add(normalized);
-            }
-        });
-        return result.length ? result : null;
-    }
-
-    updateAllStatus(statusData) {
-        if (!statusData) return;
-        const statusList = Array.isArray(statusData)
-            ? statusData
-            : Object.keys(statusData).map(key => ({ key, ...statusData[key] }));
-
-        const applyUpdates = (list) => {
-            if (!Array.isArray(list)) return;
-            list.forEach(item => {
-                if (!item) return;
-                const candidates = [
-                    item.id,
-                    item.name,
-                    item.nickname
-                ].map(val => (val !== undefined && val !== null) ? String(val) : null).filter(Boolean);
-
-                for (const key of candidates) {
-                    const update = statusList.find(s => {
-                        const identifiers = [
-                            s.id,
-                            s.character_id,
-                            s.name,
-                            s.nickname,
-                            s.key
-                        ].map(val => (val !== undefined && val !== null) ? String(val) : null).filter(Boolean);
-                        return identifiers.includes(key);
-                    });
-                    if (update) {
-                        if (update.state) item.state = update.state;
-                        if (update.status) item.state = update.status;
-                        if (update.location) item.location = update.location;
-                        if (update.goal) item.goal = update.goal;
-                        break;
-                    }
-                }
-            });
-        };
-
-        applyUpdates(this.allCharacters);
-        applyUpdates(this.currentSceneCharacters);
-        applyUpdates(this.manualSceneCharacters);
-        applyUpdates(this.displayCharacters);
-
-        this.currentGroupMembers = Array.isArray(statusData.group)
-            ? statusData.group.map(member => (member !== undefined && member !== null) ? String(member).trim() : null).filter(Boolean)
-            : [];
-
-        this.applyView();
+        return true;
     }
 
     showCharacterDetails(character) {
