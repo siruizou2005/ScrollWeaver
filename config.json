@@ -1,6 +1,6 @@
 {
-    "role_llm_name": "gpt-4o",
-    "world_llm_name": "gpt-4o",
+    "role_llm_name": "gemini-2.5-flash-preview-09-2025",
+    "world_llm_name": "gemini-2.5-flash-preview-09-2025",
     "embedding_model_name":"bge-small",
     "preset_path":"./experiment_presets/experiment_icefire.json",
     "if_save": 0,
@@ -11,7 +11,7 @@
 
     "OPENAI_API_KEY":"sk-vHXUGR18hR83QnmI5eCa716e2c544868AcAf2b6012559bBd",
     "OPENAI_API_BASE":"https://api.apiyi.com/v1",
-    "GEMINI_API_KEY":"",
+    "GEMINI_API_KEY":"AIzaSyC2w9TKClyyecFtcgUpiDBYoydXxTwAPOw",
     "ANTHROPIC_API_KEY":"",
     "OPENROUTER_API_KEY":"",
     "DASHSCOPE_API_KEY":"",
