@@ -68,6 +68,15 @@ def get_models(model_name: str):
         from modules.llm.Doubao import Doubao
         return Doubao()
     elif model_name.startswith('gemini'):
+        # Check if using OpenAI-compatible API (e.g., Gemini proxy via OpenAI SDK)
+        api_base = os.getenv("OPENAI_API_BASE", "")
+        has_openai_key = bool(os.getenv("OPENAI_API_KEY", ""))
+        
+        if api_base and has_openai_key:
+            # Use OpenAI SDK for Gemini proxy/transit services
+            from modules.llm.LangChainGPT2 import LangChainGPT
+            return LangChainGPT(model=model_name)
+        
         # Prefer Vertex Gemini when user indicates so via model prefix or env vars
         use_vertex_env = os.getenv("USE_VERTEX_GEMINI", "").lower() in ["1", "true", "yes"]
         has_google_creds = bool(os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "") or os.getenv("GOOGLE_CLOUD_PROJECT", ""))
@@ -93,8 +102,9 @@ def get_models(model_name: str):
                 # if Vertex client import fails, fall back to existing Gemini wrapper
                 print(f"VertexGemini import failed ({e}), falling back to generic Gemini client")
 
+        # Use Google Gemini SDK (default)
         from modules.llm.Gemini import Gemini
-        return Gemini(model=model_name, display_name=model_name)
+        return Gemini(model=model_name)
     else:
         print(f'Warning! undefined model {model_name}, use gpt-4o-mini instead.')
         from modules.llm.LangChainGPT import LangChainGPT
