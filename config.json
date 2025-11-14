@@ -1,8 +1,8 @@
 {
-    "role_llm_name": "gemini-2.5-flash",
-    "world_llm_name": "gemini-2.5-flash",
+    "role_llm_name": "gemini-2.5-flash-lite",
+    "world_llm_name": "gemini-2.5-flash-lite",
     "embedding_model_name":"bge-small",
-    "preset_path":"./experiment_presets/experiment_icefire.json",
+    "preset_path":"./experiment_presets/experiment_three_kindoms.json",
     "if_save": 0,
     "scene_mode": 1,
     "rounds": 10,
