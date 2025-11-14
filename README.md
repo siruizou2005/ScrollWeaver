@@ -1,208 +1,142 @@
-## 项目总概
-自动从小说文本中提取所需信息，构建一个“活的”虚拟世界。在这个世界里，书中的角色（作为智能体）可以根据自己的目标和性格自主行动、互动，并“续写”出忠实于原作风格的新故事。
+# ScrollWeaver (织梦绘卷)—— 从文本到“活世界”的多智能体互动故事系统
 
-## 下一步计划：
-1、隔离用户操作
+## 一、 项目概述：ScrollWeaver 是什么？
 
-2、修改前端
+### 1.1 一句话定位
 
-3、增加可玩性，例如将用户作为其中的一个角色，与performer和orchestrator共同推导故事情节的发展
+ScrollWeaver (织梦绘卷) 是一个多智能体社会模拟引擎，它能将静态的文本（如小说、设定集）“复活”为可互动、可共创、可导出的“活世界”。
 
-4、增加小说截断功能，可以从小说中某一情节开始enter the book
+### 1.2 核心理念
 
-## 为什么这样命名
+本项目模拟一个完整的社会系统，包含两大核心：
+* **指挥家 (Orchestrator)**： 作为“世界代理”或“导演”，它理解世界观、地点和规则，负责编排场景、调度角色登场。
+* **表演者 (Performer)**： 作为“角色代理”或“演员”，它们拥有各自的性格、记忆和目标，在“指挥家”设定的场景中自主行动、对话和演化。
 
-ScrollWeaver (织卷者) 是一个由指挥家 (Orchestrator) 和表演者 (Performer) 协同工作、响应玩家（执灯者）的行动，从而动态“编织”出独特故事（书卷）的魔法机器
+### 1.3 核心目标与价值
 
-# ScrollWeaver: Interactive Multi-Agent Story Creation System
+* **赋能创作**： 自动从文本中提炼设定与角色，并持续生成符合原作风格的新剧情，最终允许用户下载导出生动的故事内容，为作者和编剧提供灵感。
+* **交互式体验**： 支持人类玩家“扮演”或“降临”任意角色，与 AI 智能体共同推动故事发展，将“读故事”变为“玩故事”。
+* **构建“活的世界”**： 创造一个角色拥有记忆、目标会动态演化、并能对玩家行为做出真实反应的社会模拟沙盒。
 
-<div align="center">
+### 1.4 项目链接
+* **Demo:** [https://scrollweaver.harrycn.com](https://scrollweaver.harrycn.com)
 
-🖥️ [Project Page](https://scrollweaver2025.github.io/) | 📃 [Paper](https://arxiv.org/abs/2504.14538) | 🤗 [Demo](https://huggingface.co/spaces/alienet/ScrollWeaver)
+---
 
-</div>
+## 二、 核心体验与玩法：用户怎么玩？
 
+ScrollWeaver 提供了三种递进的核心玩法，从“观察”到“介入”，再到“共创与生成”，完美贴合不同用户的创作需求。
 
+### 2.1 玩法一：AI 导演模式（观察故事）
 
+这是系统的默认状态，主打“自动化叙事”。
+1.  **世界加载**： 用户选择一个预设世界（如红楼梦、冰与火之歌）或上传自己的小说文本。
+2.  **AI 自动演进**： “指挥家” (Orchestrator) 开始工作，它根据世界观和角色目标，自动设置场景并调度“表演者” (Performer) 登场。
+3.  **AI 自主表演**： 角色们根据自己的性格、记忆和当前目标，自主地进行对话、行动和互动，持续生成新的剧情。
+4.  **纯粹观察**： 用户如同观看一场永不重复的戏剧，观察 AI 如何演绎和推进符合逻辑的新故事。
 
-This is the official implementation of the paper "BOOKWORLD: From Novels to Interactive Agent Societies for Story Creation".
+### 2.2 玩法二：人类介入模式（扮演角色）
 
-<a href="https://ibb.co/TBTf350n"><img src="https://i.ibb.co/tMhGr52N/Preview.png" alt="Preview" border="0"></a>
-## Update
-[2025-09-02]
-#### ChromaDB Enhancements
-Fixed several critical bugs in ChromaDB implementation, improving stability and reliability of database operations. The update focuses on better data persistence and retrieval functionality.
+当用户希望亲自影响剧情走向时，可以随时切换到“介入模式”。
+1.  **选择角色**： 用户在前端界面上选择一个希望扮演的角色（例如，选择扮演“贾宝玉”）。
+2.  **系统暂停**： 当剧情轮到该角色行动时，系统（`server.py` 通过 WebSocket）会自动暂停，等待用户输入。
+3.  **亲自“表演”**： 用户在前端输入自己的对话或行动。
+4.  **AI 实时响应**： 系统将用户的输入作为“既定事实”纳入历史，其他 AI 角色会基于这一新的输入，实时调整自己的反应和后续行动，实现人与 AI 共同创作（Co-creation）的独特体验。
 
-#### Flexible Embedding Configuration
-You can now easily switch between different embedding models through configuration in `embedding.py`. The system supports both online API services and local models. Simply modify the model dictionary in the configuration file to use your preferred embedding solution.
+### 2.3 玩法三：人机协同创作模式（生成与导出）
 
+**(重点功能)** 这是为创作者设计的核心功能，主打**“人机协同”与“高效内容生成”**。它将“扮演模式”与“AI 高速演算”相结合。
+1.  **设定“剧本”**： 用户加载或创建好自己的世界观和角色卡。
+2.  **介入关键节点**： 用户可以像“玩法二”一样，先亲自“扮演”角色，推动剧情到关键节点，确保故事的核心走向（例如，A 和 B 必须在此相遇）。
+3.  **AI 接管推演**： 当用户完成关键布局后，点击“AI 接管生成”。AI 将基于用户已创造的剧情，在后台高速推演后续 N 个回合或 N 天的剧情。
+4.  **下载共创内容**： 生成完毕后，用户可以一键下载这份“人机共创”的完整故事脚本（例如 `.txt` 或 `.md` 格式）。这份脚本既包含了用户亲自撰写的关键情节，也包含了 AI 补完的丰富细节，可直接用于小说、剧本或视频创作。
 
-## Introduction
+---
 
-ScrollWeaver is a comprehensive system for social simulation in fictional worlds through multi-agent interactions. The system features:
+## 三、 技术实现深度解析
 
-- Scene-based story progression with multiple character agents
-- Continuous updating of agent memories, status, and goals
-- World agent orchestration of the simulation
-- Support for human intervention and control
-- LLM-based story generation and refinement
+本项目基于模块化的多智能体架构，确保了叙事的一致性、灵活性和可扩展性。
 
-## Setup
+### 3.1 总体架构
 
-### Step 1. Clone the repository
-```bash
-git clone https://github.com/your-repo/scrollweaver.git
-cd scrollweaver
-```
+* **后端 (FastAPI + WebSocket)**： (`server.py`) 负责提供 API 接口、托管前端静态资源，并通过 WebSocket 实时推送“消息流”和“状态流”，同时接收用户的“介入”指令。
+* **核心引擎 (`ScrollWeaver.py`)**： 负责模拟的主循环、状态管理和组件（指挥家、表演者）的协同工作。
+* **前端 (`index.html` + `frontend/`)**： 纯静态页面，作为“观察者”和“扮演者”的控制面板，展示对话流、角色/地图面板、场景状态，并提供输入接口。
 
-### Step 2.Install dependencies
-Conda
-```bash
-conda create -n scrollweaver python=3.10
-conda activate scrollweaver
-pip install -r requirements.txt
-```
-Docker
-```bash
-docker build -t scrollweaver .
-```
+### 3.2 核心引擎：导演-演员 (O-P) 模型
 
-### Step 3. Configure Simulation Settings
-Fill in the configuration parameters in `config.json`:
-  - `role_llm_name`: LLM model for character roles
-  - `world_llm_name`: LLM model for world simulation
-  - `preset_path`: The path to the experiment preset
-  - `if_save`: Enable/disable saving (1/0)
-  - `scene_mode`: Scene progression mode
-  - `rounds`: Number of simulation rounds
-  - `mode`: Simulation mode ("free" or "script")
+5.  **指挥家 (Orchestrator / 世界层)**
+    * **文件**： `modules/orchestrator.py`
+    * **职责**： 扮演“导演”和“世界规则”。
+    * **功能**：
+        * **世界加载**： 加载世界观 (`data/worlds/`)、地点 (`data/locations/`) 和地图信息。
+        * **RAG 检索**： 将世界设定构建为事实库 (ChromaDB, `modules/db/`)，用于检索增强，确保 AI 行为符合世界观。
+        * **场景编排**： 决定“下一幕”发生在何时、何地。
+        * **角色调度**： 决定该场景中有哪些“表演者”登场，并生成场景引导语。
+6.  **表演者 (Performer / 角色层)**
+    * **文件**： `modules/main_performer.py`
+    * **职责**： 扮演“演员”，忠于自己的角色。
+    * **功能**：
+        * **画像与记忆**： 加载角色档案 (`data/roles/`)，拥有独立的短期记忆（历史）和长期记忆（设定）。
+        * **目标演化**： 拥有动态的目标（Goals），这些目标会根据场景引导和历史事件而调整。
+        * **生成行动**： 基于“（指挥家的）场景上下文 + （自己的）角色画像/记忆/目标”，生成具体的行动和台词。
 
-Then enter the API key of the LLM provider you're using either in `config.json` or through the frontend interface.
+### 3.3 核心工作流（仿真循环）
 
-## Usage
+1.  **初始化**： 从 `config.json` 加载预设，`ScrollWeaver.py` 初始化“指挥家”和所有“表演者”。
+2.  **构建记忆**： “指挥家”加载世界观，并使用嵌入模型 (`modules/embedding.py`) 构建世界事实 RAG 检索库 (ChromaDB)。
+3.  **场景开始**： “指挥家”决定场景和登场角色。
+4.  **回合推进**： “指挥家”依次激活场景中的“表演者”。
+5.  **“介入”检查点**：
+    * 如果被激活的是“人类玩家”扮演的角色（玩法二/三）：系统通过 WebSocket 等待前端输入。
+    * 否则： “表演者” (AI) 自主生成行动/对话（玩法一）。
+6.  **记录与广播**： 行动结果被记入历史，并通过 WebSocket 广播给所有前端观察者。
+7.  **循环/存档/导出**： 推进到下一回合。状态可被自动保存 (`./experiment_saves/`)，或在“协同创作模式”（玩法三）下触发“内容导出”API。
 
-### Step 1. Start the server
-```bash
-python server.py
-```
-or
-```bash
-uvicorn server:app --host 127.0.0.1 --port 8000  
-```
-Docker
-```bash 
-docker run -p 7860:7860 scrollweaver
-```
+### 3.4 关键技术特性
 
-### Step 2. Access the web interface
-Open a browser and navigate to:
-- Local Python: http://localhost:8000
-- Local Docker: http://localhost:7860
+* **模型高度灵活**： (`modules/llm/`) 支持切换 OpenAI, Gemini, Qwen, DeepSeek, Ollama/VLLM 本地模型等。
+* **可插拔 RAG**： 默认使用 BGE-Small + ChromaDB，易于替换和扩展。
+* **数据管道**：
+    * **手动（推荐）**： 参照 `data/` 目录手动构建高质量的世界与角色档案。
+    * **自动（实验性）**： 使用 `extract_data/` 脚本从文本中自动提炼角色和设定。
+    * **转换**： 支持 `convert_sillytavern_cards_to_data.py` 将SillyTavern 角色卡转换为可用数据。
 
-### Step 3. Interact with the system
-- Start/pause/stop story generation
-- View character information and map details
-- Monitor story progression and agent interactions
-- Edit generated content if needed
+---
 
-### Step 4. Continue from previous simulation
-1. Locate the directory of the previous simulation within `/experiment_saves/`
-2. Set its path to the `save_dir` field in `config.json`. Ensure that the selected directory directly contains `server_info.json` and `orchestrator.json`.
+## 四、 创新点与赛道匹配
 
-## Customization
-### Construct Your Virtual World Manually
-1. Create the roles, map, worldbuilding following the examples given in `/data/`. Additionally, you can place an image named `icon.(png/jpg)` inside the character's folder — this will be used as the avatar displayed in the interface.
-2. You can improve the simulation quality by providing background settings about the world in `world_details/` or put character dialogue lines in `role_lines.jsonl`. 
-3. Enter the preset path to `preset_path` in `config.json`.
+### 4.1 核心创新点
 
-### Extract Role, Location, and Setting Data Automatically
+1.  **从“单体AI”到“社会AI”**： 不同于 1v1 的角色扮演，ScrollWeaver 构建了一个“多智能体社会”，AI 之间会自主发生有逻辑的互动，形成关系网和动态剧情。
+2.  **导演-演员 (O-P) 架构**： “指挥家”负责宏观场景和一致性，“表演者”负责微观演绎和个性化。这种分层架构有效解决了多智能体叙事中常见的“剧情漂移”和“人设崩塌”问题。
+3.  **人-机协同创作**： 创新的“协同创作模式”（玩法三）允许玩家先设定关键剧情，再由 AI 高速补完，实现了从“实时扮演”到“异步共创”的飞跃。
 
-Utilize the script provided in `/extract_data/` to extract key story elements using LLMs.
+### 4.2 赛道匹配：精准契合「具象热爱（内容生成智能体）」
 
-<font color="red">
-⚠️ Note: We are sorry that the extraction code is currently unstable and may not produce reliable results. We recommend manually entering the character profiles and descriptions, or using data from sources such as Wikipedia. You can quickly generate a template for location and character information by setting <code>if_auto_extract</code> to 0 in <code>extract_config.json</code>.
-</font>
-<br><br>
+本项目精准聚焦并深度契合 主赛道四「具象热爱（内容生成智能体）」。
+大赛对该赛道的定义是“开发 AI 驱动的内容生成Agent”，ScrollWeaver 正是这样一个以“AI 叙事”为核心的内容生成系统。
+* **打造“AI 创作助手”**： ScrollWeaver 的“协同创作模式”（玩法三）是一个强大的“AI 创作助手”。用户只需提供初始“素材”并介入关键节点，AI 就能高效生成包含用户创意的优质内容。 尤其是**“故事下载”**功能，将 ScrollWeaver 从一个模拟器转变为一个实用的 AIGC 生产力工具，让用户能将 AI 辅助生成的灵感和素材直接用于自己的小说或剧本。
+* **实现“人机自然协作”**： 我们通过“扮演模式”（玩法二）和“协同创作模式”（玩法三）实现了“人机协作...融入创作过程”的最佳实践。用户（人）的“扮演”输入会被 AI 实时响应（玩法二），或者作为“关键剧情锚点”被 AI 继承并高速推演（玩法三）。这打破了传统的“人写、AI 润色”模式，实现了从“实时演绎”到“异步共创”的深度协作。
+* **“具象”用户的“热爱”**： 本项目让 Soul 平台上富有创造力的 Z 世代用户，能将他们所“热爱”的任何 IP（小说、动漫、游戏）或个人幻想，通过我们的引擎“具象化”为一个可观察、可互动的“活世界”。这极大地**“赋能（了 Soul 的）兴趣内容生态”**，创造了一种全新的、具有高度沉浸感和可玩性的 AIGC/UGC 形式。
 
-**1. Configure the extraction model and API key in `extract_config.json`:**
+---
 
-* `book_path`: Path to the input book file. We currently support `.epub` (recommended), `.pdf`, and `.txt` formats.
-* `language`: The language of the book (e.g., `en`, `zh`). If not specified, the program will attempt to detect it automatically.
-* `book_source`: The title or name of the book. If omitted, the program will try to infer it from the file.
-* `target_character_names`: A list of characters to extract information about. It's best to use names or nicknames that appear most frequently in the text, rather than full formal names. If not provided, the program will attempt to extract them automatically. **For higher-quality results, we strongly recommend specifying this field.**
-* `target_location_names`: A list of important locations. Again, using the most frequently occurring name or common synonym improves accuracy. If omitted, locations will be extracted automatically. **For higher-quality results, we strongly recommend specifying this field.**
+## 五、 未来路线图
 
-**2. Run the script**
+我们计划在现有的沙盒模拟基础上，适配更多结构化的“互动叙事”玩法，并大力发展用户共创生态，将 ScrollWeaver 引擎打造为通用的“多智能体游戏与内容创作框架”。
 
-  Characters and Locations
+### 5.1 构建“共创生态” (UGC)
 
-  ```bash
-  python extract_data.py
-  ``` 
+这是我们后期的核心目标，旨在赋能 Soul 的兴趣内容生态。
+* **开放世界观编辑器**： 我们将开发可视化编辑器，让用户（Souler）不再局限于上传文本，而是可以**“共创”并分享**自己的世界观、地点、地图和规则。
+* **角色卡工坊 (Workshop)**： 建立一个社区工坊，让用户可以**“共创”并分享**他们精心设计的角色卡。优秀的角色卡将被更多“世界”所接纳，形成一个由用户驱动的、可无限扩展的内容库。
 
-  Settings
+### 5.2 新玩法适配：剧本杀 & 狼人杀
 
-  ```bash
-  python extract_settings.py
-  ```
-
-### Convert SillyTavern Character Cards to Role Data
-
-1. Put your character cards in `/data/sillytavern_cards/`.
-2. Run the script. It will convert all the cards into the role data that ScrollWeaver needs.
-```bash
-python convert_sillytavern_cards_to_data.py
-```
-3. Input role codes of all the characters participating in this simulation to `performer_codes` in the preset file.
-
-## Directory Structure
-
-```
-.
-├── data/
-├── frontend/
-│   ├── assets/
-│   ├── css/
-│   └── js/
-├── modules/
-│   ├── db/
-│   ├── llm/
-│   ├── prompt/
-│   ├── main_performer.py
-│   └── orchestrator.py
-├── experiment_configs/
-├── ScrollWeaver.py
-├── server.py
-├── config.json
-└── index.html
-```
-
-
-## Authors and Citation
-**Authors:** Yiting Ran, Xintao Wang, Tian Qiu,
-Jiaqing Liang, Yanghua Xiao, Deqing Yang.
-
-```bibtex
-@inproceedings{ran2025scrollweaver,
-  title={BOOKWORLD: From Novels to Interactive Agent Societies for Story Creation},
-  author={Ran, Yiting and Wang, Xintao and Qiu, Tian and Liang, Jiaqing and Xiao, Yanghua and Yang, Deqing},
-  booktitle={Proceedings of the 63rd Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers)},
-  pages={15898--15912},
-  year={2025}
-}
-```
-## License
-
-This project is licensed under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0).
-
-
-##  Acknowledgements
-
-- Fantasy Map: The background of map panel used in the frontend is from [Free Fantasy Maps](https://freefantasymaps.org/epic-world-cinematic-landscapes/), created by Fantasy Map Maker. This map is free for non-commercial use.
-
-## Contact
-
-ScrollWeaver is a foundational framework that we aim to continuously optimize and enrich with custom modules. We welcome and greatly appreciate your suggestions and contributions!
-
-If you have any suggestions or would like to contribute, please contact us at: alienet1109@163.com
-
+* **适配「剧本杀 (Jubensha)」**：
+    * **指挥家 (Orchestrator)** 将扮演“主持人(DM)”角色，负责管理主线剧情、时间推进和证据线索库（通过 RAG 检索）。
+    * **表演者 (Performer)** (无论是 AI 还是人类玩家) 将获得各自的“秘密剧本”（即独特的初始记忆和隐藏目标），它们必须在“指挥家”设定的场景中，通过互动、搜证、推理来达成各自的目标。
+* **适配「狼人杀 (Werewolf)」**：
+    * **指挥家 (Orchestrator)** 将扮演“法官”，严格执行游戏规则（如黑夜/白天阶段切换、投票统计、技能结算）。
+    * **表演者 (Performer)** 将被赋予特定角色（如狼人、村民、预言家），它们必须利用自己的记忆和角色目标，在“指挥家”的规则下进行发言、欺骗、和逻辑推演。
