@@ -121,7 +121,7 @@ ROLE_SINGLE_ROLE_RESPONSE_PROMPT = """
 'if_end_interaction': true or false, set to true if it's appropriate to end this interaction.
 'extra_interact_type': 'environment' or 'npc' or 'no'. 'environment' indicates your response requires an additional environmental interaction, 'npc' means it requires additional interaction with a non-main character, and 'no' means no extra interaction is needed.
 'target_npc_name': str, if 'extra_interact_type' is 'npc', this specifies the target NPC name or job, e.g., "shopkeeper."
-'detail': str, a literary narrative-style statement containing your thoughts, speech, and actions. 注意：detail字段必须是纯文本，禁止使用任何Markdown格式。
+'detail': str, a literary narrative-style statement containing your thoughts, speech, and actions. 注意：detail字段必须是纯文本，禁止使用任何Markdown格式。**严禁在detail中提及、对话或引用未出现在当前场景中的角色。**
 """ 
 
 ROLE_MULTI_ROLE_RESPONSE_PROMPT = """
@@ -139,8 +139,10 @@ ROLE_MULTI_ROLE_RESPONSE_PROMPT = """
 ## 你的状态
 {status}
 
-## 与你在一起的角色
+## 与你在一起的角色（当前场景中出现的角色）
 {other_roles_info}
+
+**重要限制：你只能与上述"与你在一起的角色"列表中的角色进行交互。严禁与未出现在当前场景中的角色交互、对话或提及。如果某个角色不在上述列表中，说明该角色不在当前场景，你无法与其交互。**
 
 ## 角色扮演的要求
 
@@ -172,7 +174,7 @@ ROLE_MULTI_ROLE_RESPONSE_PROMPT = """
 'if_end_interaction': true or false, set to true if it's appropriate to end this interaction.
 'extra_interact_type'，'environment' or 'npc' or 'no'. 'environment' indicates your response requires an additional environmental interaction, 'npc' means it requires additional interaction with a non-main character, 'no' means no extra interaction is needed.
 'target_npc_name'，str，only if 'extra_interact_type' is 'npc', this specifies the target NPC name, e.g., "shopkeeper".
-'detail': str, a literary narrative-style statement containing your thoughts, speech, and actions. 注意：detail字段必须是纯文本，禁止使用任何Markdown格式。
+'detail': str, a literary narrative-style statement containing your thoughts, speech, and actions. 注意：detail字段必须是纯文本，禁止使用任何Markdown格式。**严禁在detail中提及、对话或引用未出现在当前场景中的角色。**
 """ 
 
 ROLE_PLAN_PROMPT = """
@@ -190,8 +192,10 @@ ROLE_PLAN_PROMPT = """
 ## 你的状态
 {status}
 
-## 和你在一起的其它角色，目前你只能与他们交互
+## 和你在一起的其它角色（当前场景中出现的角色）
 {other_roles_info}
+
+**重要限制：你只能与上述"和你在一起的其它角色"列表中的角色进行交互。严禁与未出现在当前场景中的角色交互、对话或提及。如果某个角色不在上述列表中，说明该角色不在当前场景，你无法与其交互。**
 
 ## 角色扮演的要求
 
@@ -228,9 +232,9 @@ ROLE_PLAN_PROMPT = """
   - "environment": Indicates interaction with the environment (e.g., action: investigate, destroy).
   - "npc": Refers to interaction with a non-character in the list (e.g., action: shop).
   - "no": Indicates no interaction is required.
-"target_role_codes": list of str. If "interact_type" is "single" or "multi", it represents the list of target character codes, e.g., ["John-zh", "Sam-zh"]. For "single", this list should have exactly one element.
+"target_role_codes": list of str. If "interact_type" is "single" or "multi", it represents the list of target character codes, e.g., ["John-zh", "Sam-zh"]. For "single", this list should have exactly one element. **重要：target_role_codes 中的所有角色必须来自上述"和你在一起的其它角色"列表，严禁选择未出现在当前场景中的角色。**
 "target_npc_name": str. If "interact_type" is "npc", this represents the target NPC name, e.g., "shopkeeper."
-"detail": str. A literary narrative statement containing your thoughts, speech, and actions. 注意：detail字段必须是纯文本，禁止使用任何Markdown格式。
+"detail": str. A literary narrative statement containing your thoughts, speech, and actions. 注意：detail字段必须是纯文本，禁止使用任何Markdown格式。**严禁在detail中提及、对话或引用未出现在当前场景中的角色。**
 
 """
 
