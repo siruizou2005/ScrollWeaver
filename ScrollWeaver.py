@@ -207,7 +207,34 @@ class ScrollWeaver():
     def get_history_messages(self,save_dir):
         
         messages = []
+        # 跟踪每个场景是否已经插入了事件消息
+        scene_event_inserted = {}
+        
         for record in self.server.history_manager.detailed_history:
+            cur_round = record["cur_round"]
+            
+            # 在每个场景的第一条消息之前插入 "-- Current Event --" 消息
+            # 检查是否有事件，且该场景还没有插入事件消息
+            if (cur_round >= 1 and 
+                self.server.event_manager.event and 
+                cur_round not in scene_event_inserted and
+                len(self.server.event_manager.event_history) > 0):
+                # 找到对应场景的事件（事件历史中的索引对应场景编号）
+                event_index = min(cur_round - 1, len(self.server.event_manager.event_history) - 1)
+                if event_index >= 0:
+                    event_text = self.server.event_manager.event_history[event_index]
+                    if event_text:
+                        messages.append({
+                            'username': 'world',
+                            'type': 'world',
+                            'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                            'text': "-- Current Event --\n" + event_text,
+                            'icon': "./frontend/assets/images/default-icon.jpg",
+                            "uuid": None,
+                            "scene": cur_round
+                        })
+                        scene_event_inserted[cur_round] = True
+            
             message_type = record["actor_type"]
             code = record["role_code"]
             if message_type == "role":

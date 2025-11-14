@@ -122,7 +122,7 @@ Output Fields:
 ‘if_end_interaction’: true or false, set to true if it’s appropriate to end this interaction.
 ‘extra_interact_type’: ‘environment’ or ‘npc’ or ‘no’. ‘environment’ indicates your response requires an additional environmental interaction, ‘npc’ means it requires additional interaction with a non-main character, and ‘no’ means no extra interaction is needed.
 ‘target_npc_name’: str, if ‘extra_interact_type’ is ‘npc’, this specifies the target NPC name or job, e.g., "shopkeeper."
-‘detail’: str, a literary narrative-style statement containing your thoughts, speech, and actions.
+'detail': str, a literary narrative-style statement containing your thoughts, speech, and actions. **It is STRICTLY FORBIDDEN to mention, speak to, or reference characters who are not present in the current scene in the detail field.**
 """
 
 ROLE_MULTI_ROLE_RESPONSE_PROMPT = """ 
@@ -144,8 +144,10 @@ The action details are as follows: {action_detail}
 ## Your status
 {status}
 
-## The characters with you 
+## The characters with you (characters present in the current scene)
 {other_roles_info}
+
+**IMPORTANT RESTRICTION: You can only interact with characters listed in the "The characters with you" section above. It is STRICTLY FORBIDDEN to interact with, speak to, or mention characters who are not present in the current scene. If a character is not in the list above, it means they are not in the current scene and you cannot interact with them.**
 
 ## Roleplaying Requirements
 
@@ -176,7 +178,7 @@ Output Fields:
 ‘if_end_interaction’: true or false, set to true if it’s appropriate to end this interaction.
 ‘extra_interact_type’，‘environment’ or ‘npc’ or ‘no’. ‘environment’ indicates your response requires an additional environmental interaction, ‘npc’ means it requires additional interaction with a non-main character, ‘no’ means no extra interaction is needed.
 ‘target_npc_name’，str，if ‘extra_interact_type’ is ‘npc’, this specifies the target NPC name, e.g., "shopkeeper".
-‘detail’: str, a literary narrative-style statement containing your thoughts, speech, and actions.
+'detail': str, a literary narrative-style statement containing your thoughts, speech, and actions. **It is STRICTLY FORBIDDEN to mention, speak to, or reference characters who are not present in the current scene in the detail field.**
 """
 
 
@@ -196,8 +198,10 @@ You are {role_name}. Your nickname is {nickname}. Based on your goal and other p
 ## Your status
 {status}
 
-## Other characters with you; currently, you can only interact with them
+## Other characters with you (characters present in the current scene)
 {other_roles_info}
+
+**IMPORTANT RESTRICTION: You can only interact with characters listed in the "Other characters with you" section above. It is STRICTLY FORBIDDEN to interact with, speak to, or mention characters who are not present in the current scene. If a character is not in the list above, it means they are not in the current scene and you cannot interact with them.**
 
 ## Roleplaying Requirements
 
@@ -233,10 +237,10 @@ Output Fields:
   - 'environment': Indicates interaction with the environment (e.g., action: investigate, destroy).
   - 'npc': Refers to interaction with a non-character in the list (e.g., action: shop).
   - 'no': Indicates no interaction is required.
-'target_role_codes': list of str. If 'interact_type' is 'single' or 'multi', it represents the list of target character codes, e.g., ["John-zh", "Sam-zh"]. For 'single', this list should have exactly one element.
+'target_role_codes': list of str. If 'interact_type' is 'single' or 'multi', it represents the list of target character codes, e.g., ["John-zh", "Sam-zh"]. For 'single', this list should have exactly one element. **IMPORTANT: All characters in target_role_codes must be from the "Other characters with you" list above. It is STRICTLY FORBIDDEN to select characters who are not present in the current scene.**
 'target_npc_name': str. If 'interact_type' is 'npc', this represents the target NPC name, e.g., "shopkeeper."
 'visible_role_codes': list of str. You can limit the visibility of your action details to specific group members. This list should include 'target_role_codes'.
-'detail': str. A literary narrative statement containing your thoughts, speech, and actions.
+'detail': str. A literary narrative statement containing your thoughts, speech, and actions. **It is STRICTLY FORBIDDEN to mention, speak to, or reference characters who are not present in the current scene in the detail field.**
 
 """
 
