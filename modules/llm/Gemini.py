@@ -5,6 +5,7 @@ import time
 import threading
 import json
 from typing import Optional, List
+from openai import OpenAI
 
 class Gemini(BaseLLM):
     """
@@ -34,7 +35,7 @@ class Gemini(BaseLLM):
         self.messages = []
         self.system_instruction = None
         self.timeout = timeout
-        self.max_retries = 3  # 最大重试次数
+        self.max_retries = 1  # 最大重试次数（最多重试一次）
 
         # 配置 API Key（支持多个 key 轮换）
         self.api_keys: List[str] = self._load_api_keys()
@@ -42,22 +43,46 @@ class Gemini(BaseLLM):
         self._api_key_index = 0
         self._current_api_key = None
         
-        # 先配置第一个 key，确保后续调用正常
-        initial_key = self.api_keys[0]
-        self._configure_client(initial_key)
+        # 如果有 Google API Key，先配置第一个 key
+        if self.api_keys:
+            initial_key = self.api_keys[0]
+            self._configure_client(initial_key)
         # 先不创建 client，在需要时根据 system_instruction 创建
+        
+        # 检查是否有备用中转 API（OpenAI 兼容）
+        self.fallback_api_base = os.getenv("OPENAI_API_BASE", "")
+        self.fallback_api_key = os.getenv("OPENAI_API_KEY", "")
+        self.fallback_client = None
+        if self.fallback_api_base and self.fallback_api_key:
+            try:
+                self.fallback_client = OpenAI(api_key=self.fallback_api_key, base_url=self.fallback_api_base)
+                print(f"[Gemini] 已配置备用中转 API: {self.fallback_api_base}")
+            except Exception as e:
+                print(f"[Gemini] 警告：备用中转 API 配置失败: {e}")
+                self.fallback_client = None
 
     def _load_api_keys(self) -> List[str]:
         """
         从环境变量中加载 API Key。支持以下格式：
         - GEMINI_API_KEYS: JSON 数组或逗号/分号分隔的字符串
         - GEMINI_API_KEY: 单个 key 或逗号/分号分隔的多个 key
+        
+        注意：如果 GEMINI_API_KEY 为空，但配置了备用中转 API（OPENAI_API_BASE），
+        则允许使用备用 API 作为唯一方案。
         """
         raw_value = os.getenv("GEMINI_API_KEYS") or os.getenv("GEMINI_API_KEY")
         if not raw_value:
-            raise ValueError(
-                "未检测到 GEMINI_API_KEY 或 GEMINI_API_KEYS。请在 config.json 或环境变量中配置。"
-            )
+            # 检查是否有备用 API
+            fallback_base = os.getenv("OPENAI_API_BASE", "")
+            fallback_key = os.getenv("OPENAI_API_KEY", "")
+            if fallback_base and fallback_key:
+                # 允许只使用备用 API，返回空列表
+                return []
+            else:
+                raise ValueError(
+                    "未检测到 GEMINI_API_KEY 或 GEMINI_API_KEYS，且未配置备用中转 API。"
+                    "请在 config.json 中配置 GEMINI_API_KEY 或 OPENAI_API_BASE + OPENAI_API_KEY。"
+                )
 
         keys: List[str] = []
         raw_value = raw_value.strip()
@@ -83,6 +108,8 @@ class Gemini(BaseLLM):
 
     def _get_next_api_key(self) -> str:
         """轮询获取下一个 API Key。"""
+        if not self.api_keys:
+            raise ValueError("没有可用的 Google API Key")
         with self._api_key_lock:
             key = self.api_keys[self._api_key_index]
             self._api_key_index = (self._api_key_index + 1) % len(self.api_keys)
@@ -139,6 +166,14 @@ class Gemini(BaseLLM):
             模型生成的文本响应
         """
         last_exception = None
+        
+        # 如果没有 Google API Key，直接使用备用 API
+        if not self.api_keys:
+            if self.fallback_client:
+                print(f"[Gemini] 未配置 Google API Key，直接使用备用中转 API")
+                return self._get_response_fallback(temperature)
+            else:
+                raise ValueError("未配置 Google API Key 且未配置备用中转 API")
         
         # 重试机制
         for attempt in range(self.max_retries):
@@ -239,7 +274,17 @@ class Gemini(BaseLLM):
                     traceback.print_exc()
                     raise
         
-        # 如果所有重试都失败
+        # 如果所有重试都失败，尝试使用备用中转 API
+        if last_exception and self.fallback_client:
+            print(f"[Gemini] Google API 调用失败，切换到备用中转 API")
+            try:
+                return self._get_response_fallback(temperature)
+            except Exception as fallback_error:
+                print(f"[Gemini] 备用中转 API 也失败: {fallback_error}")
+                # 如果备用 API 也失败，抛出原始错误
+                raise last_exception
+        
+        # 如果没有备用 API 或备用 API 未配置，抛出原始错误
         if last_exception:
             raise last_exception
     
@@ -258,6 +303,62 @@ class Gemini(BaseLLM):
         self.user_message(text)
         response = self.get_response(temperature=temperature)
         return response
+    
+    def _get_response_fallback(self, temperature=0.8):
+        """
+        使用备用中转 API（OpenAI 兼容）获取响应。
+        
+        Args:
+            temperature: 温度参数，控制输出的随机性，默认 0.8
+            
+        Returns:
+            模型生成的文本响应
+        """
+        if not self.fallback_client:
+            raise ValueError("备用中转 API 未配置")
+        
+        # 转换消息格式为 OpenAI 格式
+        openai_messages = []
+        
+        # 如果有 system_instruction，添加为 system 消息
+        if self.system_instruction:
+            openai_messages.append({
+                "role": "system",
+                "content": self.system_instruction
+            })
+        
+        # 转换历史消息
+        for msg in self.messages:
+            role = msg["role"]
+            # Gemini 使用 "model"，OpenAI 使用 "assistant"
+            if role == "model":
+                role = "assistant"
+            elif role == "user":
+                role = "user"
+            else:
+                # 其他角色保持原样或映射为 user
+                role = "user"
+            
+            openai_messages.append({
+                "role": role,
+                "content": msg["content"]
+            })
+        
+        print(f"[Gemini] 使用备用中转 API 调用，模型: {self.display_model_name}")
+        
+        try:
+            completion = self.fallback_client.chat.completions.create(
+                model=self.model_name,
+                messages=openai_messages,
+                temperature=temperature,
+                top_p=0.8
+            )
+            response_text = completion.choices[0].message.content
+            print(f"[Gemini] 备用中转 API 调用成功，响应长度: {len(response_text) if response_text else 0} 字符")
+            return response_text
+        except Exception as e:
+            print(f"[Gemini] 备用中转 API 调用失败: {e}")
+            raise
     
     def print_prompt(self):
         """打印当前的消息历史（用于调试）。"""
