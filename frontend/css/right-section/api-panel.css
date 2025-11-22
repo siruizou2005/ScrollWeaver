@@ -30,40 +30,57 @@
 
 .api-key-input input {
     padding: 8px;
-    border: 1px solid #5f3737;
+    border: 2px solid rgba(212, 175, 55, 0.3);
     border-radius: 4px;
+    background-color: #fff;
+    color: #3d2817;
     width: 100%;
     max-width: 100%;
     box-sizing: border-box;
 }
 
+.api-key-input input:focus {
+    outline: none;
+    border-color: #d4af37;
+    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15);
+}
+
 label {
-    color: #5f3737;
+    color: #3d2817;
     font-weight: bold;
 }
 
 select {
     padding: 8px;
-    border: 1px solid #5f3737;
+    border: 2px solid rgba(212, 175, 55, 0.3);
     border-radius: 4px;
-    background-color: white;
+    background-color: #fff;
+    color: #3d2817;
     width: 100%;
     max-width: 100%;
     box-sizing: border-box;
 }
 
+select:focus {
+    outline: none;
+    border-color: #d4af37;
+    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15);
+}
+
 .api-submit-btn {
     padding: 10px;
-    background-color: #5f3737;
+    background: linear-gradient(135deg, #8b4513 0%, #6b4423 100%);
     color: white;
-    border: none;
+    border: 2px solid rgba(212, 175, 55, 0.3);
     border-radius: 4px;
     cursor: pointer;
-    transition: background-color 0.3s;
+    transition: all 0.3s;
+    box-shadow: 0 2px 8px rgba(107, 68, 35, 0.2);
 }
 
 .api-submit-btn:hover {
-    background-color: #7a4747;
+    background: linear-gradient(135deg, #a0522d 0%, #8b4513 100%);
+    box-shadow: 0 4px 12px rgba(107, 68, 35, 0.3);
 }
 
 .api-key-input .toggle-visibility {
@@ -72,7 +89,7 @@ select {
     top: 50%;
     transform: translateY(-50%);
     cursor: pointer;
-    color: #5f3737;
+    color: #6b4423;
 }
 
 /* 修复i18n后的布局问题 */
