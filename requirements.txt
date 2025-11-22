@@ -9,6 +9,7 @@ anthropic
 beautifulsoup4
 chromadb
 fastapi
+python-multipart
 # langchain and langchain_experimental are specified above
 modelscope
 openai

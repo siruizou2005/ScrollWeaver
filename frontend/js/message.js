@@ -11,10 +11,18 @@ document.addEventListener('DOMContentLoaded', function() {
     // 生成随机的客户端ID
     const clientId = Math.random().toString(36).substring(7);
     
+    // 从URL获取scroll_id
+    const urlParams = new URLSearchParams(window.location.search);
+    const scrollId = urlParams.get('scroll_id');
+    
     // WebSocket连接
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const ws = new WebSocket(`${protocol}//${window.location.host}/ws/${clientId}`);
-    window.ws = ws
+    const wsUrl = `${protocol}//${window.location.host}/ws/${clientId}`;
+    const ws = new WebSocket(wsUrl);
+    window.ws = ws;
+    
+    // 如果有scroll_id，连接建立后立即发送init消息加载预设
+    let scrollIdToLoad = scrollId;
 
     // 辅助函数：安全地发送 WebSocket 消息
     function sendWebSocketMessage(message) {
@@ -270,6 +278,15 @@ document.addEventListener('DOMContentLoaded', function() {
     ws.onopen = function() {
         console.log('WebSocket连接已建立');
         addSystemMessage('连接已建立');
+        
+        // 如果有scroll_id，立即发送init消息加载预设
+        if (scrollIdToLoad) {
+            console.log('发送init消息加载预设，scroll_id:', scrollIdToLoad);
+            sendWebSocketMessage({
+                type: 'init',
+                scroll_id: parseInt(scrollIdToLoad)
+            });
+        }
     };
     
     ws.onclose = function() {
@@ -1191,9 +1208,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 添加导出故事按钮的点击事件
     exportStoryBtn.addEventListener('click', function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const scrollId = urlParams.get('scroll_id');
+        
         const payload = { type: 'generate_story' };
         if (currentSceneFilter !== null && currentSceneFilter !== undefined) {
             payload.scene = String(currentSceneFilter);
+        }
+        if (scrollId) {
+            payload.scroll_id = parseInt(scrollId);
         }
 
         if (sendWebSocketMessage(payload)) {

@@ -9,11 +9,11 @@
 }
 
 .status-module {
-    background: #ffffff;
+    background: rgba(250, 248, 243, 0.95);
     border-radius: 6px;
     padding: 18px;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-    border: 1px solid #e2e8f0;
+    box-shadow: 0 1px 2px rgba(107, 68, 35, 0.1);
+    border: 2px solid rgba(212, 175, 55, 0.3);
     transition: all 0.2s ease;
     width: 100%;
     max-width: 100%;
@@ -23,17 +23,17 @@
 }
 
 .status-module:hover {
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
-    border-color: #cbd5e1;
+    box-shadow: 0 2px 4px rgba(107, 68, 35, 0.15);
+    border-color: rgba(212, 175, 55, 0.5);
 }
 
 .status-module h3 {
-    color: #1e293b;
+    color: #3d2817;
     margin: 0 0 12px 0;
     font-size: 1.1em;
     font-weight: 700;
     padding-bottom: 10px;
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 2px solid rgba(212, 175, 55, 0.3);
     width: 100%;
     max-width: 100%;
     box-sizing: border-box;
@@ -52,7 +52,7 @@
 
 /* 事件模块样式 */
 .event-text {
-    color: #333;
+    color: #3d2817;
     line-height: 1.6;
     display: flex;
     align-items: center;
@@ -73,13 +73,13 @@
 /* 地点模块样式 */
 .location-name {
     font-weight: 700;
-    color: #1e293b;
+    color: #3d2817;
     margin-bottom: 8px;
     font-size: 15px;
 }
 
 .location-description {
-    color: #666;
+    color: #6b4423;
     line-height: 1.6;
     font-size: 14px;
 }
@@ -95,20 +95,20 @@
 }
 
 .group-member {
-    background: #f8fafc;
+    background: rgba(250, 248, 243, 0.95);
     padding: 8px 14px;
     border-radius: 6px;
     font-size: 13px;
-    color: #475569;
+    color: #6b4423;
     font-weight: 500;
-    border: 1px solid #e2e8f0;
+    border: 2px solid rgba(212, 175, 55, 0.3);
     transition: all 0.2s ease;
 }
 
 .group-member:hover {
-    background: #f1f5f9;
-    border-color: #cbd5e1;
-    color: #334155;
+    background: rgba(245, 241, 232, 0.95);
+    border-color: rgba(212, 175, 55, 0.5);
+    color: #8b4513;
 }
 
 .no-members {
@@ -127,11 +127,11 @@
 }
 
 .setting-item {
-    background: #f8fafc;
+    background: rgba(250, 248, 243, 0.95);
     padding: 12px;
     border-radius: 6px;
     margin-bottom: 10px;
-    border: 1px solid #e2e8f0;
+    border: 2px solid rgba(212, 175, 55, 0.3);
     transition: all 0.2s ease;
     width: 100%;
     max-width: 100%;
@@ -141,26 +141,26 @@
 }
 
 .setting-item:hover {
-    background: #f1f5f9;
-    border-color: #cbd5e1;
+    background: rgba(245, 241, 232, 0.95);
+    border-color: rgba(212, 175, 55, 0.5);
 }
 
 .setting-term {
     font-weight: 700;
-    color: #1e293b;
+    color: #3d2817;
     margin-bottom: 6px;
     font-size: 14px;
 }
 
 .setting-nature {
-    color: #888;
+    color: #8b4513;
     font-size: 12px;
     margin-bottom: 6px;
     font-weight: 500;
 }
 
 .setting-detail {
-    color: #666;
+    color: #6b4423;
     line-height: 1.6;
     font-size: 13px;
 }

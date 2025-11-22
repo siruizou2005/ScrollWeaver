@@ -1,18 +1,32 @@
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Request
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Request, Depends, Header, UploadFile, File, Form
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, FileResponse
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 import json
 import asyncio
 import os
 from pathlib import Path
 from datetime import datetime
+from typing import Optional
 from sw_utils import is_image, load_json_file
 from ScrollWeaver import ScrollWeaver
 from modules.utils.text_utils import remove_markdown
+from database import db
 # Server class is now in modules.core.server, but ScrollWeaver wrapper is still in ScrollWeaver.py
 
 app = FastAPI()
+# 添加CORS支持
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+security = HTTPBearer()
 default_icon_path = './frontend/assets/images/default-icon.jpg'
 config = load_json_file('config.json')
 for key in config:
@@ -78,6 +92,8 @@ class ConnectionManager:
             if not self.pending_user_inputs[client_id].done():
                 self.pending_user_inputs[client_id].cancel()
             del self.pending_user_inputs[client_id]
+        if client_id in self.client_users:
+            del self.client_users[client_id]
             
     def stop_story(self, client_id: str):
         if client_id in self.story_tasks:
@@ -552,6 +568,12 @@ manager = ConnectionManager()
 
 @app.get("/")
 async def get():
+    html_file = Path("frontend/pages/home.html")
+    return HTMLResponse(html_file.read_text(encoding="utf-8"))
+
+@app.get("/game")
+async def get_game():
+    """游戏页面"""
     html_file = Path("index.html")
     return HTMLResponse(html_file.read_text(encoding="utf-8"))
 
@@ -631,7 +653,51 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
     print(f"WebSocket connection attempt for client {client_id}")
     await manager.connect(websocket, client_id)
     print(f"WebSocket connected for client {client_id}")
+    
+    # 存储客户端的scroll_id
+    client_scroll_id = None
+    
     try:
+        first_message = None
+        # 等待第一个消息，可能是初始化消息包含scroll_id和token
+        try:
+            first_data = await websocket.receive_text()
+            first_message = json.loads(first_data)
+            
+            # 处理用户认证
+            if 'token' in first_message:
+                user_info = db.verify_token(first_message['token'])
+                if user_info:
+                    manager.client_users[client_id] = user_info
+                    print(f"User authenticated: {user_info['username']} for client {client_id}")
+            
+            # 处理scroll_id
+            if first_message.get('type') == 'init' and 'scroll_id' in first_message:
+                client_scroll_id = first_message.get('scroll_id')
+                # 加载对应的书卷
+                if client_scroll_id:
+                    scroll = db.get_scroll(client_scroll_id)
+                    if scroll and scroll.get('preset_path') and os.path.exists(scroll['preset_path']):
+                        # 为这个客户端创建新的ScrollWeaver实例
+                        manager.scrollweaver = ScrollWeaver(
+                            preset_path=scroll['preset_path'],
+                            world_llm_name=config["world_llm_name"],
+                            role_llm_name=config["role_llm_name"],
+                            embedding_name=config["embedding_model_name"]
+                        )
+                        manager.scrollweaver.set_generator(
+                            rounds=config["rounds"],
+                            save_dir=config["save_dir"],
+                            if_save=config["if_save"],
+                            mode=config["mode"],
+                            scene_mode=config["scene_mode"]
+                        )
+                        print(f"Loaded scroll {client_scroll_id} for client {client_id}")
+                first_message = None  # init消息已处理，清除
+        except Exception as e:
+            # 如果没有初始化消息，使用默认预设
+            print(f"No init message or error: {e}")
+        
         print(f"Getting initial data for client {client_id}")
         initial_data = await manager.get_initial_data()
         await websocket.send_json({
@@ -640,10 +706,16 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
         })
         print(f"Initial data sent to client {client_id}")
         
+        # 处理消息循环
         while True:
             try:
-                data = await websocket.receive_text()
-                message = json.loads(data)
+                # 如果第一个消息不是init，先处理它；否则接收新消息
+                if first_message and first_message.get('type') != 'init':
+                    message = first_message
+                    first_message = None  # 清除，避免重复处理
+                else:
+                    data = await websocket.receive_text()
+                    message = json.loads(data)
                 print(f"Received WebSocket message: {message.get('type')} for client {client_id}, full message: {message}")
             except json.JSONDecodeError as e:
                 print(f"JSON decode error for client {client_id}: {e}")
@@ -908,12 +980,37 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                     # 清理故事文本中的 Markdown 格式
                     if story_text:
                         story_text = remove_markdown(story_text)
+                    
+                    # 保存故事到数据库（如果用户已登录）
+                    story_id = None
+                    if client_id in manager.client_users:
+                        user_info = manager.client_users[client_id]
+                        scroll_id = None
+                        # 尝试从localStorage获取scroll_id（通过消息传递）
+                        if 'scroll_id' in message:
+                            scroll_id = message.get('scroll_id')
+                        
+                        # 获取历史记录作为story_data
+                        story_data = {}
+                        if hasattr(manager.scrollweaver, 'get_history'):
+                            story_data = manager.scrollweaver.get_history()
+                        
+                        story_id = db.save_story(
+                            user_id=user_info['id'],
+                            scroll_id=scroll_id,
+                            title=f"故事_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+                            content=story_text,
+                            story_data=story_data
+                        )
+                    
+                    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                     # 发送生成的故事
                     await websocket.send_json({
                         'type': 'story_exported',
                         'data': {
                             'story': story_text,
-                            'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                            'timestamp': timestamp,
+                            'story_id': story_id
                         }
                     })
                 except Exception as e:
@@ -987,6 +1084,414 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
             manager.disconnect(client_id)
         except:
             pass
+
+# 用户认证相关API
+async def get_current_user(request: Request, authorization: Optional[str] = Header(None)):
+    """获取当前用户"""
+    token = None
+    # 尝试从Authorization header获取token
+    if authorization:
+        if authorization.startswith("Bearer "):
+            token = authorization[7:]
+    # 尝试从query参数获取token（用于WebSocket等场景）
+    if not token:
+        token = request.query_params.get("token")
+    # 尝试从cookie获取token
+    if not token:
+        token = request.cookies.get("token")
+    
+    if not token:
+        raise HTTPException(status_code=401, detail="未提供token")
+    
+    user = db.verify_token(token)
+    if not user:
+        raise HTTPException(status_code=401, detail="无效的token")
+    return user
+
+async def get_optional_user(request: Request, authorization: Optional[str] = Header(None)):
+    """获取当前用户（可选）"""
+    try:
+        return await get_current_user(request, authorization)
+    except HTTPException:
+        return None
+
+@app.post("/api/register")
+async def register(request: Request):
+    """用户注册"""
+    try:
+        data = await request.json()
+        username = data.get('username')
+        password = data.get('password')
+        email = data.get('email')
+        
+        if not username or not password:
+            raise HTTPException(status_code=400, detail="用户名和密码不能为空")
+        
+        user_id = db.create_user(username, password, email)
+        if not user_id:
+            raise HTTPException(status_code=400, detail="用户名已存在")
+        
+        token = db.create_token(user_id)
+        return {"success": True, "token": token, "user": {"id": user_id, "username": username}}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/login")
+async def login(request: Request):
+    """用户登录"""
+    try:
+        data = await request.json()
+        username = data.get('username')
+        password = data.get('password')
+        
+        if not username or not password:
+            raise HTTPException(status_code=400, detail="用户名和密码不能为空")
+        
+        user = db.verify_user(username, password)
+        if not user:
+            raise HTTPException(status_code=401, detail="用户名或密码错误")
+        
+        token = db.create_token(user['id'])
+        return {"success": True, "token": token, "user": user}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/user/me")
+async def get_current_user_info(current_user: dict = Depends(get_current_user)):
+    """获取当前用户信息"""
+    return {"success": True, "user": current_user}
+
+@app.get("/api/scrolls")
+async def get_scrolls(request: Request, current_user: Optional[dict] = Depends(get_optional_user)):
+    """获取书卷列表"""
+    try:
+        user_id = current_user['id'] if current_user else None
+        scroll_type = request.query_params.get('type')
+        scrolls = db.get_scrolls(user_id=user_id, scroll_type=scroll_type, include_public=True)
+        return {"success": True, "scrolls": scrolls}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/scrolls/{scroll_id}")
+async def get_scroll(scroll_id: int):
+    """获取单个书卷"""
+    try:
+        scroll = db.get_scroll(scroll_id)
+        if not scroll:
+            raise HTTPException(status_code=404, detail="书卷不存在")
+        return {"success": True, "scroll": scroll}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/scrolls")
+async def create_scroll_simple(request: Request, current_user: dict = Depends(get_current_user)):
+    """创建书卷（简单版本）"""
+    try:
+        data = await request.json()
+        title = data.get('title')
+        description = data.get('description', '')
+        scroll_type = data.get('scroll_type', 'user')
+        preset_path = data.get('preset_path')
+        world_dir = data.get('world_dir')
+        is_public = data.get('is_public', False)
+        
+        if not title:
+            raise HTTPException(status_code=400, detail="标题不能为空")
+        
+        scroll_id = db.create_scroll(
+            user_id=current_user['id'],
+            title=title,
+            description=description,
+            scroll_type=scroll_type,
+            preset_path=preset_path,
+            world_dir=world_dir,
+            is_public=is_public
+        )
+        
+        return {"success": True, "scroll_id": scroll_id}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/stories")
+async def get_stories(current_user: dict = Depends(get_current_user)):
+    """获取用户的故事列表"""
+    try:
+        stories = db.get_user_stories(current_user['id'])
+        return {"success": True, "stories": stories}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/stories")
+async def save_story(request: Request, current_user: dict = Depends(get_current_user)):
+    """保存故事"""
+    try:
+        data = await request.json()
+        scroll_id = data.get('scroll_id')
+        title = data.get('title', '未命名故事')
+        content = data.get('content', '')
+        story_data = data.get('story_data', {})
+        
+        story_id = db.save_story(
+            user_id=current_user['id'],
+            scroll_id=scroll_id,
+            title=title,
+            content=content,
+            story_data=story_data
+        )
+        
+        return {"success": True, "story_id": story_id}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/stories/{story_id}")
+async def get_story(story_id: int, current_user: dict = Depends(get_current_user)):
+    """获取单个故事"""
+    try:
+        story = db.get_story(story_id, current_user['id'])
+        if not story:
+            raise HTTPException(status_code=404, detail="故事不存在")
+        return {"success": True, "story": story}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/create-scroll")
+async def create_scroll(request: Request, current_user: dict = Depends(get_current_user)):
+    """创建书卷（完整引导流程）"""
+    try:
+        data = await request.json()
+        
+        # 验证必填字段
+        if not data.get('title') or not data.get('worldName') or not data.get('worldDescription'):
+            raise HTTPException(status_code=400, detail="缺少必填字段")
+        
+        if not data.get('locations') or len(data['locations']) == 0:
+            raise HTTPException(status_code=400, detail="至少需要一个地点")
+        
+        if not data.get('characters') or len(data['characters']) == 0:
+            raise HTTPException(status_code=400, detail="至少需要一个角色")
+        
+        # 生成source名称（基于标题）
+        import re
+        source_name = re.sub(r'[^\w\s-]', '', data['title'])
+        source_name = re.sub(r'[-\s]+', '_', source_name).lower()
+        source_name = f"user_{current_user['id']}_{source_name}"
+        
+        # 创建目录结构
+        base_dir = f"./data"
+        world_dir = f"{base_dir}/worlds/{source_name}"
+        roles_dir = f"{base_dir}/roles/{source_name}"
+        locations_file = f"{base_dir}/locations/{source_name}.json"
+        map_file = f"{base_dir}/maps/{source_name}.csv"
+        preset_file = f"./experiment_presets/user_{current_user['id']}_{source_name}.json"
+        
+        os.makedirs(world_dir, exist_ok=True)
+        os.makedirs(roles_dir, exist_ok=True)
+        os.makedirs(f"{base_dir}/locations", exist_ok=True)
+        os.makedirs(f"{base_dir}/maps", exist_ok=True)
+        os.makedirs("./experiment_presets", exist_ok=True)
+        
+        # 1. 创建世界文件
+        world_data = {
+            "source": source_name,
+            "world_name": data['worldName'],
+            "description": data['worldDescription'],
+            "language": data.get('language', 'zh')
+        }
+        world_file = f"{world_dir}/general.json"
+        with open(world_file, 'w', encoding='utf-8') as f:
+            json.dump(world_data, f, ensure_ascii=False, indent=2)
+        
+        # 2. 创建地点文件
+        locations_data = {}
+        for loc in data['locations']:
+            location_code = re.sub(r'[^\w\s-]', '', loc['name'])
+            location_code = re.sub(r'[-\s]+', '_', location_code).lower()
+            locations_data[location_code] = {
+                "location_code": location_code,
+                "location_name": loc['name'],
+                "source": source_name,
+                "description": loc['description'],
+                "detail": loc.get('detail', '')
+            }
+        with open(locations_file, 'w', encoding='utf-8') as f:
+            json.dump(locations_data, f, ensure_ascii=False, indent=2)
+        
+        # 3. 创建地图文件（CSV格式）
+        location_codes = list(locations_data.keys())
+        import csv
+        with open(map_file, 'w', newline='', encoding='utf-8') as f:
+            writer = csv.writer(f)
+            # 表头
+            writer.writerow([''] + location_codes)
+            # 距离矩阵（默认距离为1）
+            for loc_code in location_codes:
+                row = [loc_code]
+                for target_code in location_codes:
+                    if loc_code == target_code:
+                        row.append(0)
+                    else:
+                        row.append(1)
+                writer.writerow(row)
+        
+        # 4. 创建角色文件
+        performer_codes = []
+        for char in data['characters']:
+            char_code = char['code']
+            performer_codes.append(char_code)
+            
+            char_dir = f"{roles_dir}/{char_code}"
+            os.makedirs(char_dir, exist_ok=True)
+            
+            # 构建角色关系
+            relations = {}
+            for other_char in data['characters']:
+                if other_char['code'] != char_code:
+                    relations[other_char['code']] = {
+                        "relation": [],
+                        "detail": ""
+                    }
+            
+            char_data = {
+                "role_code": char_code,
+                "role_name": char['name'],
+                "source": source_name,
+                "activity": 1,
+                "profile": char['profile'],
+                "nickname": char.get('nickname', char['name']),
+                "relation": relations
+            }
+            
+            char_file = f"{char_dir}/role_info.json"
+            with open(char_file, 'w', encoding='utf-8') as f:
+                json.dump(char_data, f, ensure_ascii=False, indent=2)
+        
+        # 5. 创建预设文件
+        preset_data = {
+            "experiment_subname": source_name,
+            "source": source_name,
+            "world_file_path": world_file,
+            "map_file_path": map_file,
+            "loc_file_path": locations_file,
+            "role_file_dir": f"./data/roles/",
+            "performer_codes": performer_codes,
+            "intervention": data.get('description', ''),
+            "script": "",
+            "language": data.get('language', 'zh')
+        }
+        with open(preset_file, 'w', encoding='utf-8') as f:
+            json.dump(preset_data, f, ensure_ascii=False, indent=2)
+        
+        # 6. 在数据库中创建书卷记录
+        scroll_id = db.create_scroll(
+            user_id=current_user['id'],
+            title=data['title'],
+            description=data.get('description', ''),
+            scroll_type='user',
+            preset_path=preset_file,
+            world_dir=world_dir
+        )
+        
+        return {
+            "success": True,
+            "scroll_id": scroll_id,
+            "message": "书卷创建成功"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/upload-document")
+async def upload_document(
+    file: UploadFile = File(...),
+    title: str = Form(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """上传文档并处理生成书卷数据"""
+    try:
+        import sys
+        sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+        
+        # 检查文件大小（1万字约50KB，20页约200KB，设置限制为5MB）
+        file_content = await file.read()
+        if len(file_content) > 5 * 1024 * 1024:
+            raise HTTPException(status_code=400, detail="文件大小超过限制（5MB）")
+        
+        # 保存上传的文件
+        upload_dir = f"./user_uploads/{current_user['id']}"
+        os.makedirs(upload_dir, exist_ok=True)
+        
+        file_path = os.path.join(upload_dir, file.filename)
+        with open(file_path, 'wb') as f:
+            f.write(file_content)
+        
+        # 读取文件内容（支持txt）
+        text_content = ""
+        if file.filename.endswith('.txt'):
+            try:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    text_content = f.read()
+            except UnicodeDecodeError:
+                # 尝试其他编码
+                with open(file_path, 'r', encoding='gbk') as f:
+                    text_content = f.read()
+        else:
+            # 对于其他格式，需要额外的处理库
+            # 这里简化处理，只支持txt
+            raise HTTPException(status_code=400, detail="目前只支持TXT格式文件")
+        
+        # 检查文本长度（约1万字）
+        if len(text_content) > 10000:
+            raise HTTPException(status_code=400, detail="文档内容超过1万字限制")
+        
+        # 使用extract_data模块处理文档
+        # 这里需要调用extract_data的处理逻辑
+        # 暂时简化处理，创建基础书卷结构
+        world_dir = f"./data/worlds/user_{current_user['id']}_{title}"
+        os.makedirs(world_dir, exist_ok=True)
+        
+        # 创建基础的世界信息
+        world_info = {
+            "world_description": text_content[:500],  # 前500字作为描述
+            "source": title
+        }
+        
+        world_file = os.path.join(world_dir, "general.json")
+        with open(world_file, 'w', encoding='utf-8') as f:
+            json.dump(world_info, f, ensure_ascii=False, indent=2)
+        
+        # 创建书卷记录
+        scroll_id = db.create_scroll(
+            user_id=current_user['id'],
+            title=title,
+            description=f"从文档自动生成：{file.filename}",
+            scroll_type='user',
+            world_dir=world_dir
+        )
+        
+        return {
+            "success": True,
+            "scroll_id": scroll_id,
+            "message": "文档处理完成，书卷已创建"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/save-config")
 async def save_config(request: Request):

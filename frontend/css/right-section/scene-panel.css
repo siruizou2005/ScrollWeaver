@@ -16,7 +16,7 @@
 }
 
 .scenes-header h3 {
-    color: #1e293b;
+    color: #3d2817;
     margin: 0;
     font-size: 1.1em;
     font-weight: 700;
@@ -24,9 +24,9 @@
 
 .clear-selection-btn {
     padding: 6px 12px;
-    background-color: #f8fafc;
-    color: #475569;
-    border: 1px solid #e2e8f0;
+    background-color: rgba(250, 248, 243, 0.95);
+    color: #6b4423;
+    border: 2px solid rgba(212, 175, 55, 0.3);
     border-radius: 6px;
     cursor: pointer;
     font-size: 0.9em;
@@ -35,9 +35,9 @@
 }
 
 .clear-selection-btn:hover {
-    background-color: #f1f5f9;
-    border-color: #cbd5e1;
-    color: #334155;
+    background-color: rgba(245, 241, 232, 0.95);
+    border-color: rgba(212, 175, 55, 0.5);
+    color: #8b4513;
 }
 
 .scene-buttons {
@@ -51,10 +51,10 @@
 
 .scene-btn {
     padding: 8px 14px;
-    background-color: #f8fafc;
-    border: 1px solid #e2e8f0;
+    background-color: rgba(250, 248, 243, 0.95);
+    border: 2px solid rgba(212, 175, 55, 0.3);
     border-radius: 6px;
-    color: #475569;
+    color: #6b4423;
     cursor: pointer;
     transition: all 0.2s ease;
     font-size: 13px;
@@ -62,15 +62,16 @@
 }
 
 .scene-btn:hover {
-    background-color: #f1f5f9;
-    border-color: #cbd5e1;
-    color: #334155;
+    background-color: rgba(245, 241, 232, 0.95);
+    border-color: rgba(212, 175, 55, 0.5);
+    color: #8b4513;
 }
 
 .scene-btn.active {
-    background-color: #1e293b;
-    border-color: #1e293b;
+    background: linear-gradient(135deg, #8b4513 0%, #6b4423 100%);
+    border-color: rgba(212, 175, 55, 0.3);
     color: white;
+    box-shadow: 0 2px 8px rgba(107, 68, 35, 0.2);
 }
 
 .scene-btn.runtime-current {

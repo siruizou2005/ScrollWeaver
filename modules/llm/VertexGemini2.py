@@ -44,14 +44,65 @@ class VertexGemini(BaseLLM):
                 "parts": message["parts"]
             })
         
-        response = self.client.models.generate_content(
-            model=self.model_name,
-            contents=contents,
-            generation_config={
-                "temperature": temperature,
-                "max_output_tokens": max_output_tokens,
-            }
-        )
+        # 检查client是否已初始化
+        if self.client is None:
+            raise RuntimeError("Vertex AI client is not initialized. Please check your Google Cloud credentials and project settings.")
+        
+        # 根据Google Gemini API的最新版本，generation_config参数已更改
+        # 尝试多种方式以确保兼容性
+        response = None
+        last_exception = None
+        
+        # 方式1：尝试使用config参数（新版本API）
+        try:
+            from google.genai import types
+            config = types.GenerateContentConfig(
+                temperature=temperature,
+                max_output_tokens=max_output_tokens
+            )
+            response = self.client.models.generate_content(
+                model=self.model_name,
+                contents=contents,
+                config=config
+            )
+        except (AttributeError, TypeError, ImportError) as e:
+            last_exception = e
+            # 方式2：尝试直接传递config字典
+            try:
+                response = self.client.models.generate_content(
+                    model=self.model_name,
+                    contents=contents,
+                    config={
+                        "temperature": temperature,
+                        "max_output_tokens": max_output_tokens
+                    }
+                )
+            except (TypeError, AttributeError) as e:
+                last_exception = e
+                # 方式3：尝试直接传递temperature和max_output_tokens作为关键字参数
+                try:
+                    response = self.client.models.generate_content(
+                        model=self.model_name,
+                        contents=contents,
+                        temperature=temperature,
+                        max_output_tokens=max_output_tokens
+                    )
+                except (TypeError, AttributeError) as e:
+                    last_exception = e
+                    # 方式4：只传递基本参数，不使用generation_config
+                    try:
+                        response = self.client.models.generate_content(
+                            model=self.model_name,
+                            contents=contents
+                        )
+                    except Exception as e:
+                        last_exception = e
+        
+        # 如果所有方式都失败，抛出清晰的错误信息
+        if response is None:
+            error_msg = f"Failed to call generate_content API. Last error: {last_exception}. Please check your Google Gemini API version and parameters."
+            raise RuntimeError(error_msg)
+        
         # response.text contains the generated text in genai SDK
         return getattr(response, 'text', str(response))
     
