@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ScrollWeaver - 织梦绘卷</title>
+    <link rel="stylesheet" href="/frontend/css/pages/home.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="home-container">
+        <!-- 顶部一句话介绍 -->
+        <div class="hero-section">
+            <h1 class="hero-title">ScrollWeaver</h1>
+            <p class="hero-subtitle">织梦绘卷 - 从文本到"活世界"的多智能体互动故事系统</p>
+        </div>
+
+        <!-- 书卷区域 -->
+        <div class="scroll-section">
+            <div class="scroll-container" id="scrollContainer">
+                <div class="scroll-book">
+                    <div class="scroll-cover">
+                        <div class="scroll-title">入卷同游</div>
+                        <div class="scroll-decoration"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="scroll-hint">
+                <i class="fas fa-mouse"></i>
+                <span>向下滚动了解更多</span>
+            </div>
+        </div>
+
+        <!-- 介绍内容区域 -->
+        <div class="intro-section" id="introSection">
+            <div class="intro-content">
+                <section class="intro-block">
+                    <h2>核心理念</h2>
+                    <p>ScrollWeaver 模拟一个完整的社会系统，包含两大核心：</p>
+                    <div class="concept-grid">
+                        <div class="concept-card">
+                            <h3>指挥家 (Orchestrator)</h3>
+                            <p>作为"世界代理"或"导演"，它理解世界观、地点和规则，负责编排场景、调度角色登场。</p>
+                        </div>
+                        <div class="concept-card">
+                            <h3>表演者 (Performer)</h3>
+                            <p>作为"角色代理"或"演员"，它们拥有各自的性格、记忆和目标，在"指挥家"设定的场景中自主行动、对话和演化。</p>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="intro-block">
+                    <h2>核心目标与价值</h2>
+                    <div class="value-list">
+                        <div class="value-item">
+                            <i class="fas fa-magic"></i>
+                            <div>
+                                <h3>赋能创作</h3>
+                                <p>自动从文本中提炼设定与角色，并持续生成符合原作风格的新剧情，最终允许用户下载导出生动的故事内容，为作者和编剧提供灵感。</p>
+                            </div>
+                        </div>
+                        <div class="value-item">
+                            <i class="fas fa-users"></i>
+                            <div>
+                                <h3>交互式体验</h3>
+                                <p>支持人类玩家"扮演"或"降临"任意角色，与 AI 智能体共同推动故事发展，将"读故事"变为"玩故事"。</p>
+                            </div>
+                        </div>
+                        <div class="value-item">
+                            <i class="fas fa-globe"></i>
+                            <div>
+                                <h3>构建"活的世界"</h3>
+                                <p>创造一个角色拥有记忆、目标会动态演化、并能对玩家行为做出真实反应的社会模拟沙盒。</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="intro-block">
+                    <h2>核心玩法</h2>
+                    <div class="play-mode-grid">
+                        <div class="play-mode-card">
+                            <div class="mode-icon">🎭</div>
+                            <h3>AI 导演模式</h3>
+                            <p>观察故事 - 系统自动演进，角色自主表演，用户纯粹观察</p>
+                        </div>
+                        <div class="play-mode-card">
+                            <div class="mode-icon">🎪</div>
+                            <h3>人类介入模式</h3>
+                            <p>扮演角色 - 用户选择角色亲自"表演"，AI 实时响应</p>
+                        </div>
+                        <div class="play-mode-card">
+                            <div class="mode-icon">✍️</div>
+                            <h3>人机协同创作</h3>
+                            <p>生成与导出 - 用户设定关键剧情，AI 高速补完，一键下载共创内容</p>
+                        </div>
+                    </div>
+                </section>
+
+                <div class="cta-section">
+                    <button class="cta-button" onclick="window.location.href='/frontend/pages/login.html'">
+                        <span>入卷同游</span>
+                        <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/frontend/js/pages/home.js"></script>
+</body>
+</html>
+
