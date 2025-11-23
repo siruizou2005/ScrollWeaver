@@ -695,22 +695,37 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                 # 加载对应的书卷
                 if client_scroll_id:
                     scroll = db.get_scroll(client_scroll_id)
-                    if scroll and scroll.get('preset_path') and os.path.exists(scroll['preset_path']):
-                        # 为这个客户端创建新的ScrollWeaver实例
-                        manager.scrollweaver = ScrollWeaver(
-                            preset_path=scroll['preset_path'],
-                            world_llm_name=config["world_llm_name"],
-                            role_llm_name=config["role_llm_name"],
-                            embedding_name=config["embedding_model_name"]
-                        )
-                        manager.scrollweaver.set_generator(
-                            rounds=config["rounds"],
-                            save_dir=config["save_dir"],
-                            if_save=config["if_save"],
-                            mode=config["mode"],
-                            scene_mode=config["scene_mode"]
-                        )
-                        print(f"Loaded scroll {client_scroll_id} for client {client_id}")
+                    print(f"Loading scroll {client_scroll_id}: {scroll}")
+                    if scroll:
+                        preset_path = scroll.get('preset_path')
+                        if preset_path and os.path.exists(preset_path):
+                            # 为这个客户端创建新的ScrollWeaver实例
+                            manager.scrollweaver = ScrollWeaver(
+                                preset_path=preset_path,
+                                world_llm_name=config["world_llm_name"],
+                                role_llm_name=config["role_llm_name"],
+                                embedding_name=config["embedding_model_name"]
+                            )
+                            manager.scrollweaver.set_generator(
+                                rounds=config["rounds"],
+                                save_dir=config["save_dir"],
+                                if_save=config["if_save"],
+                                mode=config["mode"],
+                                scene_mode=config["scene_mode"]
+                            )
+                            print(f"Loaded scroll {client_scroll_id} for client {client_id}, preset_path: {preset_path}")
+                        else:
+                            print(f"Warning: Scroll {client_scroll_id} preset_path not found or invalid: {preset_path}")
+                            await websocket.send_json({
+                                'type': 'error',
+                                'data': {'message': f'书卷预设文件不存在: {preset_path}'}
+                            })
+                    else:
+                        print(f"Warning: Scroll {client_scroll_id} not found in database")
+                        await websocket.send_json({
+                            'type': 'error',
+                            'data': {'message': f'书卷不存在: {client_scroll_id}'}
+                        })
                 first_message = None  # init消息已处理，清除
         except Exception as e:
             # 如果没有初始化消息，使用默认预设
@@ -1364,7 +1379,18 @@ async def create_scroll(request: Request, current_user: dict = Depends(get_curre
         # 4. 创建角色文件
         performer_codes = []
         for char in data['characters']:
-            char_code = char['code']
+            char_name = char.get('name', '').strip()
+            if not char_name:
+                continue  # 跳过名称为空的角色
+            
+            # 如果code为空或无效，从name生成
+            char_code = char.get('code', '').strip()
+            if not char_code:
+                import re
+                char_code = re.sub(r'[^\w\s-]', '', char_name.lower())
+                char_code = re.sub(r'[-\s]+', '_', char_code)
+                print(f"警告：角色 '{char_name}' 的代码为空，自动生成为: {char_code}")
+            
             performer_codes.append(char_code)
             
             char_dir = f"{roles_dir}/{char_code}"

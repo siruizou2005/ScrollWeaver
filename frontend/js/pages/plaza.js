@@ -190,9 +190,10 @@ document.getElementById('generateForm')?.addEventListener('submit', async (e) =>
     progressFill.style.width = '0%';
     progressText.textContent = '正在上传文档...';
     
+    let progressInterval = null;
     try {
         // 模拟上传进度
-        const progressInterval = setInterval(() => {
+        progressInterval = setInterval(() => {
             const currentWidth = parseInt(progressFill.style.width) || 0;
             if (currentWidth < 90) {
                 progressFill.style.width = (currentWidth + 10) + '%';
@@ -207,11 +208,33 @@ document.getElementById('generateForm')?.addEventListener('submit', async (e) =>
             body: formData
         });
         
-        clearInterval(progressInterval);
+        if (progressInterval) {
+            clearInterval(progressInterval);
+            progressInterval = null;
+        }
+        
+        // 检查响应状态
+        if (!response.ok) {
+            let errorMsg = '上传失败，请稍后重试';
+            try {
+                const errorData = await response.json();
+                errorMsg = errorData.detail || errorData.message || errorMsg;
+            } catch (e) {
+                errorMsg = `服务器错误: ${response.status} ${response.statusText}`;
+            }
+            progressFill.style.width = '100%';
+            progressText.textContent = '处理失败';
+            alert('生成失败：' + errorMsg);
+            setTimeout(() => {
+                progressDiv.style.display = 'none';
+            }, 2000);
+            return;
+        }
+        
+        const data = await response.json();
         progressFill.style.width = '100%';
         progressText.textContent = '处理完成！';
         
-        const data = await response.json();
         if (data.success) {
             setTimeout(() => {
                 document.getElementById('generateModal').classList.remove('active');
@@ -221,11 +244,23 @@ document.getElementById('generateForm')?.addEventListener('submit', async (e) =>
                 loadScrolls(); // 重新加载书卷列表
             }, 1000);
         } else {
+            progressFill.style.width = '100%';
+            progressText.textContent = '处理失败';
             alert('生成失败：' + (data.detail || '未知错误'));
+            progressDiv.style.display = 'none';
         }
     } catch (error) {
+        if (progressInterval) {
+            clearInterval(progressInterval);
+            progressInterval = null;
+        }
         console.error('上传失败:', error);
-        alert('上传失败，请稍后重试');
+        progressFill.style.width = '100%';
+        progressText.textContent = '处理失败';
+        alert('上传失败：' + (error.message || '请稍后重试'));
+        setTimeout(() => {
+            progressDiv.style.display = 'none';
+        }, 2000);
     }
 });
 
@@ -236,6 +271,7 @@ let scrollData = {
     title: '',
     description: '',
     worldview: '',
+    worldName: '',
     locations: [],
     characters: []
 };
@@ -246,9 +282,15 @@ function resetCreateForm() {
         title: '',
         description: '',
         worldview: '',
+        worldName: '',
         locations: [],
         characters: []
     };
+    // 清空表单字段
+    document.getElementById('createScrollTitle')?.value && (document.getElementById('createScrollTitle').value = '');
+    document.getElementById('createDescription')?.value && (document.getElementById('createDescription').value = '');
+    document.getElementById('worldName')?.value && (document.getElementById('worldName').value = '');
+    document.getElementById('worldDescription')?.value && (document.getElementById('worldDescription').value = '');
     updateStepIndicator();
     showStep(1);
 }
@@ -276,18 +318,73 @@ function showStep(stepNum) {
     updateStepIndicator();
 }
 
-function nextStep() {
-    if (currentStep < totalSteps) {
-        currentStep++;
-        showStep(currentStep);
+function nextStep(targetStep) {
+    // 在切换步骤前，先保存当前步骤的数据
+    saveCurrentStepData();
+    
+    // 如果提供了目标步骤，直接跳转；否则前进到下一步
+    if (targetStep !== undefined) {
+        if (targetStep > currentStep && targetStep <= totalSteps) {
+            currentStep = targetStep;
+        } else if (targetStep <= currentStep) {
+            currentStep = targetStep;
+        }
+    } else {
+        if (currentStep < totalSteps) {
+            currentStep++;
+        }
+    }
+    
+    showStep(currentStep);
+    
+    // 如果进入步骤5（预览），生成预览内容
+    if (currentStep === 5) {
+        generatePreview();
     }
 }
 
-function prevStep() {
-    if (currentStep > 1) {
-        currentStep--;
-        showStep(currentStep);
+// 保存当前步骤的数据
+function saveCurrentStepData() {
+    // 步骤1：基本信息
+    const titleInput = document.getElementById('createScrollTitle');
+    if (titleInput) {
+        scrollData.title = titleInput.value;
     }
+    const descInput = document.getElementById('createDescription');
+    if (descInput) {
+        scrollData.description = descInput.value;
+    }
+    
+    // 步骤2：世界观
+    const worldDescInput = document.getElementById('worldDescription');
+    if (worldDescInput) {
+        scrollData.worldview = worldDescInput.value.trim();
+        console.log('保存世界观描述:', scrollData.worldview);
+    }
+    const worldNameInput = document.getElementById('worldName');
+    if (worldNameInput) {
+        scrollData.worldName = worldNameInput.value.trim();
+    }
+    
+    // 步骤3：地点
+    updateLocationsData();
+    
+    // 步骤4：角色
+    updateCharactersData();
+}
+
+function prevStep(targetStep) {
+    // 如果提供了目标步骤，直接跳转；否则后退到上一步
+    if (targetStep !== undefined) {
+        if (targetStep >= 1 && targetStep < currentStep) {
+            currentStep = targetStep;
+        }
+    } else {
+        if (currentStep > 1) {
+            currentStep--;
+        }
+    }
+    showStep(currentStep);
 }
 
 // 步骤导航
@@ -311,8 +408,13 @@ document.getElementById('createScrollDescription')?.addEventListener('input', (e
 });
 
 // 步骤2：世界观
-document.getElementById('worldviewText')?.addEventListener('input', (e) => {
+document.getElementById('worldDescription')?.addEventListener('input', (e) => {
     scrollData.worldview = e.target.value;
+});
+
+// 世界名称（可选）
+document.getElementById('worldName')?.addEventListener('input', (e) => {
+    scrollData.worldName = e.target.value;
 });
 
 // 步骤3：地点管理
@@ -403,29 +505,274 @@ function updateCharactersData() {
         const name = item.querySelector('.character-name')?.value;
         const nickname = item.querySelector('.character-nickname')?.value;
         const profile = item.querySelector('.character-profile')?.value;
-        if (name) {
-            scrollData.characters.push({
-                name: name,
-                nickname: nickname || '',
-                profile: profile || ''
-            });
+        if (name && name.trim()) {
+            // 生成角色代码（基于角色名称）
+            const code = name.trim().toLowerCase().replace(/[^\w\s-]/g, '').replace(/[\s-]+/g, '_');
+            // 确保code不为空
+            if (code) {
+                scrollData.characters.push({
+                    name: name.trim(),
+                    code: code,
+                    nickname: (nickname || '').trim(),
+                    profile: (profile || '').trim()
+                });
+            } else {
+                console.warn('角色代码生成失败，角色名称:', name);
+            }
         }
     });
 }
 
 document.getElementById('addCharacterBtn')?.addEventListener('click', addCharacter);
 
+// 生成预览内容
+function generatePreview() {
+    const previewContent = document.getElementById('previewContent');
+    if (!previewContent) return;
+    
+    // 先保存所有步骤的数据
+    saveCurrentStepData();
+    
+    // 调试日志
+    console.log('生成预览 - scrollData:', {
+        title: scrollData.title,
+        description: scrollData.description,
+        worldview: scrollData.worldview,
+        worldName: scrollData.worldName,
+        locationsCount: scrollData.locations.length,
+        charactersCount: scrollData.characters.length
+    });
+    
+    let html = '<div class="preview-section">';
+    html += `<h4>基本信息</h4>`;
+    html += `<p><strong>书卷名称：</strong>${scrollData.title || '未填写'}</p>`;
+    html += `<p><strong>描述：</strong>${scrollData.description || '无'}</p>`;
+    html += `</div>`;
+    
+    html += '<div class="preview-section">';
+    html += `<h4>世界观</h4>`;
+    if (scrollData.worldName) {
+        html += `<p><strong>世界名称：</strong>${scrollData.worldName}</p>`;
+    }
+    html += `<p>${scrollData.worldview || '未填写'}</p>`;
+    html += `</div>`;
+    
+    html += '<div class="preview-section">';
+    html += `<h4>地点 (${scrollData.locations.length}个)</h4>`;
+    if (scrollData.locations.length === 0) {
+        html += `<p style="color: #999;">暂无地点</p>`;
+    } else {
+        html += '<ul>';
+        scrollData.locations.forEach(loc => {
+            html += `<li><strong>${loc.name}</strong>: ${loc.description || '无描述'}</li>`;
+        });
+        html += '</ul>';
+    }
+    html += `</div>`;
+    
+    html += '<div class="preview-section">';
+    html += `<h4>角色 (${scrollData.characters.length}个)</h4>`;
+    if (scrollData.characters.length === 0) {
+        html += `<p style="color: #999;">暂无角色</p>`;
+    } else {
+        html += '<ul>';
+        scrollData.characters.forEach(char => {
+            html += `<li><strong>${char.name}</strong>${char.nickname ? ` (${char.nickname})` : ''}: ${char.profile || '无设定'}</li>`;
+        });
+        html += '</ul>';
+    }
+    html += `</div>`;
+    
+    previewContent.innerHTML = html;
+}
+
+// 提交创建书卷函数（供HTML按钮调用）
+function submitCreateScroll() {
+    // 先保存所有步骤的数据
+    saveCurrentStepData();
+    
+    // 调试日志
+    console.log('提交创建书卷 - scrollData:', {
+        title: scrollData.title,
+        description: scrollData.description,
+        worldview: scrollData.worldview,
+        worldName: scrollData.worldName,
+        locationsCount: scrollData.locations.length,
+        charactersCount: scrollData.characters.length
+    });
+    
+    // 验证必填字段
+    if (!scrollData.title || scrollData.title.trim() === '') {
+        alert('请输入书卷名称');
+        showStep(1);
+        return;
+    }
+    
+    if (!scrollData.worldview || scrollData.worldview.trim() === '') {
+        alert('请输入世界观描述');
+        showStep(2);
+        return;
+    }
+    
+    if (!scrollData.locations || scrollData.locations.length === 0) {
+        alert('至少需要添加一个地点');
+        showStep(3);
+        return;
+    }
+    
+    if (!scrollData.characters || scrollData.characters.length === 0) {
+        alert('至少需要添加一个角色');
+        showStep(4);
+        return;
+    }
+    
+    // 确保从输入框读取最新值
+    const worldDescInput = document.getElementById('worldDescription');
+    if (worldDescInput) {
+        scrollData.worldview = worldDescInput.value;
+    }
+    const worldNameInput = document.getElementById('worldName');
+    if (worldNameInput) {
+        scrollData.worldName = worldNameInput.value;
+    }
+    
+    // 准备发送给后端的数据
+    // 确保角色代码不为空
+    const characters = scrollData.characters.map(char => {
+        if (!char.code || char.code.trim() === '') {
+            // 如果code为空，重新生成
+            const code = char.name.trim().toLowerCase().replace(/[^\w\s-]/g, '').replace(/[\s-]+/g, '_');
+            console.warn('角色代码为空，重新生成:', char.name, '->', code);
+            return {
+                name: char.name.trim(),
+                code: code,
+                nickname: (char.nickname || char.name).trim(),
+                profile: (char.profile || '').trim()
+            };
+        }
+        return {
+            name: char.name.trim(),
+            code: char.code.trim(),
+            nickname: (char.nickname || char.name).trim(),
+            profile: (char.profile || '').trim()
+        };
+    }).filter(char => char.code && char.code.trim() !== ''); // 过滤掉code为空的角色
+    
+    if (characters.length === 0) {
+        alert('至少需要添加一个有效的角色（角色名称不能为空）');
+        showStep(4);
+        return;
+    }
+    
+    const requestData = {
+        title: scrollData.title,
+        description: scrollData.description || '',
+        worldName: scrollData.worldName || scrollData.title, // 使用世界名称，如果没有则使用书卷名称
+        worldDescription: scrollData.worldview,
+        language: document.getElementById('createLanguage')?.value || 'zh',
+        locations: scrollData.locations.map(loc => ({
+            name: loc.name.trim(),
+            description: (loc.description || '').trim(),
+            detail: (loc.detail || '').trim()
+        })).filter(loc => loc.name && loc.name.trim() !== ''), // 过滤掉名称为空的地点
+        characters: characters
+    };
+    
+    console.log('提交的书卷数据:', requestData);
+    
+    const progressDiv = document.getElementById('createProgress');
+    const progressFill = document.getElementById('createProgressFill');
+    const progressText = document.getElementById('createProgressText');
+    
+    progressDiv.style.display = 'block';
+    progressFill.style.width = '0%';
+    progressText.textContent = '正在创建书卷...';
+    
+    // 模拟进度
+    let progress = 0;
+    const progressInterval = setInterval(() => {
+        progress += 10;
+        if (progress <= 90) {
+            progressFill.style.width = progress + '%';
+        }
+    }, 200);
+    
+    fetch(`${API_BASE}/api/create-scroll`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(requestData)
+    })
+    .then(async response => {
+        clearInterval(progressInterval);
+        progressFill.style.width = '100%';
+        
+        if (!response.ok) {
+            let errorMsg = '创建失败，请稍后重试';
+            try {
+                const errorData = await response.json();
+                errorMsg = errorData.detail || errorData.message || errorMsg;
+            } catch (e) {
+                errorMsg = `服务器错误: ${response.status} ${response.statusText}`;
+            }
+            throw new Error(errorMsg);
+        }
+        
+        return response.json();
+    })
+    .then(data => {
+        progressText.textContent = '创建完成！';
+        
+        if (data.success) {
+            setTimeout(() => {
+                alert('创建成功！');
+                document.getElementById('createModal').classList.remove('active');
+                resetCreateForm();
+                loadScrolls();
+                progressDiv.style.display = 'none';
+            }, 500);
+        } else {
+            throw new Error(data.detail || '未知错误');
+        }
+    })
+    .catch(error => {
+        clearInterval(progressInterval);
+        console.error('创建失败:', error);
+        progressFill.style.width = '100%';
+        progressText.textContent = '创建失败';
+        alert('创建失败：' + (error.message || '请稍后重试'));
+        setTimeout(() => {
+            progressDiv.style.display = 'none';
+        }, 2000);
+    });
+}
+
 // 步骤按钮
 document.getElementById('nextStepBtn')?.addEventListener('click', () => {
+    // 先保存当前步骤的数据
+    saveCurrentStepData();
+    
     // 验证当前步骤
     if (currentStep === 1) {
-        if (!scrollData.title) {
+        if (!scrollData.title || scrollData.title.trim() === '') {
             alert('请输入书卷名称');
             return;
         }
     } else if (currentStep === 2) {
-        if (!scrollData.worldview) {
+        if (!scrollData.worldview || scrollData.worldview.trim() === '') {
             alert('请输入世界观描述');
+            return;
+        }
+    } else if (currentStep === 3) {
+        if (!scrollData.locations || scrollData.locations.length === 0) {
+            alert('至少需要添加一个地点');
+            return;
+        }
+    } else if (currentStep === 4) {
+        if (!scrollData.characters || scrollData.characters.length === 0) {
+            alert('至少需要添加一个角色');
             return;
         }
     }

@@ -637,6 +637,27 @@ body::before {
     line-height: 1.6;
 }
 
+.preview-section ul {
+    list-style: none;
+    padding: 0;
+    margin: 0.5rem 0;
+}
+
+.preview-section ul li {
+    color: #d4d4d8;
+    line-height: 1.8;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid rgba(139, 92, 246, 0.2);
+}
+
+.preview-section ul li:last-child {
+    border-bottom: none;
+}
+
+.preview-section ul li strong {
+    color: #a78bfa;
+}
+
 .preview-list {
     list-style: none;
     padding: 0;
