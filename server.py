@@ -1567,7 +1567,7 @@ async def upload_document(
                 
                 print(f"[上传文档] 使用 Gemini API 处理 TXT 文件: {file.filename}")
                 response = client.models.generate_content(
-                    model="gemini-2.5-flash-lite",
+                    model="gemini-2.5-flash",
                     contents=[extraction_prompt, file_text]
                 )
             else:
@@ -1581,7 +1581,7 @@ async def upload_document(
                 
                 # 使用新API的方式：直接使用 Part.from_bytes
                 response = client.models.generate_content(
-                    model="gemini-2.5-flash-lite",
+                    model="gemini-2.5-flash",
                     contents=[
                         types.Part.from_bytes(
                             data=file_data,
