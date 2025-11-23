@@ -1010,9 +1010,21 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                     if scene == "" or scene is False:
                         scene = None
                     story_text = manager.scrollweaver.generate_story(scene_number=scene)
-                    # 清理故事文本中的 Markdown 格式
+                    # 清理故事文本中的 Markdown 格式和故事标记符号
                     if story_text:
                         story_text = remove_markdown(story_text)
+                        # 专门清理故事格式标记（【】、（）、「」），只在输出故事时使用
+                        import re
+                        # 【】内的心理活动：移除标记，保留内容
+                        story_text = re.sub(r'【([^】]*)】', r'\1', story_text)
+                        # （）内的动作：移除标记，保留内容
+                        story_text = re.sub(r'（([^）]*)）', r'\1', story_text)
+                        # 「」内的对话：转换为引号
+                        story_text = re.sub(r'「([^」]*)」', r'"\1"', story_text)
+                        # 清理多余的空格和换行
+                        story_text = re.sub(r'\s+', ' ', story_text)
+                        story_text = re.sub(r'\n\s*\n', '\n\n', story_text)
+                        story_text = story_text.strip()
                     
                     # 保存故事到数据库（如果用户已登录）
                     story_id = None

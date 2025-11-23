@@ -162,13 +162,17 @@ class MotivationText(BaseModel):
 class StoryText(BaseModel):
     """Model for story generation from logs."""
     story: str = Field(
-        description="A literary narrative expanded from action logs. "
+        description="A literary narrative expanded from action logs in third-person omniscient perspective. "
         "Can rearrange narrative order for dramatic effect. "
         "Can modify character action descriptions while preserving key information. "
         "Should add necessary scene descriptions, plot connections, and atmosphere. "
-        "Must be plain text without Markdown formatting. "
-        "Note: Content in 【】represents inner thoughts (not visible to others), "
-        "content in () represents actions, and content in 「」represents speech."
+        "CRITICAL: Must convert all format markers to natural narrative text: "
+        "- 【】inner thoughts → third-person narrative (e.g., '【he felt uneasy】' → 'he felt uneasy' or 'a sense of unease washed over him') "
+        "- () actions → natural narrative (e.g., '(he stood up)' → 'he stood up' or 'he rose to his feet') "
+        "- 「」speech → quotation marks (e.g., '「hello」' → '\"hello\"' or 'he said: \"hello\"') "
+        "- ALL markers (【】、()、「」) MUST be completely removed, output pure narrative text "
+        "Must be plain text without Markdown formatting or any special markers. "
+        "Output should read like a traditional novel, flowing and natural."
     )
 
 

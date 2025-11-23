@@ -416,6 +416,7 @@ class Orchestrator:
     
     def log2story(self,logs):
         from .models import StoryText
+        import re
         prompt = self._LOG2STORY_PROMPT.format(**{
             "logs":logs
         })
@@ -433,6 +434,9 @@ class Orchestrator:
             except Exception as e2:
                 print(f"[Orchestrator] 文本输出也失败: {e2}")
                 response = "故事正在继续发展。" if self.language == "zh" else "The story continues to develop."
+        
+        # 注意：后处理逻辑已移至server.py的故事输出部分
+        # 这里只返回原始响应，保持log2story函数的通用性
         return response
     
     # Other
