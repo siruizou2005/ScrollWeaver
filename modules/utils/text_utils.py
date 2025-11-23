@@ -116,6 +116,19 @@ def extract_first_number(text: str):
 
 def json_parser(output: str):
     """Parse JSON from text output."""
+    # 首先尝试移除markdown代码块标记（新版API可能返回这些）
+    original_output = output
+    if "```json" in output:
+        output = output.split("```json")[1].split("```")[0].strip()
+    elif "```" in output:
+        # 移除代码块标记
+        parts = output.split("```")
+        if len(parts) >= 3:
+            output = parts[1].strip()
+            # 移除可能的语言标识符（如 "json"）
+            if output.startswith("json"):
+                output = output[4:].strip()
+    
     output = output.replace("\n", "")
     output = output.replace("\t", "")
     if "{" not in output:
@@ -124,6 +137,9 @@ def json_parser(output: str):
         output += "}"
     pattern = r'\{.*\}'
     matches = re.findall(pattern, output, re.DOTALL)
+    if not matches:
+        raise ValueError(f"No JSON object found in output. Original: {original_output[:200]}")
+    
     try:
         parsed_json = eval(matches[0])
     except:
@@ -136,7 +152,7 @@ def json_parser(output: str):
                 new_output = re.sub(r'"detail":\s*(.+?)\s*}', f"\"detail\":{detail}}}", matches[0])
                 parsed_json = json.loads(new_output)
             except Exception as e:
-                raise ValueError("No valid JSON found in the input string")
+                raise ValueError(f"No valid JSON found in the input string. Error: {e}. Original output: {original_output[:500]}")
     return parsed_json
 
 
@@ -200,8 +216,9 @@ def remove_markdown(text: str) -> str:
     # 移除引用标记
     text = re.sub(r'^>\s+', '', text, flags=re.MULTILINE)
     
-    # 移除水平线
-    text = re.sub(r'^[-*_]{3,}$', '', text, flags=re.MULTILINE)
+    # 移除水平线（但保留包含文本的行，如 "--------- Current Event ---------"）
+    # 只移除完全由 -、* 或 _ 组成的行
+    text = re.sub(r'^[-*_]{3,}\s*$', '', text, flags=re.MULTILINE)
     
     # 清理多余的空行
     text = re.sub(r'\n{3,}', '\n\n', text)

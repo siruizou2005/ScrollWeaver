@@ -1,15 +1,19 @@
 from .BaseLLM import BaseLLM
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 import os
 import time
 import threading
 import json
-from typing import Optional, List
+from typing import Optional, List, Type, TypeVar
+from pydantic import BaseModel
 from openai import OpenAI
+
+T = TypeVar('T', bound=BaseModel)
 
 class Gemini(BaseLLM):
     """
-    Gemini API 封装类，用于调用 Google 的 Gemini 模型。
+    Gemini API 封装类，用于调用 Google 的 Gemini 模型（使用新版API）。
     
     需要设置环境变量 GEMINI_API_KEY 或在 config.json 中配置 GEMINI_API_KEY。
     支持的模型包括：
@@ -17,15 +21,18 @@ class Gemini(BaseLLM):
     - gemini-1.5-flash
     - gemini-1.5-pro
     - gemini-2.5-flash
+    - gemini-2.5-flash-lite
     - gemini-2.5-pro
+    
+    注意：本类使用新版API (`from google import genai`)，而不是旧版API (`google.generativeai`)。
     """
     
-    def __init__(self, model="gemini-2.0-flash", timeout: Optional[int] = 20, display_name: Optional[str] = None):
+    def __init__(self, model="gemini-2.5-flash-lite", timeout: Optional[int] = 20, display_name: Optional[str] = None):
         """
         初始化 Gemini 客户端。
         
         Args:
-            model: 模型名称，默认为 gemini-2.0-flash
+            model: 模型名称，默认为 gemini-2.5-flash-lite
             timeout: API 调用超时时间（秒），默认 20 秒
             display_name: 用于日志输出的模型名称
         """
@@ -42,12 +49,13 @@ class Gemini(BaseLLM):
         self._api_key_lock = threading.Lock()
         self._api_key_index = 0
         self._current_api_key = None
+        self._client = None
         
         # 如果有 Google API Key，先配置第一个 key
         if self.api_keys:
             initial_key = self.api_keys[0]
             self._configure_client(initial_key)
-        # 先不创建 client，在需要时根据 system_instruction 创建
+        # 客户端将在需要时创建
         
         # 检查是否有备用中转 API（OpenAI 兼容）
         self.fallback_api_base = os.getenv("OPENAI_API_BASE", "")
@@ -116,12 +124,15 @@ class Gemini(BaseLLM):
             return key
 
     def _configure_client(self, api_key: str):
-        """使用指定 key 配置 Gemini 客户端。"""
+        """使用指定 key 配置 Gemini 客户端（新版API）。"""
         if api_key != self._current_api_key:
-            genai.configure(api_key=api_key)
+            # 新版API：设置环境变量
+            os.environ['GEMINI_API_KEY'] = api_key
             self._current_api_key = api_key
+            # 创建客户端（使用Gemini Developer API，不是Vertex AI）
+            self._client = genai.Client(vertexai=False)
             masked_key = api_key[:4] + "..." if len(api_key) > 8 else "****"
-            print(f"[Gemini] 切换 API Key: {masked_key}")
+            print(f"[Gemini] 切换 API Key: {masked_key}，使用新版API")
 
     def initialize_message(self):
         """初始化消息列表。"""
@@ -155,15 +166,17 @@ class Gemini(BaseLLM):
         """
         self.messages.append({"role": "user", "content": payload})
 
-    def get_response(self, temperature=0.8):
+    def get_response(self, temperature=0.8, response_model: Optional[Type[T]] = None):
         """
         获取模型响应，带超时和重试机制。
         
         Args:
             temperature: 温度参数，控制输出的随机性，默认 0.8
+            response_model: 可选的Pydantic模型，用于结构化输出
             
         Returns:
-            模型生成的文本响应
+            如果提供了response_model，返回解析后的Pydantic模型实例
+            否则返回模型生成的文本响应
         """
         last_exception = None
         
@@ -181,45 +194,57 @@ class Gemini(BaseLLM):
                 api_key = self._get_next_api_key()
                 self._configure_client(api_key)
 
-                print(f"[Gemini] 开始 API 调用（尝试 {attempt + 1}/{self.max_retries}），模型: {self.display_model_name}，超时: {self.timeout}秒")
-                # 创建模型实例，如果有 system_instruction 则传入
-                if self.system_instruction:
-                    model = genai.GenerativeModel(
-                        model_name=self.model_name,
-                        system_instruction=self.system_instruction
-                    )
-                else:
-                    model = genai.GenerativeModel(model_name=self.model_name)
+                print(f"[Gemini] 开始 API 调用（尝试 {attempt + 1}/{self.max_retries}），模型: {self.display_model_name}，超时: {self.timeout}秒，使用新版API")
                 
-                # 构建生成配置
-                generation_config = genai.types.GenerationConfig(temperature=temperature)
+                # 确保客户端已创建
+                if not self._client:
+                    api_key = self._get_next_api_key()
+                    self._configure_client(api_key)
                 
                 # 使用 threading 实现跨平台超时
                 response_result = [None]
                 exception_result = [None]
                 
                 def api_call():
-                    """执行 API 调用的函数"""
+                    """执行 API 调用的函数（新版API）"""
                     try:
-                        # 如果有历史消息，使用聊天模式
-                        if len(self.messages) > 1:
-                            # 转换消息格式为 Gemini 格式
-                            history = []
-                            for msg in self.messages[:-1]:
-                                if msg["role"] == "user":
-                                    history.append({"role": "user", "parts": [msg["content"]]})
-                                elif msg["role"] == "model":
-                                    history.append({"role": "model", "parts": [msg["content"]]})
-                            
-                            # 创建聊天会话
-                            chat = model.start_chat(history=history)
-                            # 发送最后一条消息
-                            last_message = self.messages[-1]["content"]
-                            response_result[0] = chat.send_message(last_message, generation_config=generation_config)
+                        # 构建contents（新版API格式）
+                        # 对于单次对话，直接使用字符串
+                        # 对于聊天历史，将所有消息合并成一个字符串
+                        if len(self.messages) == 0:
+                            prompt_text = ""
+                        elif len(self.messages) == 1:
+                            # 单次对话
+                            prompt_text = self.messages[0]["content"]
                         else:
-                            # 单次对话，直接生成
-                            prompt = self.messages[0]["content"] if self.messages else ""
-                            response_result[0] = model.generate_content(prompt, generation_config=generation_config)
+                            # 多条消息：合并成对话格式
+                            # 格式：用户消息1\n模型回复1\n用户消息2\n...
+                            conversation_parts = []
+                            for msg in self.messages:
+                                role_prefix = "用户" if msg["role"] == "user" else "助手"
+                                conversation_parts.append(f"{role_prefix}: {msg['content']}")
+                            prompt_text = "\n".join(conversation_parts)
+                        
+                        # 如果有system_instruction，添加到prompt开头
+                        if self.system_instruction:
+                            prompt_text = f"系统指令: {self.system_instruction}\n\n{prompt_text}"
+                        
+                        # 构建config参数（温度设置和结构化输出）
+                        config_dict = {"temperature": temperature}
+                        
+                        # 如果提供了response_model，添加结构化输出配置
+                        if response_model:
+                            config_dict["response_mime_type"] = "application/json"
+                            config_dict["response_json_schema"] = response_model.model_json_schema()
+                        
+                        config = types.GenerateContentConfig(**config_dict)
+                        
+                        # 调用新版API（contents可以是字符串或列表）
+                        response_result[0] = self._client.models.generate_content(
+                            model=self.model_name,
+                            contents=prompt_text,
+                            config=config
+                        )
                     except Exception as e:
                         exception_result[0] = e
                 
@@ -240,12 +265,29 @@ class Gemini(BaseLLM):
                 # 获取响应
                 response = response_result[0]
                 
-                # 检查响应是否有效
-                if not response or not hasattr(response, 'text'):
+                # 检查响应是否有效（新版API）
+                if not response:
                     raise ValueError("Gemini API 返回了无效的响应")
                 
-                print(f"[Gemini] API 调用成功，响应长度: {len(response.text) if response.text else 0} 字符")
-                return response.text
+                # 新版API的响应格式
+                response_text = response.text if hasattr(response, 'text') else str(response)
+                
+                if not response_text:
+                    raise ValueError("Gemini API 返回了空的响应")
+                
+                # 如果提供了response_model，解析为Pydantic模型
+                if response_model:
+                    try:
+                        parsed_model = response_model.model_validate_json(response_text)
+                        print(f"[Gemini] API 调用成功，结构化输出解析成功")
+                        return parsed_model
+                    except Exception as e:
+                        print(f"[Gemini] 结构化输出解析失败: {e}")
+                        print(f"[Gemini] 原始响应: {response_text[:500]}")
+                        raise ValueError(f"无法解析结构化输出: {e}")
+                
+                print(f"[Gemini] API 调用成功，响应长度: {len(response_text)} 字符")
+                return response_text
                 
             except TimeoutError as e:
                 last_exception = e
@@ -288,20 +330,22 @@ class Gemini(BaseLLM):
         if last_exception:
             raise last_exception
     
-    def chat(self, text, temperature=0.8):
+    def chat(self, text, temperature=0.8, response_model: Optional[Type[T]] = None):
         """
         简单的聊天接口。
         
         Args:
             text: 用户输入的文本
             temperature: 温度参数，默认 0.8
+            response_model: 可选的Pydantic模型，用于结构化输出
             
         Returns:
-            模型生成的文本响应
+            如果提供了response_model，返回解析后的Pydantic模型实例
+            否则返回模型生成的文本响应
         """
         self.initialize_message()
         self.user_message(text)
-        response = self.get_response(temperature=temperature)
+        response = self.get_response(temperature=temperature, response_model=response_model)
         return response
     
     def _get_response_fallback(self, temperature=0.8):
