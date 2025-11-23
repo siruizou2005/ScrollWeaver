@@ -22,3 +22,4 @@ pillow
 faiss-cpu
 huggingface_hub[cli]
 google-generativeai
+pydantic
