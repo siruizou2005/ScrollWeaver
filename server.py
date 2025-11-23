@@ -49,7 +49,8 @@ class ConnectionManager:
         self.story_tasks: dict[str, asyncio.Task] = {}
         self.user_selected_roles: dict[str, str] = {}  # client_id -> role_code
         self.waiting_for_input: dict[str, bool] = {}  # client_id -> bool
-        self.pending_user_inputs: dict[str, asyncio.Future] = {}  # client_id -> Future  
+        self.pending_user_inputs: dict[str, asyncio.Future] = {}  # client_id -> Future
+        self.client_users: dict[str, dict] = {}  # client_id -> user_info  
         if True:
             if "preset_path" in config and config["preset_path"]:
                 if os.path.exists(config["preset_path"]):
@@ -386,22 +387,39 @@ class ConnectionManager:
             message["icon"] = default_icon_path
         
         # 清理消息文本中的 Markdown 格式
+        # 注意：对于包含 "--------- Current Event ---------" 的系统消息，保留完整文本
         if "text" in message and message["text"]:
             original_text = message["text"]
-            message["text"] = remove_markdown(original_text)
-            if not message["text"].strip():
-                print("Warning: Markdown cleanup removed all content; falling back to original text.")
-                message["text"] = original_text
+            # 如果是事件消息，只做基本清理，不进行完整的 markdown 移除
+            if "--------- Current Event ---------" in original_text:
+                # 只移除代码块标记，保留其他格式
+                import re
+                cleaned_text = re.sub(r'```[\w]*\n?', '', original_text)
+                cleaned_text = re.sub(r'```', '', cleaned_text)
+                message["text"] = cleaned_text.strip()
+            else:
+                message["text"] = remove_markdown(original_text)
+                if not message["text"].strip():
+                    print("Warning: Markdown cleanup removed all content; falling back to original text.")
+                    message["text"] = original_text
         
         status = self.scrollweaver.get_current_status()
         # 清理状态中的事件描述（如果有）
         if status and isinstance(status, dict):
             if "event" in status and status["event"]:
                 original_event = status["event"]
-                status["event"] = remove_markdown(original_event)
-                if not status["event"].strip():
-                    print("Warning: Markdown cleanup removed all status event content; falling back to original text.")
-                    status["event"] = original_event
+                # 如果事件文本包含 "--------- Current Event ---------"，只做基本清理
+                if "--------- Current Event ---------" in original_event or "Current Event" in original_event:
+                    # 只移除代码块标记，避免截断
+                    import re
+                    cleaned_event = re.sub(r'```[\w]*\n?', '', original_event)
+                    cleaned_event = re.sub(r'```', '', cleaned_event)
+                    status["event"] = cleaned_event.strip()
+                else:
+                    status["event"] = remove_markdown(original_event)
+                    if not status["event"].strip():
+                        print("Warning: Markdown cleanup removed all status event content; falling back to original text.")
+                        status["event"] = original_event
         
         print(f"Returning message and status, message keys: {list(message.keys())}")
         return message, status
@@ -1420,13 +1438,16 @@ async def upload_document(
     current_user: dict = Depends(get_current_user)
 ):
     """上传文档并处理生成书卷数据"""
+    print(f"[上传文档] 开始处理文件: {file.filename}, 用户ID: {current_user.get('id')}, 标题: {title}")
     try:
         import sys
         sys.path.append(os.path.dirname(os.path.abspath(__file__)))
         
         # 检查文件大小（1万字约50KB，20页约200KB，设置限制为5MB）
         file_content = await file.read()
-        if len(file_content) > 5 * 1024 * 1024:
+        file_size = len(file_content)
+        print(f"[上传文档] 文件大小: {file_size} 字节 ({file_size / 1024:.2f} KB)")
+        if file_size > 5 * 1024 * 1024:
             raise HTTPException(status_code=400, detail="文件大小超过限制（5MB）")
         
         # 保存上传的文件
@@ -1436,41 +1457,299 @@ async def upload_document(
         file_path = os.path.join(upload_dir, file.filename)
         with open(file_path, 'wb') as f:
             f.write(file_content)
+        print(f"[上传文档] 文件已保存到: {file_path}")
         
-        # 读取文件内容（支持txt）
-        text_content = ""
-        if file.filename.endswith('.txt'):
-            try:
-                with open(file_path, 'r', encoding='utf-8') as f:
-                    text_content = f.read()
-            except UnicodeDecodeError:
-                # 尝试其他编码
-                with open(file_path, 'r', encoding='gbk') as f:
-                    text_content = f.read()
-        else:
-            # 对于其他格式，需要额外的处理库
-            # 这里简化处理，只支持txt
-            raise HTTPException(status_code=400, detail="目前只支持TXT格式文件")
+        # 使用 Gemini API 一次性提取所有信息（世界观、角色、地点）
+        file_ext = os.path.splitext(file.filename)[1].lower()
         
-        # 检查文本长度（约1万字）
-        if len(text_content) > 10000:
-            raise HTTPException(status_code=400, detail="文档内容超过1万字限制")
-        
-        # 使用extract_data模块处理文档
-        # 这里需要调用extract_data的处理逻辑
-        # 暂时简化处理，创建基础书卷结构
-        world_dir = f"./data/worlds/user_{current_user['id']}_{title}"
-        os.makedirs(world_dir, exist_ok=True)
-        
-        # 创建基础的世界信息
-        world_info = {
-            "world_description": text_content[:500],  # 前500字作为描述
-            "source": title
+        # 支持的 MIME 类型
+        mime_types = {
+            '.txt': 'text/plain',
+            '.pdf': 'application/pdf',
+            '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            '.doc': 'application/msword'
         }
         
-        world_file = os.path.join(world_dir, "general.json")
-        with open(world_file, 'w', encoding='utf-8') as f:
-            json.dump(world_info, f, ensure_ascii=False, indent=2)
+        if file_ext not in mime_types:
+            raise HTTPException(status_code=400, detail=f"不支持的文件格式: {file_ext}，支持格式：TXT, DOC, DOCX, PDF")
+        
+        mime_type = mime_types[file_ext]
+        
+        # 生成 source 名称
+        import re
+        source_name = re.sub(r'[^\w\s-]', '', title)
+        source_name = re.sub(r'[-\s]+', '_', source_name).lower()
+        source_name = f"user_{current_user['id']}_{source_name}"
+        
+        # 创建目录结构
+        base_dir = f"./data"
+        world_dir = f"{base_dir}/worlds/{source_name}"
+        roles_dir = f"{base_dir}/roles/{source_name}"
+        locations_file = f"{base_dir}/locations/{source_name}.json"
+        map_file = f"{base_dir}/maps/{source_name}.csv"
+        preset_file = f"./experiment_presets/user_{current_user['id']}_{source_name}.json"
+        
+        os.makedirs(world_dir, exist_ok=True)
+        os.makedirs(roles_dir, exist_ok=True)
+        os.makedirs(f"{base_dir}/locations", exist_ok=True)
+        os.makedirs(f"{base_dir}/maps", exist_ok=True)
+        os.makedirs("./experiment_presets", exist_ok=True)
+        
+        try:
+            from google import genai
+            from google.genai import types
+            
+            # 配置 Gemini API - 新API需要设置环境变量
+            gemini_api_key = os.getenv("GEMINI_API_KEY") or config.get("GEMINI_API_KEY")
+            if not gemini_api_key:
+                raise HTTPException(status_code=500, detail="未配置 GEMINI_API_KEY，无法处理文件")
+            
+            # 设置环境变量（新API需要）
+            os.environ['GEMINI_API_KEY'] = gemini_api_key
+            
+            # 创建客户端（使用Gemini Developer API，不是Vertex AI）
+            client = genai.Client(vertexai=False)
+            
+            print(f"[上传文档] 开始使用 Gemini API（新API）一次性提取所有信息...")
+            
+            # 构建一次性提取所有信息的提示词
+            extraction_prompt = """请从提供的文档中一次性提取以下所有信息，并以 JSON 格式返回：
+
+{
+    "world": {
+        "world_name": "世界名称",
+        "description": "详细的世界观描述，包括背景设定、规则、特色等",
+        "language": "zh"
+    },
+    "characters": [
+        {
+            "role_name": "角色名称",
+            "nickname": "昵称",
+            "profile": "角色简介，包括性格、背景、特点等"
+        }
+    ],
+    "locations": {
+        "地点代码": {
+            "location_code": "地点代码",
+            "location_name": "地点名称",
+            "description": "地点描述",
+            "detail": "详细描述"
+        }
+    }
+}
+
+要求：
+1. 提取主要角色（至少2个，最多10个）
+2. 提取主要地点（至少2个，最多10个）
+3. 只返回 JSON 格式，不要添加任何其他说明或注释
+4. 确保 JSON 格式正确，可以直接解析
+
+请开始分析文档："""
+            
+            # 根据文件类型处理
+            if file_ext == '.txt':
+                # 对于 TXT 文件，直接读取内容
+                try:
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        file_text = f.read()
+                except UnicodeDecodeError:
+                    try:
+                        with open(file_path, 'r', encoding='gbk') as f:
+                            file_text = f.read()
+                    except UnicodeDecodeError:
+                        with open(file_path, 'r', encoding='gb2312') as f:
+                            file_text = f.read()
+                
+                # 检查文本长度
+                if len(file_text) > 100000:  # 限制为10万字
+                    file_text = file_text[:100000]
+                    print(f"[上传文档] 文本过长，已截取前10万字")
+                
+                print(f"[上传文档] 使用 Gemini API 处理 TXT 文件: {file.filename}")
+                response = client.models.generate_content(
+                    model="gemini-2.5-flash-lite",
+                    contents=[extraction_prompt, file_text]
+                )
+            else:
+                # 对于 PDF、DOCX、DOC 文件，读取文件内容并使用 Part.from_bytes
+                print(f"[上传文档] 读取文件内容: {file.filename}, MIME类型: {mime_type}")
+                with open(file_path, 'rb') as f:
+                    file_data = f.read()
+                
+                print(f"[上传文档] 文件大小: {len(file_data)} 字节")
+                print(f"[上传文档] 使用 Part.from_bytes 上传文件并提取信息...")
+                
+                # 使用新API的方式：直接使用 Part.from_bytes
+                response = client.models.generate_content(
+                    model="gemini-2.5-flash-lite",
+                    contents=[
+                        types.Part.from_bytes(
+                            data=file_data,
+                            mime_type=mime_type,
+                        ),
+                        extraction_prompt
+                    ]
+                )
+                
+                print(f"[上传文档] 文件处理完成，信息提取成功")
+            
+            if not response or not response.text:
+                raise HTTPException(status_code=500, detail="Gemini API 未能提取信息")
+            
+            # 解析返回的 JSON
+            result_text = response.text.strip()
+            try:
+                # 移除可能的 markdown 代码块标记
+                if "```json" in result_text:
+                    result_text = result_text.split("```json")[1].split("```")[0].strip()
+                elif "```" in result_text:
+                    result_text = result_text.split("```")[1].split("```")[0].strip()
+                
+                extracted_data = json.loads(result_text)
+            except json.JSONDecodeError as e:
+                print(f"[上传文档] JSON 解析失败: {e}")
+                print(f"[上传文档] 返回的文本: {result_text[:500]}")
+                raise HTTPException(status_code=500, detail=f"无法解析 Gemini API 返回的 JSON 格式: {str(e)}")
+            
+            # 1. 提取世界观信息
+            world_info = extracted_data.get("world", {})
+            if not world_info:
+                world_info = {
+                    "world_name": title,
+                    "description": "从文档中提取的世界观",
+                    "language": "zh"
+                }
+            world_info["source"] = source_name
+            
+            world_file = os.path.join(world_dir, "general.json")
+            with open(world_file, 'w', encoding='utf-8') as f:
+                json.dump(world_info, f, ensure_ascii=False, indent=2)
+            print(f"[上传文档] 世界信息文件已创建: {world_file}")
+            
+            # 2. 提取角色信息
+            characters = extracted_data.get("characters", [])
+            if not characters or len(characters) < 1:
+                characters = [{
+                    "role_name": "主角",
+                    "nickname": "主角",
+                    "profile": "文档中的主要角色"
+                }]
+            
+            performer_codes = []
+            for char in characters:
+                char_name = char.get("role_name", "未知角色")
+                char_code = re.sub(r'[^\w\s-]', '', char_name)
+                char_code = re.sub(r'[-\s]+', '_', char_code).lower()
+                char_code = f"{char_code}-zh"
+                performer_codes.append(char_code)
+                
+                char_dir = os.path.join(roles_dir, char_code)
+                os.makedirs(char_dir, exist_ok=True)
+                
+                # 构建角色关系
+                relations = {}
+                for other_char in characters:
+                    if other_char.get("role_name") != char_name:
+                        other_code = re.sub(r'[^\w\s-]', '', other_char.get("role_name", ""))
+                        other_code = re.sub(r'[-\s]+', '_', other_code).lower()
+                        other_code = f"{other_code}-zh"
+                        relations[other_code] = {
+                            "relation": [],
+                            "detail": ""
+                        }
+                
+                # 确保nickname不为null，如果为空则使用role_name
+                nickname_value = char.get("nickname")
+                if not nickname_value or nickname_value == "null" or nickname_value is None:
+                    nickname_value = char_name
+                
+                char_data = {
+                    "role_code": char_code,
+                    "role_name": char_name,
+                    "source": source_name,
+                    "activity": 1,
+                    "profile": char.get("profile", ""),
+                    "nickname": nickname_value,
+                    "relation": relations
+                }
+                
+                char_file = os.path.join(char_dir, "role_info.json")
+                with open(char_file, 'w', encoding='utf-8') as f:
+                    json.dump(char_data, f, ensure_ascii=False, indent=2)
+                print(f"[上传文档] 角色信息已保存: {char_file}")
+            
+            # 3. 提取地点信息
+            locations_data = extracted_data.get("locations", {})
+            if not locations_data:
+                locations_data = {
+                    "default_location": {
+                        "location_code": "default_location",
+                        "location_name": "默认地点",
+                        "description": "文档中的主要地点",
+                        "detail": ""
+                    }
+                }
+            
+            # 为每个地点添加 source
+            for loc_code, loc_info in locations_data.items():
+                loc_info["source"] = source_name
+            
+            with open(locations_file, 'w', encoding='utf-8') as f:
+                json.dump(locations_data, f, ensure_ascii=False, indent=2)
+            print(f"[上传文档] 地点信息已保存: {locations_file}")
+            
+            # 4. 创建地图文件（CSV格式）
+            location_codes = list(locations_data.keys())
+            import csv
+            with open(map_file, 'w', newline='', encoding='utf-8') as f:
+                writer = csv.writer(f)
+                writer.writerow([''] + location_codes)
+                for loc_code in location_codes:
+                    row = [loc_code]
+                    for target_code in location_codes:
+                        if loc_code == target_code:
+                            row.append(0)
+                        else:
+                            row.append(1)
+                    writer.writerow(row)
+            print(f"[上传文档] 地图文件已创建: {map_file}")
+            
+            # 5. 创建预设文件
+            preset_data = {
+                "experiment_subname": source_name,
+                "source": source_name,
+                "world_file_path": world_file,
+                "map_file_path": map_file,
+                "loc_file_path": locations_file,
+                "role_file_dir": f"./data/roles/",
+                "performer_codes": performer_codes,
+                "intervention": "",
+                "script": "",
+                "language": world_info.get("language", "zh")
+            }
+            with open(preset_file, 'w', encoding='utf-8') as f:
+                json.dump(preset_data, f, ensure_ascii=False, indent=2)
+            print(f"[上传文档] 预设文件已创建: {preset_file}")
+                
+        except ImportError as e:
+            print(f"[上传文档] 错误: 缺少 google-generativeai 库")
+            import traceback
+            traceback.print_exc()
+            raise HTTPException(status_code=500, detail="缺少 google-generativeai 库，请安装: pip install google-generativeai")
+        except HTTPException:
+            # 重新抛出 HTTPException，不进行额外处理
+            raise
+        except Exception as e:
+            import traceback
+            print(f"[上传文档] 处理文件时发生错误: {str(e)}")
+            traceback.print_exc()
+            error_msg = str(e)
+            if "GEMINI_API_KEY" in error_msg or "API key" in error_msg.lower():
+                raise HTTPException(status_code=500, detail=f"Gemini API 配置错误: {error_msg}")
+            elif "不支持的文件格式" in error_msg:
+                raise HTTPException(status_code=400, detail=error_msg)
+            else:
+                raise HTTPException(status_code=500, detail=f"处理文件时出错: {error_msg}")
         
         # 创建书卷记录
         scroll_id = db.create_scroll(
@@ -1478,8 +1757,11 @@ async def upload_document(
             title=title,
             description=f"从文档自动生成：{file.filename}",
             scroll_type='user',
+            preset_path=preset_file,
             world_dir=world_dir
         )
+        
+        print(f"[上传文档] 书卷创建成功，ID: {scroll_id}")
         
         return {
             "success": True,
@@ -1487,11 +1769,13 @@ async def upload_document(
             "message": "文档处理完成，书卷已创建"
         }
     except HTTPException:
+        # 重新抛出 HTTPException，不进行额外处理
         raise
     except Exception as e:
         import traceback
+        print(f"[上传文档] 未预期的错误: {str(e)}")
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"处理文档时发生错误: {str(e)}")
 
 @app.post("/api/save-config")
 async def save_config(request: Request):

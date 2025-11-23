@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional, Literal
 from modules.embedding import get_embedding_model
 from modules.memory import build_performer_memory
 from modules.history_manager import HistoryManager
+from modules.models import RolePlan, SingleRoleResponse, MultiRoleResponse, NPCRoleResponse, UpdateGoal, UpdateStatus, MoveResponse
 from sw_utils import *
 import random
 import warnings
@@ -107,7 +108,11 @@ class Performer:
         role_info = load_json_file(role_profile_path)
         # self.role_info = role_info
         self.role_profile: str = role_info['profile']
-        self.nickname: str = role_info["nickname"]
+        # 确保nickname不为None或null，如果为空则使用role_name
+        nickname_value = role_info.get("nickname")
+        if not nickname_value or nickname_value == "null" or nickname_value is None:
+            nickname_value = role_info["role_name"]
+        self.nickname: str = nickname_value
         self.role_name: str = role_info["role_name"]
         self.relation: str = role_info["relation"]
         self.motivation: str = role_info["motivation"] if "motivation" in role_info else ""
@@ -151,18 +156,36 @@ class Performer:
             )
             prompt = intervention + prompt + "\n**注意: 在你的动机中考虑全局事件的影响**" if self.language == "zh" else intervention + prompt + "\n**Notice that: You should take the global event into consideration.**"
         
+        from .models import MotivationText
         print(f"[Performer] 开始为角色 {self.role_name} 设置动机...")
         try:
-            motivation = self.llm.chat(prompt)
-            print(f"[Performer] 角色 {self.role_name} 动机设置成功: {motivation[:50]}...")
-            self.save_prompt(prompt = prompt, detail = motivation)
-            self.motivation = motivation
-            return motivation
+            # 使用结构化输出
+            response_model = self.llm.chat(prompt, response_model=MotivationText)
+            motivation = response_model.motivation
         except Exception as e:
-            print(f"[Performer] 角色 {self.role_name} 动机设置失败: {e}")
-            import traceback
-            traceback.print_exc()
-            raise
+            print(f"[Performer] 动机设置结构化输出失败: {e}")
+            # 回退到文本输出
+            try:
+                motivation = self.llm.chat(prompt)
+                if not isinstance(motivation, str):
+                    motivation = str(motivation)
+            except Exception as e2:
+                print(f"[Performer] 文本输出也失败: {e2}")
+                motivation = "追求个人目标和成长" if self.language == "zh" else "Pursue personal goals and growth"
+        
+        # 确保motivation是字符串且不为空
+        if not isinstance(motivation, str):
+            motivation = str(motivation)
+        if not motivation or not motivation.strip():
+            motivation = "追求个人目标和成长" if self.language == "zh" else "Pursue personal goals and growth"
+            print(f"[Performer] 警告: 角色 {self.role_name} 动机为空，使用默认值")
+        
+        # 安全地截取前50个字符用于日志
+        motivation_preview = motivation[:50] if len(motivation) > 50 else motivation
+        print(f"[Performer] 角色 {self.role_name} 动机设置成功: {motivation_preview}...")
+        self.save_prompt(prompt = prompt, detail = motivation)
+        self.motivation = motivation
+        return motivation
     
     def plan(self, 
              other_roles_info: Dict[str, Any], 
@@ -208,14 +231,26 @@ class Performer:
                 }
         
         for i in range(max_tries):
-            response = self.llm.chat(prompt)
             try:
-                plan.update(json_parser(response))
+                # 使用结构化输出
+                response_model = self.llm.chat(prompt, response_model=RolePlan)
+                # 转换为字典格式
+                plan.update(response_model.model_dump())
                 break
             except Exception as e:
-                print(self.role_name)
-                print(f"Parsing failure! {i+1}th tries. Error:", e)   
-                print(response)
+                print(f"[{self.role_name}] 结构化输出失败! 第{i+1}次尝试. 错误: {e}")
+                # 如果结构化输出失败，回退到文本解析
+                if i < max_tries - 1:
+                    try:
+                        response_text = self.llm.chat(prompt)
+                        plan.update(json_parser(response_text))
+                        break
+                    except Exception as e2:
+                        print(f"[{self.role_name}] 文本解析也失败: {e2}")
+                        continue
+                else:
+                    # 最后一次尝试，使用默认值
+                    print(f"[{self.role_name}] 所有尝试都失败，使用默认值")
         plan["role_code"] = self.role_code
         self.save_prompt(detail=plan["detail"],
                       prompt=prompt)
@@ -272,15 +307,26 @@ class Performer:
                 }
         
         for i in range(max_tries):
-            # 使用指定的温度参数调用LLM
-            response = self.llm.chat(prompt, temperature=temperature)
             try:
-                plan.update(json_parser(response))
+                # 使用结构化输出和指定的温度参数
+                response_model = self.llm.chat(prompt, temperature=temperature, response_model=RolePlan)
+                # 转换为字典格式
+                plan.update(response_model.model_dump())
                 break
             except Exception as e:
-                print(self.role_name)
-                print(f"Parsing failure! {i+1}th tries. Error:", e)   
-                print(response)
+                print(f"[{self.role_name}] 结构化输出失败! 第{i+1}次尝试. 错误: {e}")
+                # 如果结构化输出失败，回退到文本解析
+                if i < max_tries - 1:
+                    try:
+                        response_text = self.llm.chat(prompt, temperature=temperature)
+                        plan.update(json_parser(response_text))
+                        break
+                    except Exception as e2:
+                        print(f"[{self.role_name}] 文本解析也失败: {e2}")
+                        continue
+                else:
+                    # 最后一次尝试，使用默认值
+                    print(f"[{self.role_name}] 所有尝试都失败，使用默认值")
         plan["role_code"] = self.role_code
         self.save_prompt(detail=plan["detail"], prompt=prompt)
         return plan
@@ -316,8 +362,19 @@ class Performer:
                     "if_end_interaction": True,
                     "detail": "",
                     }
-        response = self.llm.chat(prompt)
-        interaction.update(json_parser(response))
+        try:
+            # 使用结构化输出
+            response_model = self.llm.chat(prompt, response_model=NPCRoleResponse)
+            interaction.update(response_model.model_dump())
+        except Exception as e:
+            print(f"[{self.role_name}] 结构化输出失败! 错误: {e}")
+            # 回退到文本解析
+            try:
+                response_text = self.llm.chat(prompt)
+                interaction.update(json_parser(response_text))
+            except Exception as e2:
+                print(f"[{self.role_name}] 文本解析也失败: {e2}")
+                print(f"[{self.role_name}] 使用默认值")
         self.save_prompt(detail = interaction["detail"], 
                       prompt = prompt)
         return interaction
@@ -365,13 +422,25 @@ class Performer:
                     }
         
         for i in range(max_tries):
-            response = self.llm.chat(prompt) 
             try:
-                interaction.update(json_parser(response))
+                # 使用结构化输出
+                response_model = self.llm.chat(prompt, response_model=SingleRoleResponse)
+                interaction.update(response_model.model_dump())
                 break
             except Exception as e:
-                print(f"Parsing failure! {i}th tries. Error:", e)    
-                print(response)
+                print(f"[{self.role_name}] 结构化输出失败! 第{i+1}次尝试. 错误: {e}")
+                # 如果结构化输出失败，回退到文本解析
+                if i < max_tries - 1:
+                    try:
+                        response_text = self.llm.chat(prompt)
+                        interaction.update(json_parser(response_text))
+                        break
+                    except Exception as e2:
+                        print(f"[{self.role_name}] 文本解析也失败: {e2}")
+                        continue
+                else:
+                    # 最后一次尝试，使用默认值
+                    print(f"[{self.role_name}] 所有尝试都失败，使用默认值")
         
         self.save_prompt(detail = interaction["detail"], 
                       prompt = prompt)
@@ -422,13 +491,25 @@ class Performer:
                     }
         
         for i in range(max_tries):
-            response = self.llm.chat(prompt) 
             try:
-                interaction.update(json_parser(response))
+                # 使用结构化输出
+                response_model = self.llm.chat(prompt, response_model=MultiRoleResponse)
+                interaction.update(response_model.model_dump())
                 break
             except Exception as e:
-                print(f"Parsing failure! {i}th tries. Error:", e)    
-                print(response)
+                print(f"[{self.role_name}] 结构化输出失败! 第{i+1}次尝试. 错误: {e}")
+                # 如果结构化输出失败，回退到文本解析
+                if i < max_tries - 1:
+                    try:
+                        response_text = self.llm.chat(prompt)
+                        interaction.update(json_parser(response_text))
+                        break
+                    except Exception as e2:
+                        print(f"[{self.role_name}] 文本解析也失败: {e2}")
+                        continue
+                else:
+                    # 最后一次尝试，使用默认值
+                    print(f"[{self.role_name}] 所有尝试都失败，使用默认值")
         self.save_prompt(detail = interaction["detail"], prompt=prompt)
         return interaction
     
@@ -469,18 +550,27 @@ class Performer:
             "other_roles_status":other_roles_status,
             "location":self.location_name
         })
-        response = self.llm.chat(prompt) 
         try:
-            new_plan = json_parser(response)
-            if new_plan["if_change_goal"]:
-                goal = new_plan["updated_goal"]
-                self.save_prompt(prompt,response)
+            # 使用结构化输出
+            response_model = self.llm.chat(prompt, response_model=UpdateGoal)
+            if response_model.if_change_goal and response_model.updated_goal:
+                goal = response_model.updated_goal
+                self.save_prompt(prompt, response_model.model_dump_json())
                 self.goal = goal
                 return goal
         except Exception as e:
-            print(self.role_name)
-            print(f"Parsing failure! Error:", e)    
-            print(response)
+            print(f"[{self.role_name}] 结构化输出失败! 错误: {e}")
+            # 回退到文本解析
+            try:
+                response_text = self.llm.chat(prompt)
+                new_plan = json_parser(response_text)
+                if new_plan.get("if_change_goal") and new_plan.get("updated_goal"):
+                    goal = new_plan["updated_goal"]
+                    self.save_prompt(prompt, response_text)
+                    self.goal = goal
+                    return goal
+            except Exception as e2:
+                print(f"[{self.role_name}] 文本解析也失败: {e2}")
         return ""
     
     def move(self, 
@@ -497,18 +587,28 @@ class Performer:
             "locations_info_text":locations_info_text
             
         })
-        response= self.llm.chat(prompt)
         try:
-            result = json_parser(response)
-            if result["if_move"] and "destination_code" in result and result["destination_code"] in locations_info and result["destination_code"] != self.location_code:
-                destination_code = result["destination_code"]
-                self.save_prompt(detail = result["detail"],
-                              prompt = prompt)
-                return True, result["detail"], destination_code
+            # 使用结构化输出
+            response_model = self.llm.chat(prompt, response_model=MoveResponse)
+            if response_model.if_move and response_model.destination_code:
+                destination_code = response_model.destination_code
+                if destination_code in locations_info and destination_code != self.location_code:
+                    self.save_prompt(detail=response_model.detail, prompt=prompt)
+                    return True, response_model.detail, destination_code
         except Exception as e:
-            print(f"Parsing failure! Error:", e)    
-            print(response)
-        return False, "",self.location_code
+            print(f"[{self.role_name}] 结构化输出失败! 错误: {e}")
+            # 回退到文本解析
+            try:
+                response_text = self.llm.chat(prompt)
+                result = json_parser(response_text)
+                if result.get("if_move") and result.get("destination_code"):
+                    destination_code = result["destination_code"]
+                    if destination_code in locations_info and destination_code != self.location_code:
+                        self.save_prompt(detail=result["detail"], prompt=prompt)
+                        return True, result["detail"], destination_code
+            except Exception as e2:
+                print(f"[{self.role_name}] 文本解析也失败: {e2}")
+        return False, "", self.location_code
     
     def record(self, 
                 record):

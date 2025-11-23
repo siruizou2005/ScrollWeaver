@@ -63,6 +63,13 @@ class InteractionHandler:
         Returns:
             str: Information text
         """
+        # 验证role_code有效性
+        if not role_code or not role_code.strip() or role_code not in self.performers:
+            error_msg = f"[InteractionHandler] 无效的role_code: '{role_code}'，跳过此操作"
+            print(error_msg)
+            self.logger.error(error_msg)
+            return
+        
         other_roles_info = self.state_manager.get_group_members_info_dict(group)
         plan = self.performers[role_code].plan(
             other_roles_info=other_roles_info,
