@@ -162,16 +162,23 @@ class Performer:
             # 使用结构化输出
             response_model = self.llm.chat(prompt, response_model=MotivationText)
             motivation = response_model.motivation
+            print(f"[Performer] 角色 {self.role_name} 动机设置成功（结构化输出）: {motivation[:100] if motivation else 'None'}...")
         except Exception as e:
-            print(f"[Performer] 动机设置结构化输出失败: {e}")
+            print(f"[Performer] 角色 {self.role_name} 动机设置结构化输出失败: {e}")
+            import traceback
+            traceback.print_exc()
             # 回退到文本输出
             try:
                 motivation = self.llm.chat(prompt)
                 if not isinstance(motivation, str):
                     motivation = str(motivation)
+                print(f"[Performer] 角色 {self.role_name} 动机设置成功（文本输出）: {motivation[:100] if motivation else 'None'}...")
             except Exception as e2:
-                print(f"[Performer] 文本输出也失败: {e2}")
+                print(f"[Performer] 角色 {self.role_name} 文本输出也失败: {e2}")
+                import traceback
+                traceback.print_exc()
                 motivation = "追求个人目标和成长" if self.language == "zh" else "Pursue personal goals and growth"
+                print(f"[Performer] 角色 {self.role_name} 使用默认动机: {motivation}")
         
         # 确保motivation是字符串且不为空
         if not isinstance(motivation, str):

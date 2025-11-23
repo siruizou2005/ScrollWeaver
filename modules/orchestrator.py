@@ -361,22 +361,31 @@ class Orchestrator:
             "roles_info":roles_info_text,
             "history_text":history_text
         })
+        print(f"[Orchestrator] 开始生成事件，角色数量: {len(roles_info_text.split('角色')) if roles_info_text else 0}")
         try:
             # 使用结构化输出
             response_model = self.llm.chat(prompt, response_model=EventText)
             response = response_model.event
+            print(f"[Orchestrator] 事件生成成功（结构化输出）: {response[:100] if response else 'None'}...")
         except Exception as e:
             print(f"[Orchestrator] 事件生成结构化输出失败: {e}")
+            import traceback
+            traceback.print_exc()
             # 回退到文本输出
             try:
                 response = self.llm.chat(prompt)
                 if not isinstance(response, str):
                     response = str(response)
+                print(f"[Orchestrator] 事件生成成功（文本输出）: {response[:100] if response else 'None'}...")
             except Exception as e2:
                 print(f"[Orchestrator] 文本输出也失败: {e2}")
+                import traceback
+                traceback.print_exc()
                 response = "故事正在继续发展。" if self.language == "zh" else "The story continues to develop."
+                print(f"[Orchestrator] 使用默认事件: {response}")
         # 确保response不为空
         if not response or not response.strip():
+            print(f"[Orchestrator] 警告: 事件为空，使用默认值")
             response = "故事正在继续发展。" if self.language == "zh" else "The story continues to develop."
         self.record(response, prompt)
         return response

@@ -85,7 +85,17 @@ def get_models(model_name: str):
         has_google_creds = bool(os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "") or os.getenv("GOOGLE_CLOUD_PROJECT", ""))
         is_vertex_prefix = model_name.startswith('vertex-gemini')
 
-        if is_vertex_prefix or use_vertex_env or has_google_creds:
+        # 对于新模型（gemini-2.5-flash, gemini-2.5-flash-lite等），强制使用标准Gemini客户端
+        # 因为VertexGemini不支持这些新模型的结构化输出功能
+        is_new_model = any(x in model_name for x in ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-2.5-pro'])
+        
+        # 只有在明确指定vertex-gemini前缀或USE_VERTEX_GEMINI环境变量时才使用VertexGemini
+        # 对于新模型，即使有Google凭证也强制使用标准Gemini客户端
+        should_use_vertex = (is_vertex_prefix or use_vertex_env) and not is_new_model
+        
+        print(f"[sw_utils] 模型选择: {model_name}, is_new_model={is_new_model}, should_use_vertex={should_use_vertex}, has_google_creds={has_google_creds}")
+        
+        if should_use_vertex:
             try:
                 from modules.llm.VertexGemini2 import VertexGemini
                 # allow model names like 'vertex-gemini:gemini-1.5-pro-002' or 'vertex-gemini/gemini-2.0'
