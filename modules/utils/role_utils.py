@@ -37,7 +37,10 @@ def name2code(roles: Union[str, List[str]], performers: dict, role_codes: List[s
                 processed_roles.append(role)
         return processed_roles
     elif isinstance(roles, str):
-        roles = roles.replace("\n", "")
+        roles = roles.replace("\n", "").strip()
+        # 如果输入为空字符串，返回None
+        if not roles:
+            return None
         if roles in role_codes:
             return roles
         elif roles in name_dic:
