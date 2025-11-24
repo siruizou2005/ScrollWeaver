@@ -117,7 +117,7 @@ class ScrollWeaver():
                 location = f"Reaching {location_name}... ({distance})"
             chara_info = {
                 "id": i,
-                "name": agent.nickname,
+                "name": agent.role_name,
                 "icon": agent.icon_path,
                 "description": agent.role_profile,
                 "goal": agent.goal if agent.goal else agent.motivation,
@@ -149,6 +149,13 @@ class ScrollWeaver():
         else:
             username = message_type
             icon_path = ""
+        
+        # 确保text是字符串
+        if text is not None and not isinstance(text, str):
+            text = str(text)
+        if text is None:
+            text = ""
+        
         message = {
             'username': username,
             'type': message_type, # role, world, system
@@ -158,7 +165,9 @@ class ScrollWeaver():
             "uuid": message_id,
             "scene": self.server.cur_round
         }
-        print(f"Generated message: username={username}, type={message_type}, text_preview={text[:50] if text else ''}...")
+        # 安全地截取前50个字符用于日志
+        text_preview = text[:50] if text and len(text) > 50 else (text if text else '')
+        print(f"Generated message: username={username}, type={message_type}, text_preview={text_preview}...")
         return message
         
     def get_settings_info(self):

@@ -102,6 +102,7 @@ class Orchestrator:
                      intervention:str,
                      history_text: str, 
                      script: str = ""):
+        from .models import EventText
         prompt = self._UPDATE_EVENT_PROMPT.format(**{
             "event":cur_event,
             "intervention":intervention,
@@ -109,7 +110,23 @@ class Orchestrator:
         })
         if script:
             prompt = self._SCRIPT_ATTENTION.format(script = script) + prompt
-        new_event = self.llm.chat(prompt)
+        try:
+            # 使用结构化输出
+            response_model = self.llm.chat(prompt, response_model=EventText)
+            new_event = response_model.event
+        except Exception as e:
+            print(f"[Orchestrator] 事件更新结构化输出失败: {e}")
+            # 回退到文本输出
+            try:
+                new_event = self.llm.chat(prompt)
+                if not isinstance(new_event, str):
+                    new_event = str(new_event)
+            except Exception as e2:
+                print(f"[Orchestrator] 文本输出也失败: {e2}")
+                new_event = "故事正在继续发展。" if self.language == "zh" else "The story continues to develop."
+        # 确保new_event不为空
+        if not new_event or not new_event.strip():
+            new_event = "故事正在继续发展。" if self.language == "zh" else "The story continues to develop."
         self.record(new_event, prompt)
         return new_event
     
@@ -124,36 +141,62 @@ class Orchestrator:
         })
         
         max_tries = 3
-        for _ in range(max_tries):
+        response = None  # 初始化response
+        for i in range(max_tries):
             try:
                 response = self.llm.chat(prompt)
-                break
+                # 确保response不为空字符串
+                if response and response.strip():
+                    break
+                else:
+                    print(f"第{i+1}次尝试返回空响应，继续重试...")
             except Exception as e:
-                print(f"Parsing failure! Error:", e)    
-                print(response)
-        role_code = response
+                print(f"Parsing failure! 第{i+1}次尝试失败. Error:", e)
+                if response is not None:
+                    print(f"Previous response: {response}")
+        
+        # 如果所有尝试都失败或返回空值，返回None而不是空字符串
+        if not response or not response.strip():
+            print(f"[Orchestrator] decide_next_actor 所有尝试都失败或返回空值，返回None")
+            return None
+        
+        role_code = response.strip()
         self.prompts.append({"prompt":prompt,
                             "response":f"{role_code}"})
 
         return role_code
     
     def judge_if_ended(self,history_text):
+        from .models import JudgeIfEnded
         prompt = self._JUDGE_IF_ENDED_PROMPT.format(**{
             "history":history_text
         })
         max_tries = 3
         response = {"if_end":True, "detail":""}
-        for _ in range(max_tries):
+        for i in range(max_tries):
             try:
-                response.update(json_parser(self.llm.chat(prompt)))
+                # 使用结构化输出
+                response_model = self.llm.chat(prompt, response_model=JudgeIfEnded)
+                response.update(response_model.model_dump())
                 break
             except Exception as e:
-                print(f"Parsing failure! Error:", e)    
-                print(response)
+                print(f"结构化输出失败! 第{i+1}次尝试. 错误: {e}")
+                # 回退到文本解析
+                if i < max_tries - 1:
+                    try:
+                        response_text = self.llm.chat(prompt)
+                        response.update(json_parser(response_text))
+                        break
+                    except Exception as e2:
+                        print(f"文本解析也失败: {e2}")
+                        continue
+                else:
+                    print(f"所有尝试都失败，使用默认值")
         
         return response["if_end"],response["detail"]
         
     def decide_scene_actors(self,roles_info_text, history_text, event, previous_role_codes):
+        from .models import SceneActors
         prompt = self._SELECT_SCREEN_ACTORS_PROMPT.format(**{
             "roles_info":roles_info_text,
             "history_text":history_text,
@@ -161,9 +204,28 @@ class Orchestrator:
             "previous_role_codes":previous_role_codes
             
         })
-        response = self.llm.chat(prompt)
-        role_codes = eval(response)
-        return role_codes
+        try:
+            # 使用结构化输出
+            response_model = self.llm.chat(prompt, response_model=SceneActors)
+            return response_model.role_codes
+        except Exception as e:
+            print(f"[Orchestrator] 结构化输出失败: {e}")
+            # 回退到文本解析
+            try:
+                response_text = self.llm.chat(prompt)
+                if not isinstance(response_text, str):
+                    response_text = str(response_text)
+                import json
+                role_codes = json.loads(response_text)
+                if isinstance(role_codes, list):
+                    return role_codes
+                elif isinstance(role_codes, dict) and "role_codes" in role_codes:
+                    return role_codes["role_codes"]
+                else:
+                    return []
+            except Exception as e2:
+                print(f"[Orchestrator] 文本解析也失败: {e2}")
+                return []
     
     def generate_location_prologue(self,
                                    location_code,
@@ -228,13 +290,25 @@ class Orchestrator:
             }
             )
         
-        npc_interaction = {"if_end_interaction":True,"detail":"无事发生。"} if self.language == "zh" else {"if_end_interaction":True,"detail":"Nothing happens"}
+        from .models import NPCRoleResponse
+        default_detail = "无事发生。" if self.language == "zh" else "Nothing happens"
+        npc_interaction = {"if_end_interaction": True, "detail": default_detail}
         try:
-            npc_interaction = json_parser(self.llm.chat(prompt))
+            # 使用结构化输出
+            response_model = self.llm.chat(prompt, response_model=NPCRoleResponse)
+            npc_interaction = response_model.model_dump()
             response = npc_interaction["detail"]
             self.record(response, prompt)
         except Exception as e:
-            print("Enviroment Interaction failed!",e)
+            print(f"[Orchestrator] NPC交互结构化输出失败: {e}")
+            # 回退到文本解析
+            try:
+                response_text = self.llm.chat(prompt)
+                npc_interaction = json_parser(response_text)
+                response = npc_interaction.get("detail", default_detail)
+                self.record(response, prompt)
+            except Exception as e2:
+                print(f"[Orchestrator] NPC交互文本解析也失败: {e2}")
         
         return npc_interaction
     
@@ -252,44 +326,117 @@ class Orchestrator:
             "script":script,
             "last_progress":last_progress
         })
+        from .models import ScriptInstruction
         max_tries = 3
         instruction = {}
         for i in range(max_tries):
-            response = self.llm.chat(prompt)
             try:
-                instruction = json_parser(response)
+                # 使用结构化输出
+                response_model = self.llm.chat(prompt, response_model=ScriptInstruction)
+                instruction = response_model.model_dump()
                 break
             except Exception as e:
-                print(f"Parsing failure! {i+1}th tries. Error:", e)   
-                print(response)
-        self.record(response, prompt)
+                print(f"[Orchestrator] 结构化输出失败! 第{i+1}次尝试. 错误: {e}")
+                # 回退到文本解析
+                if i < max_tries - 1:
+                    try:
+                        response_text = self.llm.chat(prompt)
+                        instruction = json_parser(response_text)
+                        break
+                    except Exception as e2:
+                        print(f"[Orchestrator] 文本解析也失败: {e2}")
+                        continue
+                else:
+                    print(f"[Orchestrator] 所有尝试都失败，使用默认值")
+                    instruction = {"progress": "故事正在继续发展。" if self.language == "zh" else "The story continues to develop."}
+        # 记录响应（使用最后一次尝试的响应）
+        if 'response' in locals():
+            self.record(response if isinstance(response, str) else str(response), prompt)
         return instruction
     
     def generate_event(self,roles_info_text: str, event: str, history_text: str):
+        from .models import EventText
         prompt = self._GENERATE_INTERVENTION_PROMPT.format(**{
             "world_description":self.description,
             "roles_info":roles_info_text,
             "history_text":history_text
         })
-        response = self.llm.chat(prompt)
+        print(f"[Orchestrator] 开始生成事件，角色数量: {len(roles_info_text.split('角色')) if roles_info_text else 0}")
+        try:
+            # 使用结构化输出
+            response_model = self.llm.chat(prompt, response_model=EventText)
+            response = response_model.event
+            print(f"[Orchestrator] 事件生成成功（结构化输出）: {response[:100] if response else 'None'}...")
+        except Exception as e:
+            print(f"[Orchestrator] 事件生成结构化输出失败: {e}")
+            import traceback
+            traceback.print_exc()
+            # 回退到文本输出
+            try:
+                response = self.llm.chat(prompt)
+                if not isinstance(response, str):
+                    response = str(response)
+                print(f"[Orchestrator] 事件生成成功（文本输出）: {response[:100] if response else 'None'}...")
+            except Exception as e2:
+                print(f"[Orchestrator] 文本输出也失败: {e2}")
+                import traceback
+                traceback.print_exc()
+                response = "故事正在继续发展。" if self.language == "zh" else "The story continues to develop."
+                print(f"[Orchestrator] 使用默认事件: {response}")
+        # 确保response不为空
+        if not response or not response.strip():
+            print(f"[Orchestrator] 警告: 事件为空，使用默认值")
+            response = "故事正在继续发展。" if self.language == "zh" else "The story continues to develop."
         self.record(response, prompt)
         return response
         
     def generate_script(self, roles_info_text: str, event: str, history_text: str):
+        from .models import ScriptText
         prompt = self._GENERATE_INTERVENTION_PROMPT.format(**{
             "world_description":self.description,
             "roles_info":roles_info_text,
             "history_text":history_text
         })
-        response = self.llm.chat(prompt)
+        try:
+            # 使用结构化输出
+            response_model = self.llm.chat(prompt, response_model=ScriptText)
+            response = response_model.script
+        except Exception as e:
+            print(f"[Orchestrator] 脚本生成结构化输出失败: {e}")
+            # 回退到文本输出
+            try:
+                response = self.llm.chat(prompt)
+                if not isinstance(response, str):
+                    response = str(response)
+            except Exception as e2:
+                print(f"[Orchestrator] 文本输出也失败: {e2}")
+                response = "场景描述。" if self.language == "zh" else "Scene description."
         self.record(response, prompt)
         return response
     
     def log2story(self,logs):
+        from .models import StoryText
+        import re
         prompt = self._LOG2STORY_PROMPT.format(**{
             "logs":logs
         })
-        response = self.llm.chat(prompt)
+        try:
+            # 使用结构化输出
+            response_model = self.llm.chat(prompt, response_model=StoryText)
+            response = response_model.story
+        except Exception as e:
+            print(f"[Orchestrator] 故事生成结构化输出失败: {e}")
+            # 回退到文本输出
+            try:
+                response = self.llm.chat(prompt)
+                if not isinstance(response, str):
+                    response = str(response)
+            except Exception as e2:
+                print(f"[Orchestrator] 文本输出也失败: {e2}")
+                response = "故事正在继续发展。" if self.language == "zh" else "The story continues to develop."
+        
+        # 注意：后处理逻辑已移至server.py的故事输出部分
+        # 这里只返回原始响应，保持log2story函数的通用性
         return response
     
     # Other

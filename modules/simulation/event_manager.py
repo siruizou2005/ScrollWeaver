@@ -43,6 +43,9 @@ class EventManager:
                 event=self.intervention,
                 history_text=status_text
             )
+            # 确保事件不为空
+            if not event or event.strip() == "":
+                event = "故事刚刚开始，角色们正在探索他们的世界。" if self.language == 'zh' else "The story has just begun, characters are exploring their world."
             self.intervention = event
             self.event = event
         elif self.intervention == "" and self.script:
@@ -50,7 +53,11 @@ class EventManager:
             self.event = self.script
         else:
             self.event = self.intervention
-        return self.intervention
+        # 确保返回的事件不为空
+        if not self.event or self.event.strip() == "":
+            self.event = "故事刚刚开始，角色们正在探索他们的世界。" if self.language == 'zh' else "The story has just begun, characters are exploring their world."
+            self.intervention = self.event
+        return self.event
     
     def get_script(self) -> str:
         """Get current script."""
