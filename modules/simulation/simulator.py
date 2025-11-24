@@ -168,9 +168,10 @@ class Simulator:
                         import traceback
                         traceback.print_exc()
                         # 继续处理下一个角色，而不是完全失败
-                        error_text = (f"{self.performers[role_code].nickname} 动机设置失败: {str(e)}"
+                        nickname = self.performers[role_code].nickname if self.performers[role_code].nickname else self.performers[role_code].role_name
+                        error_text = (f"{nickname} 动机设置失败: {str(e)}"
                                     if self.language == "zh"
-                                    else f"{self.performers[role_code].nickname} failed to set motivation: {str(e)}")
+                                    else f"{nickname} failed to set motivation: {str(e)}")
                         record_id = str(uuid.uuid4())
                         self.record_manager.record(
                             role_code=role_code,
@@ -207,10 +208,13 @@ class Simulator:
                 self._server_instance.cur_round = current_round
             self.logger.info(f"========== Round {current_round+1} Started ==========")
             
+            # 显示当前事件（每轮开始时）
+            # 注意：事件在"Setting Goals"阶段已经添加到历史，这里只显示，不重复添加
             if self.event_manager.event and current_round >= 1:
                 self.logger.info(f"--------- Current Event ---------\n{self.event_manager.event}\n")
                 yield ("world", "", "-- Current Event --\n" + self.event_manager.event, None)
-                self.event_manager.add_event_to_history(self.event_manager.event)
+                # 不重复添加到历史，因为事件在"Setting Goals"阶段已经添加过了
+                # 只有在事件更新时才需要添加到历史
             
             if len(self.movement_manager.moving_roles_info) == len(self.role_codes):
                 self.movement_manager.settle_movement()
@@ -259,17 +263,25 @@ class Simulator:
                 for role_code in group:
                     current_role_code = role_code
                     if scene_mode:
-                        current_role_code = name2code(
-                            self.orchestrator.decide_next_actor(
-                                "\n".join(self.history_manager.get_recent_history(3)),
-                                self.state_manager.get_group_members_info_text(group, status=True),
-                                self.event_manager.script
-                            ),
-                            self.performers,
-                            self.role_codes,
-                            self.language
+                        next_actor = self.orchestrator.decide_next_actor(
+                            "\n".join(self.history_manager.get_recent_history(3)),
+                            self.state_manager.get_group_members_info_text(group, status=True),
+                            self.event_manager.script
                         )
-                        if not isinstance(current_role_code, str):
+                        # 如果decide_next_actor返回None或空值，使用当前role_code
+                        if next_actor and next_actor.strip():
+                            current_role_code = name2code(
+                                next_actor,
+                                self.performers,
+                                self.role_codes,
+                                self.language
+                            )
+                            # 如果name2code转换失败或返回无效值，使用当前role_code
+                            if not current_role_code or current_role_code not in self.role_codes:
+                                print(f"[Simulator] decide_next_actor返回的角色代码无效: {next_actor}，使用当前角色: {role_code}")
+                                current_role_code = role_code
+                        else:
+                            print(f"[Simulator] decide_next_actor返回None或空值，使用当前角色: {role_code}")
                             current_role_code = role_code
                     
                     yield from self.interaction_handler.implement_next_plan(role_code=current_role_code, group=group)
