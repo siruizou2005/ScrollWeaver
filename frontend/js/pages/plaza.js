@@ -45,8 +45,10 @@ function createScrollCard(scroll) {
         typeText = '分享的书卷';
     }
     
+    // 添加类型类到卡片本身，用于卷轴颜色
+    card.classList.add(typeClass);
+    
     card.innerHTML = `
-        <div class="scroll-card-spine ${typeClass}"></div>
         <div class="scroll-card-content">
             <h3 class="scroll-card-title">${scroll.title || '未命名书卷'}</h3>
             <p class="scroll-card-description">${scroll.description || '暂无描述'}</p>
@@ -188,11 +190,11 @@ document.getElementById('generateForm')?.addEventListener('submit', async (e) =>
     
     progressDiv.style.display = 'block';
     progressFill.style.width = '0%';
-    progressText.textContent = '正在上传文档...';
+    progressText.textContent = '正在制作书卷...';
     
     let progressInterval = null;
     try {
-        // 模拟上传进度
+        // 模拟进度
         progressInterval = setInterval(() => {
             const currentWidth = parseInt(progressFill.style.width) || 0;
             if (currentWidth < 90) {
@@ -247,7 +249,9 @@ document.getElementById('generateForm')?.addEventListener('submit', async (e) =>
             progressFill.style.width = '100%';
             progressText.textContent = '处理失败';
             alert('生成失败：' + (data.detail || '未知错误'));
-            progressDiv.style.display = 'none';
+            setTimeout(() => {
+                progressDiv.style.display = 'none';
+            }, 2000);
         }
     } catch (error) {
         if (progressInterval) {
@@ -261,6 +265,12 @@ document.getElementById('generateForm')?.addEventListener('submit', async (e) =>
         setTimeout(() => {
             progressDiv.style.display = 'none';
         }, 2000);
+    } finally {
+        // 确保清理定时器
+        if (progressInterval) {
+            clearInterval(progressInterval);
+            progressInterval = null;
+        }
     }
 });
 
