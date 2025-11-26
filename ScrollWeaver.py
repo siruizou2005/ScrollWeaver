@@ -24,11 +24,13 @@ class ScrollWeaver():
                  preset_path: str,
                  world_llm_name: str,
                  role_llm_name: str,
-                 embedding_name:str = "bge-m3") :
+                 embedding_name:str = "bge-m3",
+                 embedding = None) :
         self.server = Server(preset_path, 
                         world_llm_name=world_llm_name, 
                         role_llm_name=role_llm_name, 
-                        embedding_name=embedding_name)
+                        embedding_name=embedding_name,
+                        embedding=embedding)
         self.selected_scene = None
         
     def set_generator(self, 

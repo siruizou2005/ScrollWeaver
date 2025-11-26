@@ -10,3 +10,4 @@ BookWorld_test.py
 .DS_Store
 model_cache/
 .cursor
+scrollweaver.db

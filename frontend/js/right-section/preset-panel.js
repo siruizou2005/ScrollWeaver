@@ -59,6 +59,11 @@ class PresetPanel {
         // 禁用按钮，防止重复点击
         this.submitBtn.disabled = true;
 
+        // 显示加载动画
+        if (window.showLoadingOverlay) {
+            window.showLoadingOverlay('正在加载预设...', '正在初始化环境和模型，请稍候');
+        }
+
         try {
             const response = await fetch('/api/load-preset', {
                 method: 'POST',
@@ -106,7 +111,7 @@ class PresetPanel {
                             const oldWs = window.ws;
                             // 移除错误处理器，避免显示错误
                             oldWs.onerror = null;
-                            
+
                             oldWs.onclose = () => {
                                 console.log('Old WebSocket connection closed');
                                 resolve();
@@ -131,7 +136,7 @@ class PresetPanel {
                         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
                         const clientId = Math.random().toString(36).substring(7);
                         const ws = new WebSocket(`${protocol}//${window.location.host}/ws/${clientId}`);
-                        
+
                         let connectionEstablished = false;
                         let errorShown = false;
 
@@ -144,18 +149,18 @@ class PresetPanel {
                                 window.handleWebSocketMessage(event);
                                 return;
                             }
-                            
+
                             // 回退处理：如果处理函数不可用，至少分发事件
                             console.warn('handleWebSocketMessage not available, using fallback and event dispatch');
                             try {
                                 const message = JSON.parse(event.data);
                                 console.log('Received message on new connection (fallback):', message.type, message);
-                                
+
                                 // 分发事件，让其他监听器处理（这些监听器可能在 message.js 之前加载）
                                 window.dispatchEvent(new CustomEvent('websocket-message', {
                                     detail: message
                                 }));
-                                
+
                                 // 如果消息类型是 'message'，尝试直接渲染到聊天窗口
                                 if (message.type === 'message' && message.data) {
                                     const chatMessages = document.querySelector('.chat-messages');
@@ -271,6 +276,10 @@ class PresetPanel {
             console.error('Error loading preset:', error);
             alert(error.message || 'Failed to load preset, please try again.');
         } finally {
+            // 隐藏加载动画
+            if (window.hideLoadingOverlay) {
+                window.hideLoadingOverlay();
+            }
             // 恢复按钮状态
             this.submitBtn.disabled = false;
         }
