@@ -1,5 +1,5 @@
 // message.js
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     const chatMessages = document.querySelector('.chat-messages');
     const textarea = document.querySelector('textarea');
     const sendButton = document.querySelector('.send-btn');
@@ -7,22 +7,32 @@ document.addEventListener('DOMContentLoaded', function() {
     const stopBtn = document.getElementById('stopBtn');
     const resetSessionBtn = document.getElementById('resetSessionBtn');
     const exportStoryBtn = document.getElementById('exportStoryBtn');
-    
+
     // 生成随机的客户端ID
     const clientId = Math.random().toString(36).substring(7);
-    
+
     // 从URL获取scroll_id
     const urlParams = new URLSearchParams(window.location.search);
     const scrollId = urlParams.get('scroll_id');
-    
+
     // WebSocket连接
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${protocol}//${window.location.host}/ws/${clientId}`;
     const ws = new WebSocket(wsUrl);
     window.ws = ws;
-    
+
     // 如果有scroll_id，连接建立后立即发送init消息加载预设
     let scrollIdToLoad = scrollId;
+
+    // 立即显示加载动画（如果有scroll_id）
+    if (scrollIdToLoad) {
+        console.log('[Loading] 检测到scroll_id，立即显示加载动画');
+        // 这里的 showLoadingOverlay 还未定义，需要确保它在定义后调用，或者提升定义
+        // 由于 showLoadingOverlay 是函数声明，会被提升，所以可以直接调用
+        // 但为了安全起见，我们稍后在定义后调用，或者将其定义移到顶部
+        // 实际上，由于 JS 的变量提升，函数声明会被提升到作用域顶部，所以这里调用是安全的
+        // 但是为了代码清晰，我们将在定义 showLoadingOverlay 后立即调用
+    }
 
     // 辅助函数：安全地发送 WebSocket 消息
     function sendWebSocketMessage(message) {
@@ -110,7 +120,7 @@ document.addEventListener('DOMContentLoaded', function() {
     window.setIsPlaying = (playing, source = 'external') => updatePlayingState(playing, source);
     window.getIsPlaying = () => isPlaying;
     window.getCurrentRuntimeScene = () => currentRuntimeScene;
-    window.requestSceneCharacters = function(scene, context = 'runtime') {
+    window.requestSceneCharacters = function (scene, context = 'runtime') {
         if (!window.ws || window.ws.readyState !== WebSocket.OPEN) {
             console.warn('Cannot request scene characters: WebSocket not connected');
             return false;
@@ -175,7 +185,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let selectedRoleName = null;
     let waitingForInput = false;
     const autoCompleteBtn = document.getElementById('autoCompleteBtn');
-    
+
     // 初始化输入框状态：默认禁用
     textarea.disabled = true;
     textarea.placeholder = '等待您的回合...';
@@ -184,12 +194,12 @@ document.addEventListener('DOMContentLoaded', function() {
         autoCompleteBtn.disabled = false;
         autoCompleteBtn.style.opacity = '1';
     }
-    
+
     // 加载覆盖层相关函数
     const loadingOverlay = document.getElementById('loadingOverlay');
     const loadingText = document.getElementById('loadingText');
     const loadingSubtext = document.getElementById('loadingSubtext');
-    
+
     function showLoadingOverlay(text = '正在初始化...', subtext = '请稍候，这可能需要一些时间') {
         console.log('[Loading] 显示加载覆盖层:', text, subtext);
         if (loadingOverlay && loadingText && loadingSubtext) {
@@ -210,7 +220,13 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
     }
-    
+
+    // 如果有scroll_id，立即显示加载动画
+    if (scrollIdToLoad) {
+        isLoadingStory = true;
+        showLoadingOverlay('正在加载书卷...', '正在初始化环境和模型，请稍候');
+    }
+
     function hideLoadingOverlay() {
         console.log('[Loading] 隐藏加载覆盖层');
         if (loadingOverlay) {
@@ -220,9 +236,9 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('[Loading] 加载覆盖层元素未找到');
         }
     }
-    
+
     // 控制按钮点击事件 - 使用 sendWebSocketMessage 辅助函数
-    controlBtn.addEventListener('click', function() {
+    controlBtn.addEventListener('click', function () {
         if (!isPlaying) {
             // 开始
             console.log('Sending start message');
@@ -250,7 +266,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // 停止按钮点击事件 - 使用 window.ws 而不是闭包中的 ws
-    stopBtn.addEventListener('click', function() {
+    stopBtn.addEventListener('click', function () {
         console.log('Sending stop message');
         if (sendWebSocketMessage({
             type: 'control',
@@ -261,7 +277,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // 重置会话按钮点击事件
-    resetSessionBtn.addEventListener('click', function() {
+    resetSessionBtn.addEventListener('click', function () {
         if (confirm('确定要重置所有当前对话的临时session内容吗？此操作不可撤销。')) {
             // 发送重置请求
             if (sendWebSocketMessage({
@@ -275,30 +291,33 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // WebSocket事件处理
-    ws.onopen = function() {
+    ws.onopen = function () {
         console.log('WebSocket连接已建立');
         addSystemMessage('连接已建立');
-        
+
         // 如果有scroll_id，立即发送init消息加载预设
         if (scrollIdToLoad) {
             console.log('发送init消息加载预设，scroll_id:', scrollIdToLoad);
+
+            // 注意：加载动画已在页面加载时立即显示，这里不需要再次显示
+
             sendWebSocketMessage({
                 type: 'init',
                 scroll_id: parseInt(scrollIdToLoad)
             });
         }
     };
-    
-    ws.onclose = function() {
+
+    ws.onclose = function () {
         console.log('WebSocket连接已关闭');
         addSystemMessage('连接已断开');
     };
-    
-    ws.onerror = function(error) {
+
+    ws.onerror = function (error) {
         console.error('WebSocket错误:', error);
         addSystemMessage('连接错误');
     };
-    
+
     // 将消息处理逻辑提取为函数，以便在新连接中重用
     function handleWebSocketMessage(event) {
         const message = JSON.parse(event.data);
@@ -330,12 +349,12 @@ document.addEventListener('DOMContentLoaded', function() {
             // 角色选择成功
             selectedRoleName = message.data.role_name;
             addSystemMessage(message.data.message);
-            
+
             // 查找并显示选中的角色
             if (window.characterProfiles) {
                 const allChars = window.characterProfiles.allCharacters || window.characterProfiles.characters || [];
-                const selectedChar = allChars.find(c => 
-                    (c.name && c.name === message.data.role_name) || 
+                const selectedChar = allChars.find(c =>
+                    (c.name && c.name === message.data.role_name) ||
                     (c.nickname && c.nickname === message.data.role_name)
                 );
                 if (selectedChar) {
@@ -350,7 +369,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             const locationEl = card.querySelector('.character-location');
                             const goalEl = card.querySelector('.character-goal');
                             const stateEl = card.querySelector('.character-state');
-                            
+
                             showSelectedCharacter({
                                 name: message.data.role_name,
                                 nickname: message.data.role_name,
@@ -488,7 +507,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     controlBtn.disabled = false;
                 }
             }
-            
+
             const endData = message.data || {};
             const primaryMessage = endData.message || '故事已结束';
             addSystemMessage(primaryMessage);
@@ -518,7 +537,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         else if (message.type === 'message') {
             console.log('Processing message type:', message.type, 'data:', message.data);
-            
+
             // 如果是第一条消息，隐藏加载动画
             if (isLoadingStory) {
                 isLoadingStory = false;
@@ -528,7 +547,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     controlBtn.disabled = false;
                 }
             }
-            
+
             // 从状态中获取当前场景编号
             const sceneNumber = message.data.scene; // 确保消息中包含场景信息
             const normalizedScene = normalizeSceneIdentifier(sceneNumber);
@@ -538,7 +557,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     detail: { scene: normalizedScene, source: 'runtime' }
                 }));
             }
-            
+
             // 收到任何消息时，都应该禁用输入框（除非是 waiting_for_user_input）
             // 只有当服务器明确发送 waiting_for_user_input 时，才会重新启用输入框
             // 这确保了用户只能在轮到自己的角色时才能输入
@@ -565,11 +584,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     autoCompleteBtn.style.opacity = '1';
                 }
             }
-            
+
             if (message.data.type === 'system') {
                 console.log('Rendering system message:', message.data.text);
                 addSystemMessage(message.data.text);
-            } 
+            }
             else if (message.data.type === 'story') {
                 console.log('Rendering story message');
                 // 为故事消息添加特殊样式
@@ -595,7 +614,7 @@ document.addEventListener('DOMContentLoaded', function() {
         else if (message.type === 'initial_data') {
             // 清空现有消息，处理初始数据
             chatMessages.innerHTML = '';
-            
+
             // 初始化时禁用输入框
             waitingForInput = false;
             textarea.disabled = true;
@@ -605,7 +624,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 autoCompleteBtn.disabled = false;
                 autoCompleteBtn.style.opacity = '1';
             }
-            
+
             if (message.data.history_messages) {
                 loadHistoryMessages(message.data.history_messages);
             }
@@ -615,6 +634,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (message.data.status) {
                 broadcastStatus(message.data.status, 'initial');
+            }
+
+            // 隐藏加载动画
+            if (isLoadingStory) {
+                isLoadingStory = false;
+                hideLoadingOverlay();
+                if (controlBtn) {
+                    controlBtn.classList.remove('loading');
+                    controlBtn.disabled = false;
+                }
             }
         }
         else if (message.type === 'status_update') {
@@ -630,50 +659,52 @@ document.addEventListener('DOMContentLoaded', function() {
             addSystemMessage(message.data.message || 'Session已重置');
             // 显示刷新提示
             addSystemMessage('页面将在2秒后自动刷新...');
-            
+
             // 延迟刷新页面，给用户时间看到提示信息
-            setTimeout(function() {
+            setTimeout(function () {
                 window.location.reload();
             }, 2000);
         }
     }
-    
+
     // 将处理函数和辅助函数暴露到全局，以便新连接使用
     window.handleWebSocketMessage = handleWebSocketMessage;
     window.renderMessage = renderMessage;
     window.addSystemMessage = addSystemMessage;
-    
+    window.showLoadingOverlay = showLoadingOverlay;
+    window.hideLoadingOverlay = hideLoadingOverlay;
+
     // 为原始连接设置消息处理器
     ws.onmessage = handleWebSocketMessage;
 
     function loadHistoryMessages(messages) {
         // 清空现有消息
         chatMessages.innerHTML = '';
-        
+
         messages.forEach(message => {
             renderMessage(message);
         });
 
         chatMessages.scrollTop = chatMessages.scrollHeight;
-        
+
         console.log(`Loaded ${messages.length} historical messages`);
     }
 
     // 渲染消息
     function renderMessage(message) {
-    const messageElement = document.createElement('div');
-    // 支持基于来源的样式：如果消息包含 from/is_user 字段，则加上 user/npc 类
-    const srcClass = (message.from === 'user' || message.is_user) ? ' user' : ' npc';
-    messageElement.className = 'message' + srcClass;
+        const messageElement = document.createElement('div');
+        // 支持基于来源的样式：如果消息包含 from/is_user 字段，则加上 user/npc 类
+        const srcClass = (message.from === 'user' || message.is_user) ? ' user' : ' npc';
+        messageElement.className = 'message' + srcClass;
         messageElement.dataset.timestamp = message.timestamp;
         messageElement.dataset.username = message.username;
-        
+
         // 添加场景属性（确保转换为字符串）
         if (message.scene !== undefined && message.scene !== null) {
             messageElement.dataset.scene = String(message.scene);
             console.log(`Rendering message for scene ${message.scene}`);
         }
-        
+
         // Note: avatar/icon intentionally not rendered in chat (requirement: remove avatars)
         messageElement.innerHTML = `
             <div class="content">
@@ -691,7 +722,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
             </div>
         `;
-    
+
         // 获取元素引用
         const textElement = messageElement.querySelector('.text');
         const editButtons = messageElement.querySelector('.edit-buttons');
@@ -745,7 +776,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         // 防止消息点击冒泡到全局点击（全局点击用于退出编辑）
-        messageElement.addEventListener('click', function(event) {
+        messageElement.addEventListener('click', function (event) {
             event.stopPropagation();
         });
 
@@ -765,10 +796,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 currentEditingOriginalText = '';
             }
         }
-    
+
         // 根据当前场景筛选器决定是否显示
         if (currentSceneFilter !== null) {
-            messageElement.style.display = 
+            messageElement.style.display =
                 (String(message.scene) === String(currentSceneFilter)) ? '' : 'none';
         }
 
@@ -796,14 +827,14 @@ document.addEventListener('DOMContentLoaded', function() {
             addSystemMessage('当前不是您的回合，无法发送消息');
             return;
         }
-        
+
         const text = textarea.value.trim();
         if (!text) {
             // 空输入提示
             alert('请输入内容');
             return;
         }
-        
+
         const message = {
             type: 'user_message',
             text: text,
@@ -811,7 +842,7 @@ document.addEventListener('DOMContentLoaded', function() {
         };
         if (sendWebSocketMessage(message)) {
             textarea.value = '';
-            
+
             // 发送消息后，禁用输入框，等待服务器响应
             waitingForInput = false;
             textarea.disabled = true;
@@ -827,7 +858,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // AI自动完成按钮点击事件
     if (autoCompleteBtn) {
-        autoCompleteBtn.addEventListener('click', function() {
+        autoCompleteBtn.addEventListener('click', function () {
             if (waitingForInput) {
                 // 发送自动完成请求
                 if (sendWebSocketMessage({
@@ -846,10 +877,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 角色选择按钮
     const selectRoleBtn = document.getElementById('selectRoleBtn');
-    selectRoleBtn.addEventListener('click', function() {
+    selectRoleBtn.addEventListener('click', function () {
         showRoleSelectModal();
     });
-    
+
     // 显示角色选择模态框
     function showRoleSelectModal() {
         // 优先从window.characterProfiles获取完整数据
@@ -862,10 +893,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 profiles = window.characterProfiles.characters;
             }
         }
-        
+
         console.log('角色选择 - window.characterProfiles:', window.characterProfiles);
         console.log('角色选择 - profiles from characterProfiles:', profiles.length);
-        
+
         // 如果还没有，从DOM中获取
         if (profiles.length === 0) {
             const characterCards = document.querySelectorAll('.character-card');
@@ -876,14 +907,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 const goalEl = card.querySelector('.character-goal');
                 const stateEl = card.querySelector('.character-state');
                 const iconEl = card.querySelector('.character-icon img');
-                
+
                 if (nameEl) {
                     const name = nameEl.textContent.trim();
                     const location = locationEl ? locationEl.textContent.replace('📍', '').trim() : '';
                     const goal = goalEl ? goalEl.textContent.replace('🎯', '').trim() : '';
                     const state = stateEl ? stateEl.textContent.replace('⚡', '').trim() : '';
                     const icon = iconEl ? iconEl.src : './frontend/assets/images/default-icon.jpg';
-                    
+
                     // 提取描述
                     let description = '';
                     if (descEl) {
@@ -897,7 +928,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             description = descEl.textContent.trim();
                         }
                     }
-                    
+
                     profiles.push({
                         name: name,
                         nickname: name,
@@ -911,7 +942,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
         }
-        
+
         if (profiles.length === 0) {
             // 从服务器请求
             sendWebSocketMessage({
@@ -920,33 +951,33 @@ document.addEventListener('DOMContentLoaded', function() {
             alert('正在加载角色列表，请稍后再试');
             return;
         }
-        
+
         // 显示模态框
         const modal = document.getElementById('role-select-modal');
         const container = document.getElementById('roleCardsContainer');
-        
+
         if (!modal || !container) {
             console.error('角色选择模态框元素未找到');
             return;
         }
-        
+
         // 清空容器
         container.innerHTML = '';
-        
+
         // 创建角色卡片
         profiles.forEach((character) => {
             const card = createRoleSelectCard(character);
             container.appendChild(card);
         });
-        
+
         // 显示模态框
         modal.classList.remove('hidden');
         modal.setAttribute('aria-hidden', 'false');
-        
+
         // 设置关闭事件
         const closeBtn = modal.querySelector('.modal-close');
         const overlay = modal.querySelector('.modal-overlay');
-        
+
         function closeModal() {
             modal.classList.add('hidden');
             modal.setAttribute('aria-hidden', 'true');
@@ -954,29 +985,29 @@ document.addEventListener('DOMContentLoaded', function() {
             overlay.removeEventListener('click', closeModal);
             document.removeEventListener('keydown', onKeyDown);
         }
-        
+
         function onKeyDown(e) {
             if (e.key === 'Escape') closeModal();
         }
-        
+
         closeBtn.addEventListener('click', closeModal);
         overlay.addEventListener('click', closeModal);
         document.addEventListener('keydown', onKeyDown);
     }
-    
+
     // 创建角色选择卡片
     function createRoleSelectCard(character) {
         const card = document.createElement('div');
         card.className = 'role-select-card';
         card.setAttribute('data-role-name', character.name || character.nickname);
-        
+
         const name = character.name || character.nickname || 'Unknown';
         const description = character.description || character.brief || '';
         const icon = character.icon || './frontend/assets/images/default-icon.jpg';
         const location = character.location || '';
         const goal = character.goal || '';
         const state = character.state || character.status || '';
-        
+
         card.innerHTML = `
             <div class="role-select-card-header">
                 <img class="role-select-card-avatar" src="${icon}" alt="${name}" onerror="this.src='./frontend/assets/images/default-icon.jpg'">
@@ -991,9 +1022,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
             ` : ''}
         `;
-        
+
         // 添加点击事件
-        card.addEventListener('click', function() {
+        card.addEventListener('click', function () {
             handleRoleSelection(name, character);
             // 关闭模态框
             const modal = document.getElementById('role-select-modal');
@@ -1002,10 +1033,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 modal.setAttribute('aria-hidden', 'true');
             }
         });
-        
+
         return card;
     }
-    
+
     // 处理角色选择的函数
     function handleRoleSelection(roleName, characterData) {
         if (selectedRoleName && selectedRoleName === roleName) {
@@ -1026,29 +1057,29 @@ document.addEventListener('DOMContentLoaded', function() {
             type: 'select_role',
             role_name: roleName
         });
-        
+
         // 更新按钮
         selectRoleBtn.innerHTML = `<i class="fas fa-user-check"></i><span>${roleName}</span>`;
         selectRoleBtn.style.background = '#1e293b';
-        
+
         // 显示选中的角色在左侧栏顶部
         showSelectedCharacter(characterData);
     }
-    
+
     // 显示选中的角色
     function showSelectedCharacter(character) {
         const selectedSection = document.getElementById('selectedCharacterSection');
         const selectedCard = document.getElementById('selectedCharacterCard');
-        
+
         if (!selectedSection || !selectedCard) return;
-        
+
         // 创建选中角色的卡片
         const name = character.name || character.nickname || '未知角色';
         const description = character.description || '';
         const location = character.location || '—';
         const goal = character.goal || '—';
         const state = character.state || '—';
-        
+
         selectedCard.innerHTML = `
             <div class="selected-character-info">
                 <div class="selected-character-name">${name}</div>
@@ -1060,10 +1091,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
             </div>
         `;
-        
+
         // 显示选中区域
         selectedSection.style.display = 'block';
-        
+
         // 从普通列表中移除选中的角色（可选）
         const allCards = document.querySelectorAll('.character-card');
         allCards.forEach(card => {
@@ -1097,7 +1128,7 @@ document.addEventListener('DOMContentLoaded', function() {
     sendButton.addEventListener('click', sendMessage);
 
     // 绑定回车键发送（只有在输入框启用时才能发送）
-    textarea.addEventListener('keypress', function(e) {
+    textarea.addEventListener('keypress', function (e) {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             // 只有在等待输入时才能发送
@@ -1109,14 +1140,14 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     });
-    
+
     // 防止在输入框禁用时输入（额外的保护）
-    textarea.addEventListener('input', function(e) {
+    textarea.addEventListener('input', function (e) {
         if (textarea.disabled) {
             textarea.value = '';
         }
     });
-    
+
     // 角色名点击 -> 打开角色档案弹窗（弹窗内容不包含动机）
     document.addEventListener('click', function (e) {
         const target = e.target;
@@ -1195,7 +1226,7 @@ document.addEventListener('DOMContentLoaded', function() {
         overlay.addEventListener('click', close);
         document.addEventListener('keydown', onKeyDown);
     }
-    
+
     // 监听场景选择事件
     window.addEventListener('scene-selected', (event) => {
         const { scene: selectedScene, origin } = event.detail || {};
@@ -1207,10 +1238,10 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // 添加导出故事按钮的点击事件
-    exportStoryBtn.addEventListener('click', function() {
+    exportStoryBtn.addEventListener('click', function () {
         const urlParams = new URLSearchParams(window.location.search);
         const scrollId = urlParams.get('scroll_id');
-        
+
         const payload = { type: 'generate_story' };
         if (currentSceneFilter !== null && currentSceneFilter !== undefined) {
             payload.scene = String(currentSceneFilter);
@@ -1224,40 +1255,40 @@ document.addEventListener('DOMContentLoaded', function() {
             exportStoryBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>生成中...</span>';
         }
     });
-    
+
     // 显示故事模态框
     function showStoryModal(storyText, timestamp) {
         const modal = document.getElementById('story-modal');
         const content = document.getElementById('storyContent');
         const downloadBtn = document.getElementById('downloadStoryBtn');
-        
+
         if (!modal || !content) {
             console.error('故事模态框元素未找到');
             return;
         }
-        
+
         // 恢复按钮状态
         exportStoryBtn.disabled = false;
         exportStoryBtn.innerHTML = '<i class="fas fa-book"></i><span data-i18n="exportStory">输出故事</span>';
-        
+
         // 设置故事内容
         content.textContent = storyText;
-        
+
         // 显示模态框
         modal.classList.remove('hidden');
         modal.setAttribute('aria-hidden', 'false');
-        
+
         // 设置下载功能
         if (downloadBtn) {
-            downloadBtn.onclick = function() {
+            downloadBtn.onclick = function () {
                 downloadStory(storyText, timestamp);
             };
         }
-        
+
         // 设置关闭事件
         const closeBtn = modal.querySelector('.modal-close');
         const overlay = modal.querySelector('.modal-overlay');
-        
+
         function closeModal() {
             modal.classList.add('hidden');
             modal.setAttribute('aria-hidden', 'true');
@@ -1265,16 +1296,16 @@ document.addEventListener('DOMContentLoaded', function() {
             if (overlay) overlay.removeEventListener('click', closeModal);
             document.removeEventListener('keydown', onKeyDown);
         }
-        
+
         function onKeyDown(e) {
             if (e.key === 'Escape') closeModal();
         }
-        
+
         closeBtn.addEventListener('click', closeModal);
         if (overlay) overlay.addEventListener('click', closeModal);
         document.addEventListener('keydown', onKeyDown);
     }
-    
+
     // 下载故事
     function downloadStory(storyText, timestamp) {
         const filename = `story_${timestamp || new Date().toISOString().replace(/[:.]/g, '-')}.txt`;
@@ -1288,40 +1319,40 @@ document.addEventListener('DOMContentLoaded', function() {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
     }
-    
+
     // 显示AI选项选择模态框
     function showAutoOptionsModal(options) {
         const modal = document.getElementById('auto-options-modal');
         const container = document.getElementById('autoOptionsContainer');
-        
+
         if (!modal || !container) {
             console.error('AI选项模态框元素未找到');
             return;
         }
-        
+
         // 恢复按钮状态
         if (autoCompleteBtn) {
             autoCompleteBtn.disabled = false;
             autoCompleteBtn.style.opacity = '1';
         }
-        
+
         // 清空容器
         container.innerHTML = '';
-        
+
         // 创建选项卡片
         options.forEach((option, index) => {
             const card = createOptionCard(option, index);
             container.appendChild(card);
         });
-        
+
         // 显示模态框
         modal.classList.remove('hidden');
         modal.setAttribute('aria-hidden', 'false');
-        
+
         // 设置关闭事件
         const closeBtn = modal.querySelector('.modal-close');
         const overlay = modal.querySelector('.modal-overlay');
-        
+
         function closeModal() {
             modal.classList.add('hidden');
             modal.setAttribute('aria-hidden', 'true');
@@ -1329,37 +1360,37 @@ document.addEventListener('DOMContentLoaded', function() {
             if (overlay) overlay.removeEventListener('click', closeModal);
             document.removeEventListener('keydown', onKeyDown);
         }
-        
+
         function onKeyDown(e) {
             if (e.key === 'Escape') closeModal();
         }
-        
+
         closeBtn.addEventListener('click', closeModal);
         if (overlay) overlay.addEventListener('click', closeModal);
         document.addEventListener('keydown', onKeyDown);
     }
-    
+
     // 创建选项卡片
     function createOptionCard(option, index) {
         const card = document.createElement('div');
         card.className = 'auto-option-card';
         card.setAttribute('data-option-index', index);
-        
+
         const styleIcons = {
             'aggressive': '⚔️',
             'balanced': '⚖️',
             'conservative': '🛡️'
         };
-        
+
         const styleColors = {
             'aggressive': '#dc2626',
             'balanced': '#2563eb',
             'conservative': '#059669'
         };
-        
+
         const icon = styleIcons[option.style] || '💭';
         const color = styleColors[option.style] || '#64748b';
-        
+
         card.innerHTML = `
             <div class="option-header">
                 <div class="option-style-badge" style="background: ${color}20; color: ${color}; border-color: ${color}40;">
@@ -1373,16 +1404,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 选择此方案
             </button>
         `;
-        
+
         // 添加点击事件
         const selectBtn = card.querySelector('.option-select-btn');
-        selectBtn.addEventListener('click', function() {
+        selectBtn.addEventListener('click', function () {
             // 发送选中的选项
             sendWebSocketMessage({
                 type: 'select_auto_option',
                 selected_text: option.text
             });
-            
+
             // 关闭模态框
             const modal = document.getElementById('auto-options-modal');
             if (modal) {
@@ -1390,14 +1421,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 modal.setAttribute('aria-hidden', 'true');
             }
         });
-        
+
         // 卡片点击也可以选择
-        card.addEventListener('click', function(e) {
+        card.addEventListener('click', function (e) {
             if (e.target !== selectBtn && !selectBtn.contains(e.target)) {
                 selectBtn.click();
             }
         });
-        
+
         return card;
     }
 });

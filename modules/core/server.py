@@ -30,7 +30,8 @@ class Server:
                  preset_path: str,
                  world_llm_name: str,
                  role_llm_name: str,
-                 embedding_name: str = "bge-small"):
+                 embedding_name: str = "bge-small",
+                 embedding = None):
         """
         Initialize the Server.
         
@@ -39,6 +40,7 @@ class Server:
             world_llm_name: World LLM name
             role_llm_name: Role LLM name
             embedding_name: Embedding model name
+            embedding: Optional pre-loaded embedding instance (for reuse)
         """
         self.role_llm_name: str = role_llm_name
         self.world_llm_name: str = world_llm_name
@@ -71,8 +73,11 @@ class Server:
         self.role_llm = get_models(role_llm_name)
         self.logger = get_logger(self.experiment_name)
         
-        # Initialize embedding
-        self.embedding = get_embedding_model(embedding_name, language=self.language)
+        # Initialize embedding - use provided instance or load new one
+        if embedding is not None:
+            self.embedding = embedding
+        else:
+            self.embedding = get_embedding_model(embedding_name, language=self.language)
         
         # Initialize performers
         self.init_performers(

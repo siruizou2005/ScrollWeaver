@@ -43,14 +43,78 @@ app.mount("/frontend", StaticFiles(directory=static_file_abspath), name="fronten
 # 预设文件目录
 PRESETS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'experiment_presets')
 
+# Startup event handler for warmup
+@app.on_event("startup")
+async def startup_event():
+    """服务器启动时的预热任务"""
+    print("=" * 60)
+    print("Starting ScrollWeaver server...")
+    print("=" * 60)
+    
+    # 在后台异步预热embedding模型
+    asyncio.create_task(warmup_models())
+
+async def warmup_models():
+    """后台预热模型"""
+    try:
+        print("\n[Warmup] Starting background model warmup...")
+        
+        # 预加载embedding模型
+        embedding_name = config.get("embedding_model_name", "bge-m3")
+        language = 'zh'
+        
+        print(f"[Warmup] Pre-loading embedding model: {embedding_name}")
+        
+        # 在线程池中执行以避免阻塞
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(
+            None,
+            ConnectionManager.get_or_create_embedding,
+            embedding_name,
+            language
+        )
+        
+        print("[Warmup] ✓ Embedding model loaded successfully")
+        print("[Warmup] ✓ Server is ready for connections")
+        print("=" * 60)
+        
+    except Exception as e:
+        print(f"[Warmup] ✗ Warning: Error during warmup: {e}")
+        print("[Warmup] Server will load models on first connection")
+        print("=" * 60)
+        import traceback
+        traceback.print_exc()
+
+
 class ConnectionManager:
+    # Class-level embedding cache for sharing across instances
+    _shared_embedding = None
+    _shared_embedding_name = None
+    
+    @classmethod
+    def get_or_create_embedding(cls, embedding_name: str, language: str = 'zh'):
+        """获取或创建共享的embedding实例，避免重复加载"""
+        from modules.embedding import get_embedding_model
+        
+        cache_key = f"{embedding_name}_{language}"
+        if cls._shared_embedding is None or cls._shared_embedding_name != cache_key:
+            print(f"\n[ConnectionManager] Loading shared embedding model: {embedding_name}")
+            cls._shared_embedding = get_embedding_model(embedding_name, language)
+            cls._shared_embedding_name = cache_key
+            print(f"[ConnectionManager] ✓ Shared embedding model loaded\n")
+        else:
+            print(f"[ConnectionManager] ✓ Reusing cached embedding model: {embedding_name}")
+        
+        return cls._shared_embedding
+    
     def __init__(self):
         self.active_connections: dict[str, WebSocket] = {}  
         self.story_tasks: dict[str, asyncio.Task] = {}
         self.user_selected_roles: dict[str, str] = {}  # client_id -> role_code
         self.waiting_for_input: dict[str, bool] = {}  # client_id -> bool
         self.pending_user_inputs: dict[str, asyncio.Future] = {}  # client_id -> Future
-        self.client_users: dict[str, dict] = {}  # client_id -> user_info  
+        self.client_users: dict[str, dict] = {}  # client_id -> user_info
+        
         if True:
             if "preset_path" in config and config["preset_path"]:
                 if os.path.exists(config["preset_path"]):
@@ -62,10 +126,18 @@ class ConnectionManager:
                 preset_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),f"./config/experiment_{genre}.json")
             else:
                 raise ValueError("Please set the preset_path in `config.json`.")
+            
+            # Get shared embedding instance
+            embedding = self.get_or_create_embedding(
+                config["embedding_model_name"],
+                language='zh'
+            )
+            
             self.scrollweaver = ScrollWeaver(preset_path = preset_path,
                     world_llm_name = config["world_llm_name"],
                     role_llm_name = config["role_llm_name"],
-                    embedding_name = config["embedding_model_name"])
+                    embedding_name = config["embedding_model_name"],
+                    embedding = embedding)
             self.scrollweaver.set_generator(rounds = config["rounds"], 
                         save_dir = config["save_dir"], 
                         if_save = config["if_save"],
@@ -582,7 +654,29 @@ class ConnectionManager:
             import traceback
             traceback.print_exc()
 
-manager = ConnectionManager()
+
+# Lazy initialization for ConnectionManager
+_manager_instance = None
+
+def get_manager() -> ConnectionManager:
+    """获取ConnectionManager单例，使用延迟初始化"""
+    global _manager_instance
+    if _manager_instance is None:
+        print("\n[Server] Initializing ConnectionManager...")
+        _manager_instance = ConnectionManager()
+        print("[Server] ✓ ConnectionManager initialized\n")
+    return _manager_instance
+
+# For backward compatibility, keep manager as a property
+class _ManagerProxy:
+    def __getattr__(self, name):
+        return getattr(get_manager(), name)
+    
+    def __setattr__(self, name, value):
+        setattr(get_manager(), name, value)
+
+manager = _ManagerProxy()
+
 
 @app.get("/")
 async def get():
@@ -636,12 +730,19 @@ async def load_preset(request: Request):
             raise HTTPException(status_code=404, detail=f"Preset not found: {preset_path}")
             
         try:
+            # Get shared embedding instance
+            embedding = ConnectionManager.get_or_create_embedding(
+                config["embedding_model_name"],
+                language='zh'
+            )
+            
             # 更新ScrollWeaver实例的预设
             manager.scrollweaver = ScrollWeaver(
                 preset_path=preset_path,
                 world_llm_name=config["world_llm_name"],
                 role_llm_name=config["role_llm_name"],
-                embedding_name=config["embedding_model_name"]
+                embedding_name=config["embedding_model_name"],
+                embedding=embedding
             )
             manager.scrollweaver.set_generator(
                 rounds=config["rounds"],
@@ -699,12 +800,19 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                     if scroll:
                         preset_path = scroll.get('preset_path')
                         if preset_path and os.path.exists(preset_path):
+                            # Get shared embedding instance
+                            embedding = ConnectionManager.get_or_create_embedding(
+                                config["embedding_model_name"],
+                                language='zh'
+                            )
+                            
                             # 为这个客户端创建新的ScrollWeaver实例
                             manager.scrollweaver = ScrollWeaver(
                                 preset_path=preset_path,
                                 world_llm_name=config["world_llm_name"],
                                 role_llm_name=config["role_llm_name"],
-                                embedding_name=config["embedding_model_name"]
+                                embedding_name=config["embedding_model_name"],
+                                embedding=embedding
                             )
                             manager.scrollweaver.set_generator(
                                 rounds=config["rounds"],
