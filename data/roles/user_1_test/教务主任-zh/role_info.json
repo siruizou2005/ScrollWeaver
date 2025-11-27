@@ -1,0 +1,30 @@
+{
+  "role_code": "教务主任-zh",
+  "role_name": "教务主任",
+  "source": "user_1_test",
+  "activity": 1,
+  "profile": "林朝夕实习学校的教务主任，一位热心为实习生牵线搭桥的领导。她对适龄女性的婚姻和未来生活持有传统且世俗的看法，强调“抓紧”和家庭条件的重要性。",
+  "nickname": "教务主任",
+  "relation": {
+    "林朝夕-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "老林先生-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "裴之-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "苏小明-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "安潇潇-zh": {
+      "relation": [],
+      "detail": ""
+    }
+  }
+}

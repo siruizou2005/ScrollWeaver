@@ -1,0 +1,30 @@
+{
+  "role_code": "主任-zh",
+  "role_name": "主任",
+  "source": "user_1_天才基本法_3",
+  "activity": 1,
+  "profile": "林朝夕实习学校的教务主任，一位非常热心、积极为实习生介绍相亲对象的领导。她代表了社会对年轻女性在事业、婚姻和家庭方面的传统期望，言语中透露出催促和掌控的意味。",
+  "nickname": "主任",
+  "relation": {
+    "林朝夕-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "林先生-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "裴之-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "苏小明-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "安潇潇-zh": {
+      "relation": [],
+      "detail": ""
+    }
+  }
+}

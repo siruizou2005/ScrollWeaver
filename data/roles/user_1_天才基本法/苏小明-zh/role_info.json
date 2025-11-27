@@ -1,0 +1,34 @@
+{
+  "role_code": "苏小明-zh",
+  "role_name": "苏小明",
+  "source": "user_1_天才基本法",
+  "activity": 1,
+  "profile": "三味大学学生会主席，邀请林朝夕参加智力竞赛的旁听会议。他似乎关心林朝夕，并对她父亲的病情表示震惊。在会议中负责主持和协调工作。",
+  "nickname": "苏小明",
+  "relation": {
+    "林朝夕-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "老林-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "裴之-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "主任-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "安潇潇-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "小萌妹-zh": {
+      "relation": [],
+      "detail": ""
+    }
+  }
+}

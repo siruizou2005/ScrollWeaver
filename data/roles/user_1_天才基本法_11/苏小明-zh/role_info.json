@@ -1,0 +1,30 @@
+{
+  "role_code": "苏小明-zh",
+  "role_name": "苏小明",
+  "source": "user_1_天才基本法_11",
+  "activity": 1,
+  "profile": "大学城高校学生会主席，邀请林朝夕参加智力竞赛筹备会议。他与林朝夕关系友好，对林朝夕的家庭情况表示关心，为人看起来比较友善和体贴。",
+  "nickname": "苏小明",
+  "relation": {
+    "林朝夕-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "老林先生-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "安潇潇-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "主任-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "裴之-zh": {
+      "relation": [],
+      "detail": ""
+    }
+  }
+}

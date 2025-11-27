@@ -1,0 +1,19 @@
+{
+  "experiment_subname": "user_1_test",
+  "source": "user_1_test",
+  "world_file_path": "./data/worlds/user_1_test/general.json",
+  "map_file_path": "./data/maps/user_1_test.csv",
+  "loc_file_path": "./data/locations/user_1_test.json",
+  "role_file_dir": "./data/roles/",
+  "performer_codes": [
+    "林朝夕-zh",
+    "老林先生-zh",
+    "裴之-zh",
+    "教务主任-zh",
+    "苏小明-zh",
+    "安潇潇-zh"
+  ],
+  "intervention": "",
+  "script": "",
+  "language": "zh"
+}

@@ -1,0 +1,30 @@
+{
+  "role_code": "老林先生-zh",
+  "role_name": "老林先生",
+  "source": "user_1_天才基本法_new",
+  "activity": 1,
+  "profile": "林朝夕的父亲，被诊断出早发性阿尔茨海默症。他幽默风趣，富有哲理，善于用轻松的方式引导女儿面对困境。为了抚养林朝夕，他曾放弃出国深造的机会。他经济条件优越（有数百万存款和五套房产），与女儿关系亲密，常有玩笑般的互动。",
+  "nickname": "林会计",
+  "relation": {
+    "林朝夕-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "苏小明-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "安潇潇-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "主任-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "小刘-zh": {
+      "relation": [],
+      "detail": ""
+    }
+  }
+}

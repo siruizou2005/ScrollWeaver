@@ -1,0 +1,8 @@
+,Hospital,NoodleShop,UniversityTown,SanweiUniversity,BaicaoUniversity,StudentActivityCenter,ConferenceRoom
+Hospital,0,1,1,1,1,1,1
+NoodleShop,1,0,1,1,1,1,1
+UniversityTown,1,1,0,1,1,1,1
+SanweiUniversity,1,1,1,0,1,1,1
+BaicaoUniversity,1,1,1,1,0,1,1
+StudentActivityCenter,1,1,1,1,1,0,1
+ConferenceRoom,1,1,1,1,1,1,0

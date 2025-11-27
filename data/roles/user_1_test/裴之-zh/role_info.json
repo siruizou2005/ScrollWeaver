@@ -1,0 +1,30 @@
+{
+  "role_code": "裴之-zh",
+  "role_name": "裴之",
+  "source": "user_1_test",
+  "activity": 1,
+  "profile": "林朝夕暗恋多年的校园男神。他即将出国深造，前往的正是林朝夕父亲当年放弃的那所顶尖学府。被暗示在数学领域拥有卓越才能，是解决复杂智力题目的理想人选。",
+  "nickname": "裴之",
+  "relation": {
+    "林朝夕-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "老林先生-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "教务主任-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "苏小明-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "安潇潇-zh": {
+      "relation": [],
+      "detail": ""
+    }
+  }
+}

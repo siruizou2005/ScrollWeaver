@@ -1,0 +1,30 @@
+{
+  "role_code": "老林先生-zh",
+  "role_name": "老林先生",
+  "source": "user_1_test",
+  "activity": 1,
+  "profile": "林朝夕的父亲，被确诊为早发性阿尔茨海默病。他性格豁达，甚至带着一丝玩世不恭，相信“我的病是我的病，你的人生是你的人生”的生活哲学。他为了女儿放弃了当年出国深造的机会。家庭经济条件良好，拥有多套房产，酷爱炸猪排。",
+  "nickname": "老林先生",
+  "relation": {
+    "林朝夕-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "裴之-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "教务主任-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "苏小明-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "安潇潇-zh": {
+      "relation": [],
+      "detail": ""
+    }
+  }
+}

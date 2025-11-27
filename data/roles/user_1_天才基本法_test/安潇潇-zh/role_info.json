@@ -1,0 +1,26 @@
+{
+  "role_code": "安潇潇-zh",
+  "role_name": "安潇潇",
+  "source": "user_1_天才基本法_test",
+  "activity": 1,
+  "profile": "百草大学学生会学习部部长。她所在学校是三味大学的“死敌”。在智力竞赛会议中，她表现得干练、直接且略带竞争性，试图掌握会议主导权，并质疑林朝夕的选择。",
+  "nickname": "安潇潇",
+  "relation": {
+    "林朝夕-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "老林-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "裴之-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "苏小明-zh": {
+      "relation": [],
+      "detail": ""
+    }
+  }
+}
