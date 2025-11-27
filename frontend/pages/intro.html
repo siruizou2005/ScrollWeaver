@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>书卷前言 - ScrollWeaver</title>
+    <link rel="stylesheet" href="../css/pages/intro.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="intro-container">
+        <!-- 顶部导航 -->
+        <header class="intro-header">
+            <button class="back-btn" id="backBtn">
+                <i class="fas fa-arrow-left"></i>
+                <span>返回广场</span>
+            </button>
+            <h1 class="scroll-title" id="scrollTitle">书卷名称</h1>
+            <div class="header-actions">
+                <button class="icon-btn" id="shareBtn" title="分享">
+                    <i class="fas fa-share-alt"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- 主要内容区域 - 左右分栏布局 -->
+        <div class="intro-content">
+            <!-- 左侧：世界观和角色卡 -->
+            <div class="intro-left">
+                <!-- 世界观摘要 - 左上角 -->
+                <section class="world-summary">
+                    <h2><i class="fas fa-book"></i> 世界观</h2>
+                    <div class="summary-content" id="worldSummary">
+                        <p>加载中...</p>
+                    </div>
+                </section>
+
+                <!-- 角色卡 - 左下角 -->
+                <section class="characters-section">
+                    <h2><i class="fas fa-users"></i> 登场人物</h2>
+                    <div class="characters-grid" id="charactersGrid">
+                        <div class="characters-loading">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <p>加载中...</p>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- 右侧：玩法选择 -->
+            <div class="intro-right">
+                <section class="mode-selection">
+                    <h2><i class="fas fa-compass"></i> 选择模式</h2>
+                    
+                    <!-- 私语模式 (P Mode) -->
+                    <div class="mode-card" data-mode="chat">
+                        <div class="mode-icon">
+                            <i class="fas fa-comments"></i>
+                        </div>
+                        <h3>私语</h3>
+                        <p>与单个角色进行1v1对话</p>
+                        <div class="mode-action">
+                            <select id="chatRoleSelect" class="role-select">
+                                <option value="">选择角色...</option>
+                            </select>
+                            <button class="mode-btn" id="enterChatBtn" disabled>
+                                <i class="fas fa-sign-in-alt"></i> 进入
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 入卷模式 (O-P Mode) -->
+                    <div class="mode-card" data-mode="story">
+                        <div class="mode-icon">
+                            <i class="fas fa-scroll"></i>
+                        </div>
+                        <h3>入卷</h3>
+                        <p>体验多角色故事，AI编导控制剧情</p>
+                        <div class="mode-action">
+                            <div class="act-selector">
+                                <label>选择幕数：</label>
+                                <select id="actSelect" class="act-select">
+                                    <option value="new">新建一幕</option>
+                                </select>
+                            </div>
+                            <div class="act-settings">
+                                <label>
+                                    <input type="checkbox" id="enableMultiplayerStory">
+                                    启用联机模式
+                                </label>
+                                <label>
+                                    <input type="checkbox" id="enableEventChain">
+                                    预设事件链（3/5/8/10幕）
+                                </label>
+                                <select id="actCountSelect" class="act-count-select" disabled>
+                                    <option value="3">3幕</option>
+                                    <option value="5">5幕</option>
+                                    <option value="8">8幕</option>
+                                    <option value="10">10幕</option>
+                                </select>
+                            </div>
+                            <button class="mode-btn primary" id="enterStoryBtn">
+                                <i class="fas fa-play"></i> 开始入卷
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 历史进度 - 在右侧下方，需要滚动才能看到 -->
+                <section class="history-section">
+                    <h2><i class="fas fa-history"></i> 历史进度</h2>
+                    <div class="timeline" id="historyTimeline">
+                        <!-- 时间轴将在这里动态生成 -->
+                        <div class="timeline-empty">
+                            <i class="fas fa-clock"></i>
+                            <p>暂无历史记录</p>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <!-- 加载提示 -->
+    <div class="loading-overlay" id="loadingOverlay" style="display: none;">
+        <div class="loading-spinner">
+            <i class="fas fa-spinner fa-spin"></i>
+            <p>加载中...</p>
+        </div>
+    </div>
+
+    <!-- 角色详情模态框 -->
+    <div class="character-modal" id="characterModal" style="display: none;">
+        <div class="modal-overlay" id="modalOverlay"></div>
+        <div class="modal-content">
+            <button class="modal-close" id="modalClose">
+                <i class="fas fa-times"></i>
+            </button>
+            <div class="character-detail-header">
+                <div class="character-detail-avatar" id="detailAvatar">
+                    <i class="fas fa-user"></i>
+                </div>
+                <div class="character-detail-title">
+                    <h2 id="detailName">角色名称</h2>
+                    <p id="detailNickname" class="character-nickname"></p>
+                </div>
+            </div>
+            <div class="character-detail-body">
+                <div class="detail-section">
+                    <h3><i class="fas fa-book-open"></i> 角色简介</h3>
+                    <div class="detail-content" id="detailProfile">加载中...</div>
+                </div>
+                <div class="detail-section" id="personaSection" style="display: none;">
+                    <h3><i class="fas fa-brain"></i> 性格设定</h3>
+                    <div class="detail-content" id="detailPersona"></div>
+                </div>
+                <div class="detail-section" id="scenarioSection" style="display: none;">
+                    <h3><i class="fas fa-scroll"></i> 场景设定</h3>
+                    <div class="detail-content" id="detailScenario"></div>
+                </div>
+                <div class="detail-section" id="relationSection" style="display: none;">
+                    <h3><i class="fas fa-users"></i> 人物关系</h3>
+                    <div class="detail-content" id="detailRelation"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/intro.js"></script>
+</body>
+</html>
+
