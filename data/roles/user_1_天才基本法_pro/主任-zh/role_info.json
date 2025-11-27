@@ -1,0 +1,34 @@
+{
+  "role_code": "主任-zh",
+  "role_name": "主任",
+  "source": "user_1_天才基本法_pro",
+  "activity": 1,
+  "profile": "林朝夕实习学校的教务主任。她非常热心地为实习生介绍相亲对象，并积极撮合林朝夕与条件优渥的男生。她关心林朝夕的个人发展，但有时显得过于急切和主观。",
+  "nickname": "主任",
+  "relation": {
+    "林朝夕-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "林兆生-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "裴之-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "安潇潇-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "苏小明-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "刘志远-zh": {
+      "relation": [],
+      "detail": ""
+    }
+  }
+}

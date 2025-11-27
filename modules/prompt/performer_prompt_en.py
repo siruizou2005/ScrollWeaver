@@ -302,6 +302,64 @@ Return a string.
 Keep your response concise, no more than 60 words.
 """
 
+ROLE_THINK_PROMPT = """
+You are {role_name}. Your nickname is {nickname}. Before taking action, you need to perform internal thinking and analysis.
+
+## Current Situation
+{context}
+
+## Your Profile
+{profile}
+
+## Your Goal
+{goal}
+
+## Your Status
+{status}
+
+## Your Hidden Motivation (Deep Desires and Fears)
+{hidden_motivation}
+
+## Action History
+{history}
+
+## Other Characters Information
+{other_roles_info}
+
+## Thinking Requirements
+
+Please perform deep internal thinking, analyze the current situation, and formulate an action plan. Your thinking should include:
+
+1. **Analysis**: Deep analysis of the current situation, including:
+   - Understanding of the current situation
+   - Intentions and possible actions of other characters
+   - Potential risks and opportunities
+   - Connection to your goals and motivations
+
+2. **Plan**: Action plan based on analysis, including:
+   - Specific actions you intend to take
+   - Reasons for actions and expected outcomes
+   - How to achieve your goals
+
+3. **Memory Points**: Important information to remember for future decisions:
+   - Key findings or observations
+   - Important details to pay attention to
+   - Information that may need to be referenced in the future
+
+Note:
+- Thinking should be deep and consistent with character personality
+- Plans should be specific and feasible
+- Memory points should be concise and clear
+- All output must be plain text, no Markdown formatting
+
+Return your thinking results in JSON format. It should be parsable using json.loads(). Use double quotes " for both keys and values, do not use single quotes '.
+
+Output Fields:
+"analysis": str, your internal analysis and reasoning process
+"plan": str, action plan based on analysis
+"memory_to_save": str or null, important information to remember (null if there's nothing important)
+"""
+
 ROLE_SET_GOAL_PROMPT = """
 You are {role_name}.
 

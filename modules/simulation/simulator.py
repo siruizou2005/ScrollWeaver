@@ -119,7 +119,6 @@ class Simulator:
         
         # Setting Goals
         if not meta_info["goal_setted"]:
-            yield ("system", "", "-- Setting Goals --", None)
             self.logger.info("========== Start Goal Setting ==========")
             
             if self.mode == "free":
@@ -133,56 +132,144 @@ class Simulator:
                 yield ("system", "", f"--------- Setted Script ---------\n{self.event_manager.script}\n", None)
                 self.event_manager.add_event_to_history(self.event_manager.event)
             
+            # 在当前事件之后显示"书卷加载中"提示
+            loading_text = "书卷加载中..." if self.language == "zh" else "Loading scroll..."
+            yield ("system", "", loading_text, None)
+            
             if self.mode == "free":
                 # Get all performers info for motivation setting
                 all_performers_dict = self.state_manager.get_group_members_info_dict(self.role_codes)
-                print(f"[Simulator] 开始为 {len(self.role_codes)} 个角色设置动机...")
-                for idx, role_code in enumerate(self.role_codes):
-                    print(f"[Simulator] 正在为角色 {idx + 1}/{len(self.role_codes)} ({self.performers[role_code].role_name}) 设置动机...")
-                    try:
-                        motivation = self.performers[role_code].set_motivation(
-                            world_description=self.orchestrator.description,
-                            other_roles_info=all_performers_dict,
-                            intervention=self.event_manager.event,
-                            script=self.event_manager.script
-                        )
-                        info_text = (f"{self.performers[role_code].nickname} 设立了动机: {motivation}"
-                                   if self.language == "zh"
-                                   else f"{self.performers[role_code].nickname} has set the motivation: {motivation}")
+                print(f"[Simulator] 开始为 {len(self.role_codes)} 个角色批量设置动机...")
+                
+                # 使用批量生成动机
+                try:
+                    from modules.utils.motivation_generator import MotivationGenerator
+                    generator = MotivationGenerator(llm_name="gemini-2.5-flash")
+                    
+                    # 准备角色信息列表
+                    characters_list = []
+                    for role_code in self.role_codes:
+                        performer = self.performers[role_code]
+                        characters_list.append({
+                            "role_name": performer.role_name,
+                            "profile": performer.role_profile
+                        })
+                    
+                    # 一次性批量生成所有角色的动机
+                    motivations_dict = generator.generate_batch_motivations(
+                        characters=characters_list,
+                        world_description=self.orchestrator.description,
+                        intervention=self.event_manager.event,
+                        language=self.language
+                    )
+                    
+                    # 为每个角色设置动机并记录（但不显示在对话页面）
+                    for role_code in self.role_codes:
+                        performer = self.performers[role_code]
+                        role_name = performer.role_name
                         
-                        record_id = str(uuid.uuid4())
-                        self.logger.info(info_text)
-                        self.record_manager.record(
-                            role_code=role_code,
-                            detail=info_text,
-                            actor=role_code,
-                            group=[role_code],
-                            actor_type='role',
-                            act_type="goal setting",
-                            record_id=record_id
-                        )
-                        print(f"[Simulator] 角色 {self.performers[role_code].role_name} 动机设置完成")
-                        yield ("role", role_code, info_text, record_id)
-                    except Exception as e:
-                        print(f"[Simulator] 角色 {self.performers[role_code].role_name} 动机设置失败: {e}")
-                        import traceback
-                        traceback.print_exc()
-                        # 继续处理下一个角色，而不是完全失败
-                        nickname = self.performers[role_code].nickname if self.performers[role_code].nickname else self.performers[role_code].role_name
-                        error_text = (f"{nickname} 动机设置失败: {str(e)}"
-                                    if self.language == "zh"
-                                    else f"{nickname} failed to set motivation: {str(e)}")
-                        record_id = str(uuid.uuid4())
-                        self.record_manager.record(
-                            role_code=role_code,
-                            detail=error_text,
-                            actor=role_code,
-                            group=[role_code],
-                            actor_type='role',
-                            act_type="goal setting",
-                            record_id=record_id
-                        )
-                        yield ("role", role_code, error_text, record_id)
+                        if role_name in motivations_dict:
+                            motivation = motivations_dict[role_name]
+                            # 设置到 performer 对象
+                            performer.motivation = motivation
+                            
+                            info_text = (f"{performer.nickname} 设立了动机: {motivation}"
+                                       if self.language == "zh"
+                                       else f"{performer.nickname} has set the motivation: {motivation}")
+                            
+                            record_id = str(uuid.uuid4())
+                            self.logger.info(info_text)
+                            # 记录到 record_manager，但不 yield 到前端（不显示在对话页面）
+                            self.record_manager.record(
+                                role_code=role_code,
+                                detail=info_text,
+                                actor=role_code,
+                                group=[role_code],
+                                actor_type='role',
+                                act_type="goal setting",
+                                record_id=record_id
+                            )
+                            print(f"[Simulator] 角色 {role_name} 动机设置完成（已记录但不显示）")
+                            # 不 yield，这样就不会在对话页面显示
+                        else:
+                            print(f"[Simulator] 警告: 角色 {role_name} 的动机未在批量生成结果中找到")
+                            # 使用默认动机
+                            default_motivation = "追求个人目标和成长" if self.language == "zh" else "Pursue personal goals and growth"
+                            performer.motivation = default_motivation
+                            
+                            info_text = (f"{performer.nickname} 设立了动机: {default_motivation}"
+                                       if self.language == "zh"
+                                       else f"{performer.nickname} has set the motivation: {default_motivation}")
+                            
+                            record_id = str(uuid.uuid4())
+                            self.logger.info(info_text)
+                            # 记录但不显示
+                            self.record_manager.record(
+                                role_code=role_code,
+                                detail=info_text,
+                                actor=role_code,
+                                group=[role_code],
+                                actor_type='role',
+                                act_type="goal setting",
+                                record_id=record_id
+                            )
+                            # 不 yield
+                    
+                    print(f"[Simulator] 批量动机设置完成，共设置 {len(motivations_dict)} 个角色的动机")
+                    
+                except Exception as e:
+                    print(f"[Simulator] 批量生成动机失败，回退到逐个生成: {e}")
+                    import traceback
+                    traceback.print_exc()
+                    
+                    # 回退到逐个生成（备用方案）
+                    for idx, role_code in enumerate(self.role_codes):
+                        print(f"[Simulator] 正在为角色 {idx + 1}/{len(self.role_codes)} ({self.performers[role_code].role_name}) 设置动机...")
+                        try:
+                            motivation = self.performers[role_code].set_motivation(
+                                world_description=self.orchestrator.description,
+                                other_roles_info=all_performers_dict,
+                                intervention=self.event_manager.event,
+                                script=self.event_manager.script
+                            )
+                            info_text = (f"{self.performers[role_code].nickname} 设立了动机: {motivation}"
+                                       if self.language == "zh"
+                                       else f"{self.performers[role_code].nickname} has set the motivation: {motivation}")
+                            
+                            record_id = str(uuid.uuid4())
+                            self.logger.info(info_text)
+                            # 记录但不显示
+                            self.record_manager.record(
+                                role_code=role_code,
+                                detail=info_text,
+                                actor=role_code,
+                                group=[role_code],
+                                actor_type='role',
+                                act_type="goal setting",
+                                record_id=record_id
+                            )
+                            print(f"[Simulator] 角色 {self.performers[role_code].role_name} 动机设置完成（已记录但不显示）")
+                            # 不 yield
+                        except Exception as e2:
+                            print(f"[Simulator] 角色 {self.performers[role_code].role_name} 动机设置失败: {e2}")
+                            import traceback
+                            traceback.print_exc()
+                            # 继续处理下一个角色，而不是完全失败
+                            nickname = self.performers[role_code].nickname if self.performers[role_code].nickname else self.performers[role_code].role_name
+                            error_text = (f"{nickname} 动机设置失败: {str(e2)}"
+                                        if self.language == "zh"
+                                        else f"{nickname} failed to set motivation: {str(e2)}")
+                            record_id = str(uuid.uuid4())
+                            self.record_manager.record(
+                                role_code=role_code,
+                                detail=error_text,
+                                actor=role_code,
+                                group=[role_code],
+                                actor_type='role',
+                                act_type="goal setting",
+                                record_id=record_id
+                            )
+                            # 错误信息也不显示
                 print(f"[Simulator] 所有角色动机设置完成")
             
             if hasattr(self, '_server_instance'):

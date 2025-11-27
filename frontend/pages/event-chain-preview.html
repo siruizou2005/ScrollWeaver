@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>事件链预览 - ScrollWeaver</title>
+    <link rel="stylesheet" href="../css/pages/event-chain-preview.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="preview-container">
+        <div class="preview-header">
+            <h1><i class="fas fa-list-alt"></i> 事件链预览</h1>
+            <div class="header-actions">
+                <button class="btn btn-secondary" onclick="cancelPreview()">
+                    <i class="fas fa-times"></i> 取消
+                </button>
+                <button class="btn btn-primary" onclick="confirmAndEnter()">
+                    <i class="fas fa-check"></i> 确认并进入对话
+                </button>
+            </div>
+        </div>
+        
+            <div class="preview-content" id="previewContent">
+                <div class="loading" id="loadingDiv" style="display: flex;">
+                    <div>
+                        <div class="loading-spinner"></div>
+                        <p>正在生成事件链，请稍候...</p>
+                        <p style="margin-top: 10px; font-size: 14px; color: #666;">这可能需要1-2分钟时间</p>
+                    </div>
+                </div>
+            </div>
+    </div>
+
+    <script src="../js/event-chain-preview.js"></script>
+</body>
+</html>
+

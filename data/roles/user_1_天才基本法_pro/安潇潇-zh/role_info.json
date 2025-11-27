@@ -1,0 +1,34 @@
+{
+  "role_code": "安潇潇-zh",
+  "role_name": "安潇潇",
+  "source": "user_1_天才基本法_pro",
+  "activity": 1,
+  "profile": "百草大学学生会学习部部长。她干练、有能力，与林朝夕的学校存在竞争关系。在智力竞赛的选题会议中表现出强势和主导性。",
+  "nickname": "安潇潇",
+  "relation": {
+    "林朝夕-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "林兆生-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "裴之-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "苏小明-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "主任-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "刘志远-zh": {
+      "relation": [],
+      "detail": ""
+    }
+  }
+}

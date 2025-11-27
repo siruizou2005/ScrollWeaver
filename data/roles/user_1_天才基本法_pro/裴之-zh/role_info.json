@@ -1,0 +1,34 @@
+{
+  "role_code": "裴之-zh",
+  "role_name": "裴之",
+  "source": "user_1_天才基本法_pro",
+  "activity": 1,
+  "profile": "林朝夕的暗恋对象，三味大学数学系的学生，即将出国深造。他在学校以其智慧而闻名。",
+  "nickname": "男神",
+  "relation": {
+    "林朝夕-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "林兆生-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "安潇潇-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "苏小明-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "主任-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "刘志远-zh": {
+      "relation": [],
+      "detail": ""
+    }
+  }
+}
