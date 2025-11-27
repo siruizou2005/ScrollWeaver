@@ -392,14 +392,19 @@ function bindEventListeners() {
     });
     
     // 入卷模式
-    document.getElementById('enterStoryBtn').addEventListener('click', () => {
+    document.getElementById('enterStoryBtn').addEventListener('click', async () => {
         const actSelect = document.getElementById('actSelect');
         const act = actSelect.value === 'new' ? null : parseInt(actSelect.value);
         const multiplayer = document.getElementById('enableMultiplayerStory').checked;
         const eventChain = document.getElementById('enableEventChain').checked;
         const actCount = eventChain ? parseInt(document.getElementById('actCountSelect').value) : null;
         
-        enterStoryMode(act, multiplayer, eventChain, actCount);
+        // 如果启用了事件链，先生成并预览
+        if (eventChain && actCount) {
+            await generateAndPreviewEventChain(actCount, act, multiplayer);
+        } else {
+            enterStoryMode(act, multiplayer, eventChain, actCount);
+        }
     });
     
     // 事件链开关
@@ -407,23 +412,31 @@ function bindEventListeners() {
         document.getElementById('actCountSelect').disabled = !e.target.checked;
     });
     
-    // 组局模式
-    document.getElementById('createRoomBtn').addEventListener('click', () => {
-        createGameRoom();
-    });
+    // 组局模式（如果元素存在）
+    const createRoomBtn = document.getElementById('createRoomBtn');
+    if (createRoomBtn) {
+        createRoomBtn.addEventListener('click', () => {
+            createGameRoom();
+        });
+    }
     
-    document.getElementById('joinRoomBtn').addEventListener('click', () => {
-        const input = document.getElementById('roomCodeInput');
-        input.style.display = input.style.display === 'none' ? 'block' : 'none';
-        if (input.style.display === 'block') {
-            input.focus();
-            input.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    joinGameRoom(input.value);
+    const joinRoomBtn = document.getElementById('joinRoomBtn');
+    if (joinRoomBtn) {
+        joinRoomBtn.addEventListener('click', () => {
+            const input = document.getElementById('roomCodeInput');
+            if (input) {
+                input.style.display = input.style.display === 'none' ? 'block' : 'none';
+                if (input.style.display === 'block') {
+                    input.focus();
+                    input.addEventListener('keypress', (e) => {
+                        if (e.key === 'Enter') {
+                            joinGameRoom(input.value);
+                        }
+                    });
                 }
-            });
-        }
-    });
+            }
+        });
+    }
 }
 
 /**
@@ -444,6 +457,25 @@ function enterChatMode(roleCode) {
     });
     window.location.href = `/frontend/pages/chat.html?${params.toString()}`;
 }
+
+/**
+ * 生成并预览事件链
+ */
+function generateAndPreviewEventChain(actCount, act, multiplayer) {
+    // 立即跳转到预览页面，参数通过URL传递
+    const params = new URLSearchParams({
+        scroll_id: scrollId,
+        act_count: actCount,
+        language: 'zh'
+    });
+    if (act) params.set('act', act);
+    if (multiplayer) params.set('multiplayer', 'true');
+    
+    // 跳转到预览页面（预览页面会处理生成逻辑）
+    window.location.href = `/frontend/pages/event-chain-preview.html?${params.toString()}`;
+}
+
+// 事件链预览功能已移至新页面 event-chain-preview.html
 
 /**
  * 进入入卷模式

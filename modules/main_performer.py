@@ -69,11 +69,11 @@ class Performer:
     def _init_prompt(self):
         if self.language == 'zh':
             from modules.prompt.performer_prompt_zh \
-                import ROLE_PLAN_PROMPT,ROLE_SINGLE_ROLE_RESPONSE_PROMPT,ROLE_MULTI_ROLE_RESPONSE_PROMPT,ROLE_SET_GOAL_PROMPT,INTERVENTION_PROMPT,UPDATE_GOAL_PROMPT,UPDATE_STATUS_PROMPT,ROLE_SET_MOTIVATION_PROMPT,SCRIPT_ATTENTION_PROMPT,ROLE_MOVE_PROMPT,SUMMARIZE_PROMPT,ROLE_NPC_RESPONSE_PROMPT
+                import ROLE_PLAN_PROMPT,ROLE_SINGLE_ROLE_RESPONSE_PROMPT,ROLE_MULTI_ROLE_RESPONSE_PROMPT,ROLE_SET_GOAL_PROMPT,INTERVENTION_PROMPT,UPDATE_GOAL_PROMPT,UPDATE_STATUS_PROMPT,ROLE_SET_MOTIVATION_PROMPT,SCRIPT_ATTENTION_PROMPT,ROLE_MOVE_PROMPT,SUMMARIZE_PROMPT,ROLE_NPC_RESPONSE_PROMPT,ROLE_THINK_PROMPT
             
         else:
             from modules.prompt.performer_prompt_en \
-                import ROLE_PLAN_PROMPT,ROLE_SINGLE_ROLE_RESPONSE_PROMPT,ROLE_MULTI_ROLE_RESPONSE_PROMPT,ROLE_SET_GOAL_PROMPT,INTERVENTION_PROMPT,UPDATE_GOAL_PROMPT,UPDATE_STATUS_PROMPT,ROLE_SET_MOTIVATION_PROMPT,SCRIPT_ATTENTION_PROMPT,ROLE_MOVE_PROMPT,SUMMARIZE_PROMPT,ROLE_NPC_RESPONSE_PROMPT
+                import ROLE_PLAN_PROMPT,ROLE_SINGLE_ROLE_RESPONSE_PROMPT,ROLE_MULTI_ROLE_RESPONSE_PROMPT,ROLE_SET_GOAL_PROMPT,INTERVENTION_PROMPT,UPDATE_GOAL_PROMPT,UPDATE_STATUS_PROMPT,ROLE_SET_MOTIVATION_PROMPT,SCRIPT_ATTENTION_PROMPT,ROLE_MOVE_PROMPT,SUMMARIZE_PROMPT,ROLE_NPC_RESPONSE_PROMPT,ROLE_THINK_PROMPT
         self._ROLE_SET_GOAL_PROMPT = ROLE_SET_GOAL_PROMPT
         self._ROLE_PLAN_PROMPT = ROLE_PLAN_PROMPT
         self._ROLE_SINGLE_ROLE_RESPONSE_PROMPT = ROLE_SINGLE_ROLE_RESPONSE_PROMPT
@@ -86,6 +86,7 @@ class Performer:
         self._ROLE_MOVE_PROMPT = ROLE_MOVE_PROMPT
         self._SUMMARIZE_PROMPT = SUMMARIZE_PROMPT
         self._ROLE_NPC_RESPONSE_PROMPT = ROLE_NPC_RESPONSE_PROMPT
+        self._ROLE_THINK_PROMPT = ROLE_THINK_PROMPT
             
     def _init_from_file(self, 
                         role_code: str, 
@@ -116,6 +117,7 @@ class Performer:
         self.role_name: str = role_info["role_name"]
         self.relation: str = role_info["relation"]
         self.motivation: str = role_info["motivation"] if "motivation" in role_info else ""
+        self.hidden_motivation: str = role_info.get("hidden_motivation", "")
         
         self.activity: float = float(role_info["activity"]) if "activity" in role_info else 1.0
         self.icon_path: str = os.path.join(base_dir, role_path,"icon.png")
@@ -194,11 +196,110 @@ class Performer:
         self.motivation = motivation
         return motivation
     
+    def think(self,
+              context: str,
+              other_roles_info: Dict[str, Any],
+              world_description: str = "") -> Dict[str, Any]:
+        """
+        思考链方法 - 内部思考步骤
+        
+        Args:
+            context: 当前情况的描述（如"轮到你发言了"）
+            other_roles_info: 其他角色信息
+            world_description: 世界观描述
+            
+        Returns:
+            包含 analysis, plan, memory_to_save 的字典
+        """
+        from modules.models import ThoughtChain
+        
+        action_history_text = self.retrieve_history(query="", retrieve=False)
+        
+        if len(other_roles_info) == 1:
+            other_roles_info_text = "没有人在这里。你不能进行涉及角色的互动。" if self.language == "zh" else "No one else is here. You can not interact with roles."
+        else:
+            other_roles_info_text = self.get_other_roles_info_text(other_roles_info, if_profile=False)
+        
+        # 构建思考链 prompt
+        prompt = self._ROLE_THINK_PROMPT.format(
+            role_name=self.role_name,
+            nickname=self.nickname,
+            context=context,
+            profile=self.role_profile,
+            goal=self.goal,
+            status=self.status,
+            hidden_motivation=self.hidden_motivation if self.hidden_motivation else (
+                "追求个人目标和成长" if self.language == "zh" else "Pursue personal goals and growth"
+            ),
+            history=action_history_text,
+            other_roles_info=other_roles_info_text
+        )
+        
+        max_tries = 3
+        thought_result = {
+            "analysis": "",
+            "plan": "",
+            "memory_to_save": None
+        }
+        
+        for i in range(max_tries):
+            try:
+                # 使用结构化输出
+                response_model = self.llm.chat(prompt, response_model=ThoughtChain, temperature=0.7)
+                thought_result.update(response_model.model_dump())
+                break
+            except Exception as e:
+                print(f"[{self.role_name}] 思考链结构化输出失败! 第{i+1}次尝试. 错误: {e}")
+                # 如果结构化输出失败，回退到文本解析
+                if i < max_tries - 1:
+                    try:
+                        response_text = self.llm.chat(prompt, temperature=0.7)
+                        parsed = json_parser(response_text)
+                        thought_result.update({
+                            "analysis": parsed.get("analysis", ""),
+                            "plan": parsed.get("plan", ""),
+                            "memory_to_save": parsed.get("memory_to_save")
+                        })
+                        break
+                    except Exception as e2:
+                        print(f"[{self.role_name}] 思考链文本解析也失败: {e2}")
+                        continue
+                else:
+                    # 最后一次尝试，使用默认值
+                    print(f"[{self.role_name}] 所有思考链尝试都失败，使用默认值")
+                    thought_result["analysis"] = f"{self.role_name}正在思考当前情况。" if self.language == "zh" else f"{self.role_name} is thinking about the current situation."
+                    thought_result["plan"] = f"{self.role_name}将根据情况采取行动。" if self.language == "zh" else f"{self.role_name} will act according to the situation."
+        
+        # 保存思考结果到短期记忆向量库
+        if thought_result.get("plan"):
+            memory_text = f"计划: {thought_result['plan']}"
+            if thought_result.get("memory_to_save"):
+                memory_text += f" | 记忆要点: {thought_result['memory_to_save']}"
+            try:
+                self.memory.add_record(memory_text)
+                print(f"[{self.role_name}] 思考结果已存入短期记忆")
+            except Exception as e:
+                print(f"[{self.role_name}] 保存思考结果到记忆失败: {e}")
+        
+        self.save_prompt(prompt=prompt, detail=str(thought_result))
+        return thought_result
+    
     def plan(self, 
              other_roles_info: Dict[str, Any], 
              available_locations: List[str], 
              world_description: str, 
-             intervention: str = ""):
+             intervention: str = "",
+             use_thought_chain: bool = True):
+        """
+        计划方法 - 支持思考链的两阶段流程
+        
+        Args:
+            other_roles_info: 其他角色信息
+            available_locations: 可用地点列表
+            world_description: 世界观描述
+            intervention: 干预信息
+            use_thought_chain: 是否使用思考链（默认 True）
+        """
         action_history_text = self.retrieve_history(query = "", retrieve=False)
         references = self.retrieve_references(query = action_history_text)
         knowledges = self.retrieve_knowledges(query = action_history_text)
@@ -208,26 +309,45 @@ class Performer:
         else:
             other_roles_info_text = self.get_other_roles_info_text(other_roles_info, if_profile = False)
         
+        # 第一阶段：思考链（如果启用）
+        thought_result = None
+        if use_thought_chain:
+            context = f"你需要基于你的目标、状态和提供的其它信息实行下一步行动。当前地点: {self.location_name}"
+            thought_result = self.think(
+                context=context,
+                other_roles_info=other_roles_info,
+                world_description=world_description
+            )
+            print(f"[{self.role_name}] 思考链完成 - 分析: {thought_result.get('analysis', '')[:50]}...")
+        
         if intervention:
             intervention = self._INTERVENTION_PROMPT.format(**
                 {"intervention": intervention}
             )
-        prompt = self._ROLE_PLAN_PROMPT.format(**
-            {
-                "role_name": self.role_name,
-                "nickname": self.nickname,
-                "profile": self.role_profile,
-                "goal": self.goal,
-                "status": self.status,
-                "history": action_history_text,
-                "other_roles_info": other_roles_info_text,
-                "world_description": world_description,
-                "location": self.location_name,
-                "references": references,
-                "knowledges":knowledges,
-            }
-        )
+        
+        # 构建计划 prompt，如果使用了思考链，将思考结果加入 prompt
+        plan_prompt_dict = {
+            "role_name": self.role_name,
+            "nickname": self.nickname,
+            "profile": self.role_profile,
+            "goal": self.goal,
+            "status": self.status,
+            "history": action_history_text,
+            "other_roles_info": other_roles_info_text,
+            "world_description": world_description,
+            "location": self.location_name,
+            "references": references,
+            "knowledges": knowledges,
+        }
+        
+        # 如果有思考链结果，添加到 prompt
+        if thought_result:
+            thought_hint = f"\n\n## 你的思考结果\n分析: {thought_result.get('analysis', '')}\n计划: {thought_result.get('plan', '')}"
+            plan_prompt_dict["knowledges"] = knowledges + thought_hint
+        
+        prompt = self._ROLE_PLAN_PROMPT.format(**plan_prompt_dict)
         prompt = intervention + prompt
+        
         max_tries = 3
         plan = {"action": "待机" if self.language == "zh" else "Stay", 
                 "destination": None,
@@ -258,9 +378,9 @@ class Performer:
                 else:
                     # 最后一次尝试，使用默认值
                     print(f"[{self.role_name}] 所有尝试都失败，使用默认值")
+        
         plan["role_code"] = self.role_code
-        self.save_prompt(detail=plan["detail"],
-                      prompt=prompt)
+        self.save_prompt(detail=plan["detail"], prompt=prompt)
         return plan
     
     def plan_with_style(self, 

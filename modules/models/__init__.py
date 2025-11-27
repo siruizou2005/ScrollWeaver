@@ -14,6 +14,9 @@ from .response_models import (
     MotivationText,
     StoryText,
     ScriptText,
+    ThoughtChain,
+    CharacterMotivation,
+    BatchMotivations,
 )
 
 __all__ = [
@@ -31,5 +34,8 @@ __all__ = [
     "MotivationText",
     "StoryText",
     "ScriptText",
+    "ThoughtChain",
+    "CharacterMotivation",
+    "BatchMotivations",
 ]
 

@@ -1,0 +1,350 @@
+/* 事件链预览页面样式 */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Noto Serif SC', 'Inter', sans-serif;
+    background: linear-gradient(135deg, #f5f1e8 0%, #e8ddd4 50%, #f0ebe0 100%);
+    background-attachment: fixed;
+    min-height: 100vh;
+    color: #3d2817;
+}
+
+.preview-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 40px 20px;
+    min-height: 100vh;
+}
+
+.preview-header {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 16px;
+    padding: 30px;
+    margin-bottom: 30px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.preview-header h1 {
+    color: #5d4037;
+    font-size: 28px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.preview-header h1 i {
+    color: #8b6f47;
+}
+
+.header-actions {
+    display: flex;
+    gap: 15px;
+}
+
+.preview-content {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 16px;
+    padding: 40px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    min-height: 400px;
+}
+
+.loading {
+    text-align: center;
+    padding: 80px 20px;
+    color: #5d4037;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 300px;
+}
+
+.loading-spinner {
+    border: 5px solid rgba(139, 111, 71, 0.1);
+    border-top: 5px solid #8b6f47;
+    border-right: 5px solid #6b5537;
+    border-radius: 50%;
+    width: 60px;
+    height: 60px;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 30px;
+}
+
+.loading p {
+    font-size: 18px;
+    font-weight: 500;
+    color: #5d4037;
+    margin: 10px 0;
+}
+
+.loading p:last-child {
+    font-size: 14px;
+    color: #8b6f47;
+    font-weight: 400;
+    margin-top: 15px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.error-message {
+    text-align: center;
+    padding: 60px 20px;
+    color: #d32f2f;
+}
+
+.error-message i {
+    font-size: 48px;
+    margin-bottom: 20px;
+}
+
+.error-message p {
+    margin-bottom: 20px;
+    font-size: 18px;
+}
+
+/* 事件链预览内容 */
+.event-chain-preview {
+    color: #3d2817;
+}
+
+.overall-theme {
+    background: linear-gradient(135deg, #fff8e1 0%, #ffe0b2 100%);
+    border-left: 4px solid #ff9800;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 30px;
+}
+
+.overall-theme h3 {
+    color: #e65100;
+    font-size: 20px;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.overall-theme p {
+    font-size: 16px;
+    line-height: 1.8;
+    color: #5d4037;
+}
+
+.act-preview {
+    margin-bottom: 40px;
+    border: 2px solid #d4c4a8;
+    border-radius: 12px;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.8);
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.act-preview:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.act-header {
+    background: linear-gradient(135deg, #8b6f47 0%, #6b5537 100%);
+    padding: 20px 25px;
+    color: white;
+}
+
+.act-header h4 {
+    font-size: 22px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.act-number {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-weight: 700;
+}
+
+.act-title {
+    font-weight: 500;
+}
+
+.act-content {
+    padding: 25px;
+}
+
+.plot-section {
+    margin-bottom: 25px;
+    padding: 18px;
+    background: rgba(248, 245, 240, 0.6);
+    border-radius: 8px;
+    border-left: 3px solid #8b6f47;
+}
+
+.plot-section:last-child {
+    margin-bottom: 0;
+}
+
+.plot-section h5 {
+    color: #5d4037;
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.plot-section h5 i {
+    color: #8b6f47;
+}
+
+.plot-section.main-plot {
+    border-left-color: #ff9800;
+}
+
+.plot-section.main-plot h5 {
+    color: #e65100;
+}
+
+.plot-section.sub-plot {
+    border-left-color: #673ab7;
+}
+
+.plot-section.sub-plot h5 {
+    color: #512da8;
+}
+
+.plot-section.key-events {
+    border-left-color: #4caf50;
+}
+
+.plot-section.key-events h5 {
+    color: #2e7d32;
+}
+
+.plot-section.relationship {
+    border-left-color: #2196f3;
+}
+
+.plot-section.relationship h5 {
+    color: #1565c0;
+}
+
+.plot-section p {
+    line-height: 1.8;
+    color: #3d2817;
+    font-size: 15px;
+    margin: 0;
+}
+
+.plot-section ul {
+    list-style: none;
+    padding-left: 0;
+    margin: 0;
+}
+
+.plot-section li {
+    padding: 10px 15px;
+    margin-bottom: 8px;
+    background: rgba(255, 255, 255, 0.7);
+    border-radius: 6px;
+    border-left: 3px solid #8b6f47;
+    line-height: 1.6;
+    color: #3d2817;
+    position: relative;
+    padding-left: 35px;
+}
+
+.plot-section li::before {
+    content: '▸';
+    position: absolute;
+    left: 15px;
+    color: #8b6f47;
+    font-weight: bold;
+}
+
+/* 按钮样式 */
+.btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 500;
+    transition: all 0.3s;
+    font-family: 'Noto Serif SC', sans-serif;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #8b6f47 0%, #6b5537 100%);
+    color: white;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #6b5537 0%, #5d4037 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(139, 111, 71, 0.3);
+}
+
+.btn-secondary {
+    background: #e8ddd4;
+    color: #5d4037;
+}
+
+.btn-secondary:hover {
+    background: #d4c4a8;
+    transform: translateY(-2px);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .preview-container {
+        padding: 20px 15px;
+    }
+    
+    .preview-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .preview-header h1 {
+        font-size: 24px;
+    }
+    
+    .header-actions {
+        flex-direction: column;
+    }
+    
+    .preview-content {
+        padding: 20px;
+    }
+    
+    .act-header h4 {
+        font-size: 18px;
+    }
+    
+    .plot-section {
+        padding: 15px;
+    }
+}
+

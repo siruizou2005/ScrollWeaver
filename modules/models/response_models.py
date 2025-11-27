@@ -184,3 +184,41 @@ class ScriptText(BaseModel):
         "Only describe the current situation, do not make actions for characters. "
         "Must be plain text without Markdown formatting."
     )
+
+
+class ThoughtChain(BaseModel):
+    """Model for thought chain (Chain of Thought) response."""
+    analysis: str = Field(
+        description="Internal analysis and reasoning process. "
+        "This represents the character's internal thoughts and considerations. "
+        "Must be plain text without Markdown formatting."
+    )
+    plan: str = Field(
+        description="Action plan based on the analysis. "
+        "This represents what the character intends to do. "
+        "Must be plain text without Markdown formatting."
+    )
+    memory_to_save: Optional[str] = Field(
+        default=None,
+        description="Important information to remember for future decisions. "
+        "This will be stored in the character's short-term memory vector database. "
+        "Can be None if there's nothing important to remember."
+    )
+
+
+class CharacterMotivation(BaseModel):
+    """Model for a single character's motivation."""
+    role_name: str = Field(description="Character name")
+    motivation: str = Field(
+        description="Hidden motivation of the character, approximately 100 words (within 100 characters in Chinese). "
+        "Should deeply explore the character's psychological level, "
+        "reflect the intrinsic connection between the character and the world setting. "
+        "Must be plain text without Markdown formatting."
+    )
+
+
+class BatchMotivations(BaseModel):
+    """Model for batch motivation generation response."""
+    motivations: List[CharacterMotivation] = Field(
+        description="List of character motivations, one for each character"
+    )

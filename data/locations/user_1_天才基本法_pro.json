@@ -1,0 +1,44 @@
+{
+  "HOSPITAL": {
+    "location_code": "HOSPITAL",
+    "location_name": "医院",
+    "description": "林朝夕父亲被诊断出早发性阿尔茨海默病的地方。",
+    "detail": "位于热闹街道附近，是故事中发生重要诊断事件的地点。",
+    "source": "user_1_天才基本法_pro"
+  },
+  "NOODLE_SHOP": {
+    "location_code": "NOODLE_SHOP",
+    "location_name": "打卤面店",
+    "description": "林朝夕和她父亲在医院确诊后用餐的地方。",
+    "detail": "靠近医院，雨天水汽充盈，店里热气腾腾。是父女间进行重要对话的场所。",
+    "source": "user_1_天才基本法_pro"
+  },
+  "UNIVERSITY_TOWN": {
+    "location_code": "UNIVERSITY_TOWN",
+    "location_name": "大学城",
+    "description": "包含多所大学的区域，其中包括三味大学和百草大学。",
+    "detail": "智力竞赛等学术和校际活动的主要发生地，街道热闹，常有车辆行人穿梭。",
+    "source": "user_1_天才基本法_pro"
+  },
+  "SANWEI_UNIVERSITY": {
+    "location_code": "SANWEI_UNIVERSITY",
+    "location_name": "三味大学",
+    "description": "林朝夕和裴之就读的大学。",
+    "detail": "大学城内的主要学府之一，学生会活动和学术交流的中心，林朝夕在此参与智力竞赛事宜。",
+    "source": "user_1_天才基本法_pro"
+  },
+  "BAICAO_UNIVERSITY": {
+    "location_code": "BAICAO_UNIVERSITY",
+    "location_name": "百草大学",
+    "description": "安潇潇所属的，与三味大学有竞争关系的大学。",
+    "detail": "大学城内的另一所高校，其学生会参与高校联合智力竞赛。",
+    "source": "user_1_天才基本法_pro"
+  },
+  "STUDENT_ACTIVITY_CENTER_CONFERENCE_ROOM": {
+    "location_code": "STUDENT_ACTIVITY_CENTER_CONFERENCE_ROOM",
+    "location_name": "大学生活动中心二楼会议室",
+    "description": "高校联合智力竞赛的选题会议举行地。",
+    "detail": "位于大学生活动中心二楼，是各高校代表共同讨论和筛选智力竞赛试题的场所。",
+    "source": "user_1_天才基本法_pro"
+  }
+}

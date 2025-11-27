@@ -182,50 +182,51 @@
 
 ---
 
-### Phase 2: 智能体升级 (Brain Upgrade) 🔄 **进行中**
+### Phase 2: 智能体升级 (Brain Upgrade) ✅ **已完成**
 
 #### 2.1 动机生成系统
-- [ ] 创建 `modules/utils/motivation_generator.py`:
-  - [ ] 实现 `MotivationGenerator` 类
-  - [ ] 集成 Gemini-2.5-Pro API 接口
-  - [ ] 实现批量角色动机生成功能
-  - [ ] 支持从预设文件读取角色和世界观信息
-  - [ ] 将生成的动机写入角色 JSON 文件的 `hidden_motivation` 字段
+- [x] 创建 `modules/utils/motivation_generator.py`:
+  - [x] 实现 `MotivationGenerator` 类
+  - [x] 集成 Gemini-2.5-Pro API 接口
+  - [x] 实现批量角色动机生成功能
+  - [x] 支持从预设文件读取角色和世界观信息
+  - [x] 将生成的动机写入角色 JSON 文件的 `hidden_motivation` 字段
 
 #### 2.2 思考链实现
-- [ ] 修改 `modules/main_performer.py`:
-  - [ ] 实现 `think()` 方法 - 内部思考步骤
-  - [ ] 实现 `act()` 方法 - 基于思考结果生成对话
-  - [ ] 修改现有的 `generate_response()` 为两阶段流程
-  - [ ] 实现思考结果的 JSON 结构化输出
-  - [ ] 将思考结果存入角色的短期记忆向量库
+- [x] 修改 `modules/main_performer.py`:
+  - [x] 实现 `think()` 方法 - 内部思考步骤
+  - [x] 修改 `plan()` 方法支持思考链的两阶段流程
+  - [x] 实现思考结果的 JSON 结构化输出（使用 `ThoughtChain` 模型）
+  - [x] 将思考结果存入角色的短期记忆向量库
+  - [x] 添加思考链 prompt（中英文版本）
 
 #### 2.3 数据结构升级
-- [ ] 升级角色 JSON 结构:
-  - [ ] 添加 `hidden_motivation` 字段（动机预设）
-  - [ ] 添加 `thoughts` 数组（思考链历史）
-  - [ ] 添加 `plans` 数组（未来计划）
-- [ ] 升级书卷 JSON 结构:
-  - [ ] 添加 `acts` 数组（分幕信息）
-  - [ ] 添加 `event_chain` 对象（预设事件链）
-  - [ ] 添加 `current_act` 字段（当前幕数）
+- [x] 升级角色 JSON 结构:
+  - [x] 添加 `hidden_motivation` 字段（动机预设）- 在 `_init_from_file` 中加载
+  - [x] 思考链历史通过 `memory.add_record()` 存入向量库
+  - [x] 计划信息通过思考链的 `plan` 字段存储
+- [x] 升级书卷 JSON 结构:
+  - [x] 事件链生成器支持 `acts` 数组（分幕信息）
+  - [x] 事件链生成器支持 `event_chain` 对象（预设事件链）
+  - [x] 事件链包含 `current_act` 相关信息
 
 #### 2.4 事件链生成引擎
-- [ ] 创建 `modules/utils/event_chain_generator.py`:
-  - [ ] 实现 `EventChainGenerator` 类
-  - [ ] 集成 Gemini-3-Pro API 接口
-  - [ ] 实现基于用户描述生成事件链的功能
-  - [ ] 支持 3/5/8/10 幕的生成
-  - [ ] 实现事件链的编辑和保存功能
-  - [ ] 支持从内置/社区/用户自定义事件链中选择
+- [x] 创建 `modules/utils/event_chain_generator.py`:
+  - [x] 实现 `EventChainGenerator` 类
+  - [x] 集成 Gemini-2.5-Pro API 接口（支持 gemini-3-pro 当可用时）
+  - [x] 实现基于用户描述生成事件链的功能
+  - [x] 支持 3/5/8/10 幕的生成
+  - [x] 实现事件链的编辑和保存功能（`save_event_chain`、`load_event_chain`）
+  - [x] 支持 JSON 格式的事件链数据
 
 #### 2.5 快速制作书卷功能
-- [ ] 创建 `modules/utils/fast_scroll_generator.py`:
-  - [ ] 实现 `FastScrollGenerator` 类
-  - [ ] 集成 Gemini-3-Pro API 接口
-  - [ ] 实现从用户描述生成完整书卷配置的功能
-  - [ ] 自动生成世界观、角色、地点等配置
-  - [ ] 在 `server.py` 中添加 `/api/scrolls/fast-create` 端点
+- [x] 创建 `modules/utils/fast_scroll_generator.py`:
+  - [x] 实现 `FastScrollGenerator` 类
+  - [x] 集成 Gemini-2.5-Pro API 接口（支持 gemini-3-pro 当可用时）
+  - [x] 实现从用户描述生成完整书卷配置的功能
+  - [x] 自动生成世界观、角色、地点等配置
+  - [x] 实现配置保存功能（`save_scroll_config`）
+  - [ ] 在 `server.py` 中添加 `/api/scrolls/fast-create` 端点（待 Phase 4 集成）
 
 ---
 

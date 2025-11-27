@@ -2212,6 +2212,96 @@ async def get_scroll_world_info(scroll_id: int, current_user: Optional[dict] = D
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/api/scroll/{scroll_id}/generate-event-chain")
+async def generate_event_chain(scroll_id: int, request: Request, current_user: Optional[dict] = Depends(get_optional_user)):
+    """生成事件链"""
+    try:
+        scroll = db.get_scroll(scroll_id)
+        if not scroll:
+            raise HTTPException(status_code=404, detail="书卷不存在")
+        
+        # 获取请求参数
+        data = await request.json()
+        total_acts = data.get('total_acts', 5)
+        language = data.get('language', 'zh')
+        
+        if total_acts not in [1, 3, 5, 8, 10]:
+            raise HTTPException(status_code=400, detail="幕数必须是 1、3、5、8 或 10")
+        
+        preset_path = scroll.get('preset_path')
+        if not preset_path or not os.path.exists(preset_path):
+            raise HTTPException(status_code=404, detail="书卷预设文件不存在")
+        
+        # 加载预设文件
+        preset_data = load_json_file(preset_path)
+        world_file_path = preset_data.get('world_file_path', '')
+        performer_codes = preset_data.get('performer_codes', [])
+        role_file_dir = preset_data.get('role_file_dir', './data/roles/')
+        source = preset_data.get('source', '')
+        
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        
+        # 加载世界观描述
+        world_description = ""
+        if world_file_path:
+            world_path = os.path.join(base_dir, world_file_path)
+            if os.path.exists(world_path):
+                world_data = load_json_file(world_path)
+                world_description = world_data.get('description', '')
+        
+        # 获取角色名称列表
+        character_names = []
+        for role_code in performer_codes:
+            try:
+                role_path = None
+                if source and os.path.exists(os.path.join(base_dir, role_file_dir, source)):
+                    from sw_utils import get_child_folders
+                    for path in get_child_folders(os.path.join(base_dir, role_file_dir, source)):
+                        if role_code in path:
+                            role_path = path
+                            break
+                else:
+                    from sw_utils import get_grandchild_folders
+                    for path in get_grandchild_folders(os.path.join(base_dir, role_file_dir)):
+                        if role_code in path:
+                            role_path = path
+                            break
+                
+                if role_path:
+                    role_info_path = os.path.join(base_dir, role_path, "role_info.json")
+                    if os.path.exists(role_info_path):
+                        role_info = load_json_file(role_info_path)
+                        character_names.append(role_info.get('role_name', role_code))
+            except Exception as e:
+                print(f"[API] 获取角色 {role_code} 信息失败: {e}")
+                continue
+        
+        # 生成事件链
+        from modules.utils.event_chain_generator import EventChainGenerator
+        try:
+            generator = EventChainGenerator(llm_name="gemini-2.5-flash")
+            event_chain = generator.generate_event_chain(
+                world_description=world_description,
+                character_names=character_names,
+                total_acts=total_acts,
+                language=language
+            )
+            
+            return {
+                "success": True,
+                "event_chain": event_chain
+            }
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            raise HTTPException(status_code=500, detail=f"生成事件链失败: {str(e)}")
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/api/scroll/{scroll_id}/history")
 async def get_scroll_history(scroll_id: int, current_user: Optional[dict] = Depends(get_optional_user)):
     """获取书卷的历史进度（幕）"""

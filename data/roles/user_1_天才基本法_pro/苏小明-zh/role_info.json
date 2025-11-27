@@ -1,0 +1,34 @@
+{
+  "role_code": "苏小明-zh",
+  "role_name": "苏小明",
+  "source": "user_1_天才基本法_pro",
+  "activity": 1,
+  "profile": "三味大学学生会主席。他负责召集智力竞赛会议，并对林朝夕父亲的健康状况表示关心。",
+  "nickname": "苏小明",
+  "relation": {
+    "林朝夕-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "林兆生-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "裴之-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "安潇潇-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "主任-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "刘志远-zh": {
+      "relation": [],
+      "detail": ""
+    }
+  }
+}
