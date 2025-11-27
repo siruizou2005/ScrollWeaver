@@ -14,6 +14,9 @@ from sw_utils import is_image, load_json_file
 from ScrollWeaver import ScrollWeaver
 from modules.utils.text_utils import remove_markdown
 from database import db
+from modules.core.socketio_manager import SocketIOManager
+from modules.core.sessions import SessionMode, SessionManager
+import socketio
 # Server class is now in modules.core.server, but ScrollWeaver wrapper is still in ScrollWeaver.py
 
 app = FastAPI()
@@ -43,6 +46,12 @@ app.mount("/frontend", StaticFiles(directory=static_file_abspath), name="fronten
 # 预设文件目录
 PRESETS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'experiment_presets')
 
+# 初始化 Socket.IO 管理器
+socketio_manager = SocketIOManager()
+
+# 初始化会话管理器（用于聊天会话）
+session_manager = SessionManager()
+
 # Startup event handler for warmup
 @app.on_event("startup")
 async def startup_event():
@@ -50,6 +59,13 @@ async def startup_event():
     print("=" * 60)
     print("Starting ScrollWeaver server...")
     print("=" * 60)
+    
+    # 初始化 Socket.IO
+    socketio_manager.set_app(app)
+    # 将 Socket.IO 挂载为 ASGI 应用
+    socketio_app = socketio.ASGIApp(socketio_manager.sio, app)
+    app.mount("/socket.io", socketio_app)
+    print("[SocketIO] Socket.IO manager initialized")
     
     # 在后台异步预热embedding模型
     asyncio.create_task(warmup_models())
@@ -1329,9 +1345,22 @@ async def get_scrolls(request: Request, current_user: Optional[dict] = Depends(g
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/api/scroll/{scroll_id}")
+async def get_scroll_for_intro(scroll_id: int):
+    """获取单个书卷（用于intro页面）"""
+    try:
+        scroll = db.get_scroll(scroll_id)
+        if not scroll:
+            raise HTTPException(status_code=404, detail="书卷不存在")
+        return scroll
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/api/scrolls/{scroll_id}")
 async def get_scroll(scroll_id: int):
-    """获取单个书卷"""
+    """获取单个书卷（兼容旧API）"""
     try:
         scroll = db.get_scroll(scroll_id)
         if not scroll:
@@ -1928,6 +1957,570 @@ async def save_config(request: Request):
     # Disabled: front-end configuration is no longer supported for security reasons.
     # All configuration should be edited in the server-side config.json file and the service restarted.
     raise HTTPException(status_code=403, detail="前端配置已禁用。请在服务器上编辑 config.json 并重启服务以更改配置。")
+
+# ==================== Evolution Phase 1: 新增 API 端点 ====================
+
+@app.get("/api/scroll/{scroll_id}")
+async def get_scroll_for_intro(scroll_id: int):
+    """获取单个书卷（用于intro页面）"""
+    try:
+        scroll = db.get_scroll(scroll_id)
+        if not scroll:
+            raise HTTPException(status_code=404, detail="书卷不存在")
+        return scroll
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/scroll/{scroll_id}/characters")
+async def get_scroll_characters(scroll_id: int, current_user: Optional[dict] = Depends(get_optional_user)):
+    """获取书卷的角色列表"""
+    try:
+        scroll = db.get_scroll(scroll_id)
+        if not scroll:
+            raise HTTPException(status_code=404, detail="书卷不存在")
+        
+        preset_path = scroll.get('preset_path')
+        if not preset_path or not os.path.exists(preset_path):
+            raise HTTPException(status_code=404, detail="书卷预设文件不存在")
+        
+        # 加载预设文件
+        preset_data = load_json_file(preset_path)
+        performer_codes = preset_data.get('performer_codes', [])
+        role_file_dir = preset_data.get('role_file_dir', './data/roles/')
+        source = preset_data.get('source', '')
+        
+        # 从角色文件中读取详细信息
+        characters = []
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        
+        for role_code in performer_codes:
+            try:
+                # 查找角色文件路径
+                role_path = None
+                if source and os.path.exists(os.path.join(base_dir, role_file_dir, source)):
+                    from sw_utils import get_child_folders
+                    for path in get_child_folders(os.path.join(base_dir, role_file_dir, source)):
+                        if role_code in path:
+                            role_path = path
+                            break
+                else:
+                    from sw_utils import get_grandchild_folders
+                    for path in get_grandchild_folders(os.path.join(base_dir, role_file_dir)):
+                        if role_code in path:
+                            role_path = path
+                            break
+                
+                if role_path:
+                    role_info_path = os.path.join(base_dir, role_path, "role_info.json")
+                    if os.path.exists(role_info_path):
+                        role_info = load_json_file(role_info_path)
+                        character = {
+                            'code': role_code,
+                            'name': role_info.get('role_name', role_code),
+                            'nickname': role_info.get('nickname', role_info.get('role_name', role_code)),
+                            'role': role_info.get('relation', {}).get('relation', ''),
+                            'description': role_info.get('profile', '')[:100] + '...' if len(role_info.get('profile', '')) > 100 else role_info.get('profile', '')
+                        }
+                        characters.append(character)
+            except Exception as e:
+                print(f"加载角色 {role_code} 失败: {e}")
+                # 如果加载失败，至少添加基本信息
+                characters.append({
+                    'code': role_code,
+                    'name': role_code,
+                    'nickname': role_code,
+                    'role': '',
+                    'description': ''
+                })
+        
+        return {"success": True, "characters": characters}
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/scroll/{scroll_id}/character/{role_code}")
+async def get_character_detail(scroll_id: int, role_code: str, current_user: Optional[dict] = Depends(get_optional_user)):
+    """获取角色详细信息"""
+    try:
+        scroll = db.get_scroll(scroll_id)
+        if not scroll:
+            raise HTTPException(status_code=404, detail="书卷不存在")
+        
+        preset_path = scroll.get('preset_path')
+        if not preset_path or not os.path.exists(preset_path):
+            raise HTTPException(status_code=404, detail="书卷预设文件不存在")
+        
+        # 加载预设文件
+        preset_data = load_json_file(preset_path)
+        role_file_dir = preset_data.get('role_file_dir', './data/roles/')
+        source = preset_data.get('source', '')
+        
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        
+        # 查找角色文件路径
+        role_path = None
+        if source and os.path.exists(os.path.join(base_dir, role_file_dir, source)):
+            from sw_utils import get_child_folders
+            for path in get_child_folders(os.path.join(base_dir, role_file_dir, source)):
+                if role_code in path:
+                    role_path = path
+                    break
+        else:
+            from sw_utils import get_grandchild_folders
+            for path in get_grandchild_folders(os.path.join(base_dir, role_file_dir)):
+                if role_code in path:
+                    role_path = path
+                    break
+        
+        if not role_path:
+            raise HTTPException(status_code=404, detail="角色不存在")
+        
+        role_info_path = os.path.join(base_dir, role_path, "role_info.json")
+        if not os.path.exists(role_info_path):
+            raise HTTPException(status_code=404, detail="角色信息文件不存在")
+        
+        role_info = load_json_file(role_info_path)
+        
+        # 查找头像文件
+        avatar_path = None
+        avatar_extensions = ['.png', '.jpg', '.jpeg']
+        for ext in avatar_extensions:
+            potential_avatar = os.path.join(base_dir, role_path, f"avatar{ext}")
+            if os.path.exists(potential_avatar):
+                # 返回API端点路径
+                avatar_path = f"/api/scroll/{scroll_id}/character/{role_code}/avatar"
+                break
+        
+        # 构建角色详细信息
+        character_detail = {
+            'code': role_code,
+            'name': role_info.get('role_name', role_code),
+            'nickname': role_info.get('nickname', role_info.get('role_name', role_code)),
+            'profile': role_info.get('profile', '暂无描述'),
+            'persona': role_info.get('persona', ''),
+            'avatar': avatar_path,
+            'relation': role_info.get('relation', {}),
+            'scenario': role_info.get('scenario', ''),
+            'first_message': role_info.get('first_message', ''),
+            'description': role_info.get('description', '')
+        }
+        
+        return {"success": True, "character": character_detail}
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/scroll/{scroll_id}/character/{role_code}/avatar")
+async def get_character_avatar(scroll_id: int, role_code: str, current_user: Optional[dict] = Depends(get_optional_user)):
+    """获取角色头像"""
+    try:
+        scroll = db.get_scroll(scroll_id)
+        if not scroll:
+            raise HTTPException(status_code=404, detail="书卷不存在")
+        
+        preset_path = scroll.get('preset_path')
+        if not preset_path or not os.path.exists(preset_path):
+            raise HTTPException(status_code=404, detail="书卷预设文件不存在")
+        
+        # 加载预设文件
+        preset_data = load_json_file(preset_path)
+        role_file_dir = preset_data.get('role_file_dir', './data/roles/')
+        source = preset_data.get('source', '')
+        
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        
+        # 查找角色文件路径
+        role_path = None
+        if source and os.path.exists(os.path.join(base_dir, role_file_dir, source)):
+            from sw_utils import get_child_folders
+            for path in get_child_folders(os.path.join(base_dir, role_file_dir, source)):
+                if role_code in path:
+                    role_path = path
+                    break
+        else:
+            from sw_utils import get_grandchild_folders
+            for path in get_grandchild_folders(os.path.join(base_dir, role_file_dir)):
+                if role_code in path:
+                    role_path = path
+                    break
+        
+        if not role_path:
+            raise HTTPException(status_code=404, detail="角色不存在")
+        
+        # 查找头像文件
+        avatar_extensions = ['.png', '.jpg', '.jpeg']
+        for ext in avatar_extensions:
+            potential_avatar = os.path.join(base_dir, role_path, f"avatar{ext}")
+            if os.path.exists(potential_avatar):
+                return FileResponse(potential_avatar)
+        
+        # 如果没有找到头像，返回默认图标
+        if os.path.exists(default_icon_path):
+            return FileResponse(default_icon_path)
+        else:
+            raise HTTPException(status_code=404, detail="头像不存在")
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/scroll/{scroll_id}/world-info")
+async def get_scroll_world_info(scroll_id: int, current_user: Optional[dict] = Depends(get_optional_user)):
+    """获取书卷的世界观信息"""
+    try:
+        scroll = db.get_scroll(scroll_id)
+        if not scroll:
+            raise HTTPException(status_code=404, detail="书卷不存在")
+        
+        preset_path = scroll.get('preset_path')
+        if not preset_path or not os.path.exists(preset_path):
+            raise HTTPException(status_code=404, detail="书卷预设文件不存在")
+        
+        preset_data = load_json_file(preset_path)
+        world_file_path = preset_data.get('world_file_path', '')
+        
+        world_description = scroll.get('description', '暂无描述')
+        
+        # 尝试从世界文件加载更详细的世界观
+        if world_file_path and os.path.exists(world_file_path):
+            try:
+                world_data = load_json_file(world_file_path)
+                if world_data.get('description'):
+                    world_description = world_data.get('description')
+                elif world_data.get('world_description'):
+                    world_description = world_data.get('world_description')
+            except:
+                pass
+        
+        return {
+            "success": True,
+            "world_description": world_description,
+            "world_name": world_data.get('world_name', '') if 'world_data' in locals() else ''
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/scroll/{scroll_id}/history")
+async def get_scroll_history(scroll_id: int, current_user: Optional[dict] = Depends(get_optional_user)):
+    """获取书卷的历史进度（幕）"""
+    try:
+        scroll = db.get_scroll(scroll_id)
+        if not scroll:
+            raise HTTPException(status_code=404, detail="书卷不存在")
+        
+        # TODO: 从数据库或文件系统加载历史记录
+        # 目前返回空列表
+        acts = []
+        
+        return {"success": True, "acts": acts}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/game/create-room")
+async def create_game_room(request: Request, current_user: dict = Depends(get_current_user)):
+    """创建游戏房间"""
+    try:
+        data = await request.json()
+        scroll_id = data.get('scroll_id')
+        game_type = data.get('game_type', 'werewolf')
+        
+        if not scroll_id:
+            raise HTTPException(status_code=400, detail="缺少scroll_id")
+        
+        # 创建游戏会话
+        session = socketio_manager.session_manager.create_session(
+            mode=SessionMode.GAME,
+            scroll_id=scroll_id,
+            user_id=current_user['id'],
+            game_type=game_type
+        )
+        
+        # 初始化会话
+        config = {
+            'scroll_id': scroll_id,
+            'game_type': game_type
+        }
+        await session.initialize(config)
+        
+        return {
+            "success": True,
+            "room_id": session.room_id,
+            "session_id": session.session_id,
+            "room_code": session.room_id[:8].upper()  # 简化的房间代码
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/game/join-room/{room_code}")
+async def join_game_room(room_code: str, current_user: dict = Depends(get_current_user)):
+    """加入游戏房间"""
+    try:
+        # 查找房间（简化实现，实际应该用数据库存储房间代码映射）
+        sessions = socketio_manager.session_manager.sessions
+        target_session = None
+        
+        for session in sessions.values():
+            if session.room_id.startswith(room_code.upper()) or session.room_id.startswith(room_code.lower()):
+                target_session = session
+                break
+        
+        if not target_session:
+            raise HTTPException(status_code=404, detail="房间不存在")
+        
+        return {
+            "success": True,
+            "room_id": target_session.room_id,
+            "session_id": target_session.session_id
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ==================== 聊天 API 端点 ====================
+
+@app.post("/api/chat/create")
+async def create_chat_session(request: Request, current_user: dict = Depends(get_current_user)):
+    """创建私语模式聊天会话"""
+    try:
+        data = await request.json()
+        scroll_id = data.get('scroll_id')
+        role_code = data.get('role_code')
+        user_name = data.get('user_name', current_user.get('username', '用户'))
+        
+        if not scroll_id:
+            raise HTTPException(status_code=400, detail="缺少scroll_id")
+        if not role_code:
+            raise HTTPException(status_code=400, detail="缺少role_code")
+        
+        # 验证书卷存在
+        scroll = db.get_scroll(scroll_id)
+        if not scroll:
+            raise HTTPException(status_code=404, detail="书卷不存在")
+        
+        # 创建聊天会话
+        session = session_manager.create_session(
+            mode=SessionMode.CHAT,
+            scroll_id=scroll_id,
+            user_id=current_user['id'],
+            role_code=role_code,
+            user_name=user_name
+        )
+        
+        # 初始化会话
+        config = {
+            'llm_name': 'gemini-2.5-flash-lite',
+            'user_name': user_name
+        }
+        init_result = await session.initialize(config)
+        
+        return {
+            "success": True,
+            "session_id": session.session_id,
+            "role_code": role_code,
+            "character_name": init_result.get('character_name', ''),
+            "character_nickname": init_result.get('character_nickname', '')
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/chat/send")
+async def send_chat_message(request: Request, current_user: dict = Depends(get_current_user)):
+    """发送聊天消息"""
+    try:
+        data = await request.json()
+        session_id = data.get('session_id')
+        message = data.get('message', '')
+        temperature = data.get('temperature', 0.8)
+        
+        if not session_id:
+            raise HTTPException(status_code=400, detail="缺少session_id")
+        if not message:
+            raise HTTPException(status_code=400, detail="消息内容不能为空")
+        
+        # 获取会话
+        session = session_manager.get_session(session_id)
+        if not session:
+            raise HTTPException(status_code=404, detail="会话不存在")
+        
+        # 验证用户权限
+        if session.user_id != current_user['id']:
+            raise HTTPException(status_code=403, detail="无权访问此会话")
+        
+        # 处理消息
+        result = await session.process_message({
+            "text": message,
+            "temperature": temperature
+        }, sender_id=current_user['id'])
+        
+        return {
+            "success": True,
+            "message": result.get('message', ''),
+            "character_name": result.get('character_name', ''),
+            "character_nickname": result.get('character_nickname', ''),
+            "timestamp": result.get('timestamp', '')
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/chat/history/{session_id}")
+async def get_chat_history(session_id: str, current_user: dict = Depends(get_current_user)):
+    """获取对话历史"""
+    try:
+        # 获取会话
+        session = session_manager.get_session(session_id)
+        if not session:
+            raise HTTPException(status_code=404, detail="会话不存在")
+        
+        # 验证用户权限
+        if session.user_id != current_user['id']:
+            raise HTTPException(status_code=403, detail="无权访问此会话")
+        
+        # 获取历史
+        history = session.chat_history if hasattr(session, 'chat_history') else []
+        
+        return {
+            "success": True,
+            "history": history
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/chat/clear/{session_id}")
+async def clear_chat_history(session_id: str, current_user: dict = Depends(get_current_user)):
+    """清空对话历史"""
+    try:
+        # 获取会话
+        session = session_manager.get_session(session_id)
+        if not session:
+            raise HTTPException(status_code=404, detail="会话不存在")
+        
+        # 验证用户权限
+        if session.user_id != current_user['id']:
+            raise HTTPException(status_code=403, detail="无权访问此会话")
+        
+        # 清空历史
+        if hasattr(session, 'chat_performer') and session.chat_performer:
+            session.chat_performer.clear_history()
+        if hasattr(session, 'chat_history'):
+            session.chat_history.clear()
+        
+        return {
+            "success": True,
+            "message": "历史已清空"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/chat/update-extensions/{session_id}")
+async def update_chat_extensions(session_id: str, request: Request, current_user: dict = Depends(get_current_user)):
+    """更新扩展提示词（World Info、Memory、Authors Note）"""
+    try:
+        data = await request.json()
+        
+        # 获取会话
+        session = session_manager.get_session(session_id)
+        if not session:
+            raise HTTPException(status_code=404, detail="会话不存在")
+        
+        # 验证用户权限
+        if session.user_id != current_user['id']:
+            raise HTTPException(status_code=403, detail="无权访问此会话")
+        
+        if not hasattr(session, 'chat_performer') or not session.chat_performer:
+            raise HTTPException(status_code=400, detail="会话未初始化")
+        
+        # 更新扩展提示词
+        world_info_before = data.get('world_info_before', '')
+        world_info_after = data.get('world_info_after', '')
+        memory_summary = data.get('memory_summary', '')
+        authors_note = data.get('authors_note', '')
+        
+        if world_info_before or world_info_after:
+            session.chat_performer.update_world_info(world_info_before, world_info_after)
+        
+        if memory_summary:
+            session.chat_performer.update_memory(memory_summary)
+        
+        if authors_note:
+            session.chat_performer.update_authors_note(authors_note)
+        
+        return {
+            "success": True,
+            "message": "扩展提示词已更新"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/chat/extensions/{session_id}")
+async def get_chat_extensions(session_id: str, current_user: dict = Depends(get_current_user)):
+    """获取扩展提示词（World Info、Memory、Authors Note）"""
+    try:
+        # 获取会话
+        session = session_manager.get_session(session_id)
+        if not session:
+            raise HTTPException(status_code=404, detail="会话不存在")
+        
+        # 验证用户权限
+        if session.user_id != current_user['id']:
+            raise HTTPException(status_code=403, detail="无权访问此会话")
+        
+        if not hasattr(session, 'chat_performer') or not session.chat_performer:
+            raise HTTPException(status_code=400, detail="会话未初始化")
+        
+        performer = session.chat_performer
+        
+        return {
+            "success": True,
+            "extensions": {
+                "world_info_before": performer.world_info_before,
+                "world_info_after": performer.world_info_after,
+                "memory_summary": performer.memory_summary,
+                "authors_note": performer.authors_note
+            }
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     uvicorn.run("server:app", host="0.0.0.0", port=8000, reload=True)

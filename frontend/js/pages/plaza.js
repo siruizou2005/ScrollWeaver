@@ -21,15 +21,21 @@ document.getElementById('logoutBtn')?.addEventListener('click', () => {
 
 // 初始化书架
 function initBookshelf() {
+    console.log('初始化书架...');
     // 加载书卷
     loadScrolls();
 }
+
+// 页面加载完成后初始化
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('Plaza page loaded, initializing...');
+    initBookshelf();
+});
 
 // 创建书卷卡片
 function createScrollCard(scroll) {
     const card = document.createElement('div');
     card.className = 'scroll-card';
-    card.onclick = () => enterScroll(scroll);
     
     // 根据书卷类型设置样式
     let typeClass = '';
@@ -55,6 +61,17 @@ function createScrollCard(scroll) {
             <span class="scroll-card-type ${typeClass}">${typeText}</span>
         </div>
     `;
+    
+    // 绑定点击事件 - 使用 addEventListener 更可靠
+    card.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('点击书卷卡片:', scroll.id, scroll.title);
+        enterScroll(scroll);
+    });
+    
+    // 添加鼠标悬停样式
+    card.style.cursor = 'pointer';
     
     return card;
 }
@@ -130,12 +147,16 @@ function renderBooks() {
 
 // 进入书卷
 function enterScroll(scroll) {
+    console.log('enterScroll 被调用，scroll:', scroll);
+    
     // 保存当前书卷ID到localStorage
     localStorage.setItem('currentScrollId', scroll.id);
     localStorage.setItem('currentScroll', JSON.stringify(scroll));
     
-    // 跳转到游戏页面
-    window.location.href = '/game?scroll_id=' + scroll.id;
+    // 跳转到书卷前言页（新增功能）
+    const introUrl = `/frontend/pages/intro.html?scroll_id=${scroll.id}`;
+    console.log('准备跳转到:', introUrl);
+    window.location.href = introUrl;
 }
 
 // 模态框控制

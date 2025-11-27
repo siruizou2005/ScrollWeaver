@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>私语 - ScrollWeaver</title>
+    <link rel="stylesheet" href="../css/pages/chat.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="chat-container">
+        <!-- 顶部栏 -->
+        <header class="chat-header">
+            <button class="back-btn" id="backBtn">
+                <i class="fas fa-arrow-left"></i>
+                <span>返回</span>
+            </button>
+            <div class="character-info">
+                <div class="character-avatar" id="characterAvatar">
+                    <i class="fas fa-user-circle"></i>
+                </div>
+                <div class="character-details">
+                    <h2 id="characterName">角色名称</h2>
+                    <p id="characterNickname" class="character-nickname"></p>
+                </div>
+            </div>
+            <div class="header-actions">
+                <button class="icon-btn" id="clearBtn" title="清空历史">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+                <button class="icon-btn" id="menuBtn" title="菜单">
+                    <i class="fas fa-ellipsis-v"></i>
+                </button>
+            </div>
+        </header>
+        
+        <!-- 消息区域 -->
+        <div class="messages-wrapper">
+            <div class="messages-loading" id="messagesLoading">
+                <i class="fas fa-spinner fa-spin"></i>
+                <p>加载中...</p>
+            </div>
+            <div class="messages-container" id="messagesContainer">
+                <!-- 消息将动态添加 -->
+            </div>
+        </div>
+        
+        <!-- 输入区域 -->
+        <div class="input-container">
+            <div class="input-wrapper">
+                <textarea id="messageInput" placeholder="输入消息..." rows="1"></textarea>
+                <button id="sendBtn" class="send-btn" title="发送">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="../js/chat.js"></script>
+</body>
+</html>
+
