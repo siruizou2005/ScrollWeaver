@@ -75,6 +75,15 @@
     *   用户在“前言页”选择进入某一幕。
     *   在故事进行中，用户可点击“**下一幕**”，触发总结机制，归档当前上下文，开启新的一章，防止 Context Window 溢出。
 
+### 2.5 创作与共享生态 (Creation & Sharing)
+*   **造办处 (The Workshop)**:
+    *   **快速制作**: 输入一句话描述（"赛博朋克版红楼梦"），调用 `Gemini-3-Pro` 自动生成完整的 World + Roles 配置。
+    *   **自主制作**: 保留现有的详细表单填写模式。
+*   **藏书阁 (The Library)**:
+    *   **书卷包 (Scroll Package)**: 包含 `World Config` + `Role Cards` + `Event Chain Script` 的完整数据包。
+    *   **共享模式**: 支持引用 (Reference/Fork) 和快照 (Snapshot)。
+    *   **推荐逻辑**: 优先推荐官方内置 > 社区高赞 > 用户自定义创建。
+
 ---
 
 ## 3. 算法与智能增强 (Algorithm Enhancements)
@@ -103,6 +112,15 @@
     3.  **External Step (Speaking)**: 基于 `plan` 生成最终对话。
     4.  **Storage**: 将 `plan` 和 `memory_to_save` 存入该角色的短期记忆向量库，供未来决策检索。
 
+### 3.3 预设剧本与命运干预 (Scripted Events & Destiny Control)
+*   **适用场景**: O-P 模式 (入卷同游)。
+*   **核心流程**:
+    1.  **设置**: 用户选择 `Total Acts` (3/5/8/10) 和 `Enable Multiplayer`。
+    2.  **推演天机**: 调用 `Gemini-3-Pro` 生成完整的故事大纲 (Event Chain)，包含每一幕的标题、明线、暗线。
+    3.  **命运干预 (God Mode)**:
+        *   **开启**: 用户可预览并修改每一幕的事件摘要 (e.g., 改写结局)。
+        *   **关闭**: 沉浸式体验，Orchestrator 按照既定大纲隐形引导剧情。
+
 ---
 
 ## 4. 实施路线图 (Implementation Roadmap)
@@ -115,7 +133,8 @@
 ### Phase 2: 智能体升级 (Brain Upgrade)
 1.  **脚本**: 编写 `initialize_motivations.py`，集成 Gemini-2.5 接口进行批量动机生成。
 2.  **逻辑**: 修改 `main_performer.py`，实现 `Think -> Act` 的两阶段推理流程。
-3.  **数据**: 升级 JSON 数据结构，支持存储 `acts` (分幕) 和 `thoughts` (思考)。
+3.  **剧本引擎**: 实现基于 `Gemini-3-Pro` 的事件链生成与编辑功能。
+4.  **数据**: 升级 JSON 数据结构，支持存储 `acts` (分幕)、`thoughts` (思考) 和 `event_chain` (预设剧本)。
 
 ### Phase 3: 雅集博弈实现 (The Game)
 1.  **Admin**: 编写 `modules/game_logic/werewolf_admin.py`，实现狼人杀标准规则状态机。
@@ -125,4 +144,6 @@
 ### Phase 4: 整合与多用户联调 (Integration)
 1.  **联机**: 调试多用户同时进入同一房间的消息同步。
 2.  **体验**: 优化“分幕”切换的流畅度，确保历史记录正确加载。
-3.  **UI**: 统一全站古风视觉元素 (字体、按钮、背景)。
+3.  **创作**: 开发“造办处”与“藏书阁”界面，打通“生成-分享-引用”的 UGC 链路。
+4.  **UI**: 统一全站古风视觉元素 (字体、按钮、背景)。
+
