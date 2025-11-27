@@ -1,0 +1,34 @@
+{
+  "role_code": "林朝夕-zh",
+  "role_name": "林朝夕",
+  "source": "user_1_天才基本法",
+  "activity": 1,
+  "profile": "22岁的哲学系学生，立志成为一名教师。父亲被确诊为阿尔茨海默症，对她的生活产生重大影响。她聪明、敏感，对数字和智力题有独特的见解，但面对个人情感和未来选择时会感到迷茫。暗恋校园男神裴之。",
+  "nickname": "朝夕",
+  "relation": {
+    "老林-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "裴之-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "主任-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "苏小明-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "安潇潇-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "小萌妹-zh": {
+      "relation": [],
+      "detail": ""
+    }
+  }
+}

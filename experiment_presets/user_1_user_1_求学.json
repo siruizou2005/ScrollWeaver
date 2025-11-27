@@ -1,0 +1,14 @@
+{
+  "experiment_subname": "user_1_求学",
+  "source": "user_1_求学",
+  "world_file_path": "./data/worlds/user_1_求学/general.json",
+  "map_file_path": "./data/maps/user_1_求学.csv",
+  "loc_file_path": "./data/locations/user_1_求学.json",
+  "role_file_dir": "./data/roles/",
+  "performer_codes": [
+    "家长"
+  ],
+  "intervention": "",
+  "script": "",
+  "language": "zh"
+}

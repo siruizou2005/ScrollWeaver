@@ -1,0 +1,30 @@
+{
+  "HOSPITAL": {
+    "location_code": "HOSPITAL",
+    "location_name": "医院",
+    "description": "林朝夕父亲被确诊阿尔茨海默症的地方。",
+    "detail": "一个承载着重要诊断结果和父女情感波动的地点。",
+    "source": "user_1_天才基本法_11"
+  },
+  "DALUMIAN_SHOP": {
+    "location_code": "DALUMIAN_SHOP",
+    "location_name": "打卤面店",
+    "description": "医院附近的一家面店。",
+    "detail": "恰逢中午，下雨天水汽充盈，店里热气腾腾。林朝夕和父亲在这里用餐，并进行了关于父亲病情和人生哲学的对话。",
+    "source": "user_1_天才基本法_11"
+  },
+  "UNIVERSITY_TOWN": {
+    "location_code": "UNIVERSITY_TOWN",
+    "location_name": "大学城",
+    "description": "一个有多所高校聚集的区域，联合智力竞赛在此举办。",
+    "detail": "这里是林朝夕和她同学学习、生活、参与各项学生组织活动的场所，也是不同学校学生交流和竞争的舞台。",
+    "source": "user_1_天才基本法_11"
+  },
+  "MEETING_ROOM": {
+    "location_code": "MEETING_ROOM",
+    "location_name": "学生活动中心二楼会议室",
+    "description": "大学城学生活动中心二楼的会议室。",
+    "detail": "高校联合智力竞赛筹备会议的地点。会议室在林朝夕推门而入时瞬间安静下来，是各校代表讨论并挑选竞赛题目的正式场所。",
+    "source": "user_1_天才基本法_11"
+  }
+}

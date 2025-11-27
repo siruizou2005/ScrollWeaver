@@ -1,0 +1,30 @@
+{
+  "role_code": "林朝夕-zh",
+  "role_name": "林朝夕",
+  "source": "user_1_test",
+  "activity": 1,
+  "profile": "故事的主人公，22岁，哲学系学生，立志成为一名人民教师。她聪明、敏锐，对父亲的病情感到忧虑但内心坚韧。她渴望掌控自己的人生，对既定的未来感到恐慌，追求无限可能。她暗恋裴之，并积极参与大学城的智力竞赛，展现出卓越的逻辑分析能力。",
+  "nickname": "林朝夕",
+  "relation": {
+    "老林先生-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "裴之-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "教务主任-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "苏小明-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "安潇潇-zh": {
+      "relation": [],
+      "detail": ""
+    }
+  }
+}

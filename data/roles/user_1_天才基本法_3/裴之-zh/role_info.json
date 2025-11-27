@@ -1,0 +1,30 @@
+{
+  "role_code": "裴之-zh",
+  "role_name": "裴之",
+  "source": "user_1_天才基本法_3",
+  "activity": 1,
+  "profile": "林朝夕暗恋多年的校园男神，数学系学生，即将出国深造。他被认为是数学领域的佼佼者，甚至有人提议在智力竞赛中遇到难题时可以找他解决。",
+  "nickname": "校园男神",
+  "relation": {
+    "林朝夕-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "林先生-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "苏小明-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "安潇潇-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "主任-zh": {
+      "relation": [],
+      "detail": ""
+    }
+  }
+}

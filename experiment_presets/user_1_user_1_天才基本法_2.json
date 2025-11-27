@@ -1,0 +1,17 @@
+{
+  "experiment_subname": "user_1_天才基本法_2",
+  "source": "user_1_天才基本法_2",
+  "world_file_path": "./data/worlds/user_1_天才基本法_2/general.json",
+  "map_file_path": "./data/maps/user_1_天才基本法_2.csv",
+  "loc_file_path": "./data/locations/user_1_天才基本法_2.json",
+  "role_file_dir": "./data/roles/",
+  "performer_codes": [
+    "林朝夕-zh",
+    "林先生-zh",
+    "安潇潇-zh",
+    "苏小明-zh"
+  ],
+  "intervention": "",
+  "script": "",
+  "language": "zh"
+}

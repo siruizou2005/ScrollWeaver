@@ -1,0 +1,22 @@
+{
+  "role_code": "苏小明-zh",
+  "role_name": "苏小明",
+  "source": "user_1_天才基本法_2",
+  "activity": 1,
+  "profile": "林朝夕学校的学生会主席，与林朝夕是朋友关系，关心林朝夕及其父亲的状况。在智力竞赛组织中扮演重要角色。",
+  "nickname": "苏小明",
+  "relation": {
+    "林朝夕-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "林先生-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "安潇潇-zh": {
+      "relation": [],
+      "detail": ""
+    }
+  }
+}

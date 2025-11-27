@@ -1,0 +1,34 @@
+{
+  "role_code": "老林-zh",
+  "role_name": "老林",
+  "source": "user_1_天才基本法",
+  "activity": 1,
+  "profile": "林朝夕的父亲，被确诊为早发性阿尔茨海默症。性格开朗豁达，甚至拿自己的病情开玩笑，试图减轻女儿的负担。曾为了抚养女儿放弃出国深造数学。他有一套独特的生存哲学，认为“世界上所有事情，都可能发生在任何一个人身上，没什么大不了”。",
+  "nickname": "爸爸, 林先生",
+  "relation": {
+    "林朝夕-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "裴之-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "主任-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "苏小明-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "安潇潇-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "小萌妹-zh": {
+      "relation": [],
+      "detail": ""
+    }
+  }
+}

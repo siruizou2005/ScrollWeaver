@@ -1,0 +1,30 @@
+{
+  "role_code": "小刘-zh",
+  "role_name": "小刘",
+  "source": "user_1_天才基本法_new",
+  "activity": 1,
+  "profile": "林朝夕的相亲对象，一名银行职员。他被描述为“很正常的男生，有点小骄傲”，介绍了自己的家庭背景、父母的工作以及对生二胎的看法，暗示着优越的家庭条件和对未来生活的设想。",
+  "nickname": "小刘",
+  "relation": {
+    "林朝夕-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "老林先生-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "苏小明-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "安潇潇-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "主任-zh": {
+      "relation": [],
+      "detail": ""
+    }
+  }
+}

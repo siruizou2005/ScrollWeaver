@@ -1,0 +1,30 @@
+{
+  "role_code": "老林先生-zh",
+  "role_name": "老林先生",
+  "source": "user_1_天才基本法_11",
+  "activity": 1,
+  "profile": "林朝夕的父亲，被诊断患有早发性阿尔茨海默症。他性格洒脱，甚至有些玩世不恭，面对疾病能开玩笑。他曾为抚养林朝夕而放弃出国深造，对女儿的爱深沉而独特。他有自己一套关于人生独立和责任的哲学观，能用独特的方式开导女儿。",
+  "nickname": "爸爸, 林会计",
+  "relation": {
+    "林朝夕-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "苏小明-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "安潇潇-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "主任-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "裴之-zh": {
+      "relation": [],
+      "detail": ""
+    }
+  }
+}
