@@ -17,19 +17,29 @@
 | **O-P Mode** | **入卷同游 (Saga)** | 现有的跑团、故事生成、多角色群聊 | AI 编导控制剧情走向，角色自由发挥。 | **Orchestrator**: 编导 (上帝)<br>**Performer(s)**: NPC<br>**User**: 主角 |
 | **A-O-P Mode** | **雅集博弈 (Arena)** | 狼人杀、谁是卧底、规则类卡牌游戏 | 代码控制硬规则，AI 负责演绎和推理。 | **Administrator**: 规则执行官 (代码)<br>**Orchestrator**: 主持人 (描述者)<br>**Performer(s)**: 玩家 (AI)<br>**User**: 玩家 (人) |
 
-### 1.2 A-O-P 详细工作流 (Administrator-Orchestrator-Performer)
+### 1.2 A-O-P 详细工作流与 O 的职能重定义
 
-1.  **Administrator (A)**: 
-    *   **性质**: 纯 Python 类 (State Machine)，**不使用 LLM**。
-    *   **职责**: 维护游戏状态 (State Keeping)。记录谁是狼人、谁死了、票数统计、胜负判定。
-    *   **输出**: 结构化指令，如 `{"event": "night_results", "dead": ["PlayerA"], "win": null}`。
-2.  **Orchestrator (O)**:
-    *   **性质**: LLM Wrapper。
-    *   **职责**: "润色者"与"传声筒"。接收 A 的指令，转化为沉浸式的语言描述。
-    *   **例子**: 收到 A 的 `night_start` 指令后，生成“夜幕降临，大观园的灯火渐渐熄灭...”
-3.  **Performer (P)**:
-    *   **性质**: LLM Wrapper (Agent)。
-    *   **职责**: 玩游戏。接收 O 的公开信息，结合自己的私密身份 (如狼人) 进行思考 (Think) 和行动 (Act)。
+#### Administrator (A)
+*   **性质**: 纯 Python 类 (State Machine)，**不使用 LLM**。
+*   **职责**: 维护游戏状态 (State Keeping)。记录谁是狼人、谁死了、票数统计、胜负判定。
+*   **输出**: 结构化指令，如 `{"event": "night_results", "dead": ["PlayerA"], "win": null}`。
+
+#### Orchestrator (O) 的定位调整
+虽然 A 可以直接通知 P，但 ScrollWeaver 必须保留 O 以维持世界观沉浸感。
+*   **性质**: LLM Wrapper + 模板引擎。
+*   **核心职责**:
+    1.  **世界观渲染 (The Renderer)**: 将 A 的枯燥状态 (e.g., "Player dies") 翻译为符合《红楼梦》或《冰与火之歌》风格的文学叙事。
+    2.  **软性控场 (The Host)**: 在“垃圾时间”填补环境描写，维持氛围。
+    3.  **情感锚点**: 为 AI Performer 提供更有张力的 Input，激发更真实的情绪反应。
+
+*   **优化策略: 混合模式 (Hybrid Orchestrator)**
+    *   为了解决延迟和成本，O 将分为两类操作：
+    *   **Templated (模板化)**: 对于重复性高、无叙事需求的指令（如“请发言”），由 A 直接分发预设文本，**绕过 LLM**。
+    *   **LLM-Driven (大模型驱动)**: 仅在**关键节点**（开场、死亡、结局、日夜切换）介入，进行高成本的文学渲染。
+
+#### Performer (P)
+*   **性质**: LLM Wrapper (Agent)。
+*   **职责**: 玩游戏。接收 O 的公开信息，结合自己的私密身份 (如狼人) 进行思考 (Think) 和行动 (Act)。
 
 ---
 
@@ -109,11 +119,10 @@
 
 ### Phase 3: 雅集博弈实现 (The Game)
 1.  **Admin**: 编写 `modules/game_logic/werewolf_admin.py`，实现狼人杀标准规则状态机。
-2.  **Orchestrator**: 适配 A-O 接口，将游戏状态转化为叙事文本。
+2.  **Orchestrator**: 适配 A-O 接口，实现**混合模式 (Hybrid Orchestrator)**，将游戏状态转化为叙事文本。
 3.  **前端**: 开发 `game_room.html`，实现圆桌布局、投票交互动画。
 
 ### Phase 4: 整合与多用户联调 (Integration)
 1.  **联机**: 调试多用户同时进入同一房间的消息同步。
 2.  **体验**: 优化“分幕”切换的流畅度，确保历史记录正确加载。
 3.  **UI**: 统一全站古风视觉元素 (字体、按钮、背景)。
-
