@@ -583,6 +583,727 @@ body::after {
     transform: translateY(-2px) scale(1.02);
 }
 
+/* ========== 新内容样式 ========== */
+
+/* 玩法展示区域 */
+.gameplay-section {
+    margin-bottom: 6rem;
+}
+
+.gameplay-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 3rem;
+    margin-top: 3rem;
+}
+
+.gameplay-card {
+    background: rgba(250, 248, 243, 0.95);
+    border-radius: 20px;
+    overflow: hidden;
+    border: 2px solid rgba(212, 175, 55, 0.3);
+    box-shadow: 0 8px 30px rgba(107, 68, 35, 0.15);
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+}
+
+.gameplay-card:hover {
+    transform: translateY(-12px);
+    box-shadow: 0 20px 60px rgba(107, 68, 35, 0.25);
+    border-color: rgba(212, 175, 55, 0.6);
+}
+
+.gameplay-visual {
+    height: 200px;
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(135deg, rgba(139, 69, 19, 0.1) 0%, rgba(107, 68, 35, 0.05) 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.creation-visual {
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.15) 0%, rgba(139, 69, 19, 0.1) 100%);
+}
+
+.creation-visual .visual-content i {
+    font-size: 4rem;
+    color: #d4af37;
+    animation: floatText 3s ease-in-out infinite;
+}
+
+.floating-text {
+    position: absolute;
+    font-size: 0.9rem;
+    color: #8b4513;
+    opacity: 0.6;
+    animation: floatAround 4s ease-in-out infinite;
+}
+
+@keyframes floatText {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(-10px) rotate(5deg); }
+}
+
+@keyframes floatAround {
+    0%, 100% { transform: translate(0, 0); opacity: 0.6; }
+    25% { transform: translate(20px, -15px); opacity: 0.8; }
+    50% { transform: translate(-15px, -25px); opacity: 0.4; }
+    75% { transform: translate(-20px, -10px); opacity: 0.7; }
+}
+
+.simulation-visual {
+    background: linear-gradient(135deg, rgba(139, 69, 19, 0.15) 0%, rgba(107, 68, 35, 0.1) 100%);
+}
+
+.simulation-visual .visual-content i {
+    font-size: 4rem;
+    color: #8b4513;
+    position: relative;
+    z-index: 2;
+}
+
+.crossing-line {
+    position: absolute;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #d4af37, transparent);
+    top: 50%;
+    left: 0;
+    animation: crossLine 2s ease-in-out infinite;
+}
+
+@keyframes crossLine {
+    0%, 100% { transform: translateX(-100%); opacity: 0; }
+    50% { transform: translateX(0); opacity: 1; }
+}
+
+.gathering-visual {
+    background: linear-gradient(135deg, rgba(107, 68, 35, 0.2) 0%, rgba(139, 69, 19, 0.15) 100%);
+}
+
+.gathering-visual .visual-content i {
+    font-size: 3.5rem;
+    color: #6b4423;
+    position: relative;
+    z-index: 2;
+}
+
+.candle-light {
+    position: absolute;
+    width: 60px;
+    height: 60px;
+    background: radial-gradient(circle, rgba(212, 175, 55, 0.4) 0%, transparent 70%);
+    border-radius: 50%;
+    top: 20%;
+    left: 20%;
+    animation: flicker 2s ease-in-out infinite;
+}
+
+@keyframes flicker {
+    0%, 100% { opacity: 0.6; transform: scale(1); }
+    50% { opacity: 0.9; transform: scale(1.1); }
+}
+
+.gameplay-content {
+    padding: 2rem;
+    text-align: center;
+}
+
+.gameplay-number {
+    display: inline-block;
+    width: 40px;
+    height: 40px;
+    line-height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #d4af37, #8b4513);
+    color: #fff;
+    font-weight: 700;
+    font-size: 1.2rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 4px 15px rgba(212, 175, 55, 0.4);
+}
+
+.gameplay-card h3 {
+    font-size: 1.8rem;
+    color: #3d2817;
+    margin-bottom: 0.5rem;
+    font-weight: 700;
+}
+
+.gameplay-slogan {
+    font-size: 1.1rem;
+    color: #d4af37;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    font-style: italic;
+}
+
+.gameplay-desc {
+    line-height: 1.8;
+    color: #6b4423;
+    font-size: 1rem;
+}
+
+/* 核心技术区域 */
+.tech-section {
+    margin-bottom: 6rem;
+}
+
+.section-subtitle {
+    text-align: center;
+    color: #6b4423;
+    font-size: 1.1rem;
+    margin-bottom: 3rem;
+    font-style: italic;
+}
+
+.tech-architecture {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2.5rem;
+    margin-top: 3rem;
+}
+
+.tech-card {
+    background: rgba(250, 248, 243, 0.95);
+    border-radius: 20px;
+    padding: 2rem;
+    border: 2px solid rgba(212, 175, 55, 0.3);
+    box-shadow: 0 8px 30px rgba(107, 68, 35, 0.15);
+    transition: all 0.5s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.tech-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 20px 50px rgba(107, 68, 35, 0.25);
+    border-color: rgba(212, 175, 55, 0.6);
+}
+
+.tech-visual {
+    height: 180px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+    position: relative;
+}
+
+.arch-visual {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.p-visual i {
+    font-size: 4rem;
+    color: #8b4513;
+}
+
+.connection-line {
+    position: absolute;
+    width: 80px;
+    height: 2px;
+    background: linear-gradient(90deg, #8b4513, #d4af37, #8b4513);
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(45deg);
+    opacity: 0.6;
+    animation: pulseLine 2s ease-in-out infinite;
+}
+
+@keyframes pulseLine {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 0.8; }
+}
+
+.op-visual {
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.1) 0%, rgba(139, 69, 19, 0.05) 100%);
+    border-radius: 12px;
+}
+
+.op-visual i {
+    font-size: 3.5rem;
+    color: #d4af37;
+    position: relative;
+    z-index: 2;
+}
+
+.orchestrator-shadow {
+    position: absolute;
+    top: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100px;
+    height: 100px;
+    background: radial-gradient(ellipse, rgba(212, 175, 55, 0.2) 0%, transparent 70%);
+    border-radius: 50%;
+    opacity: 0.6;
+}
+
+.event-chain {
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 200px;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, #d4af37, transparent);
+    box-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
+    animation: chainFlow 3s ease-in-out infinite;
+}
+
+@keyframes chainFlow {
+    0%, 100% { opacity: 0.5; transform: translateX(-50%) scaleX(0.8); }
+    50% { opacity: 1; transform: translateX(-50%) scaleX(1); }
+}
+
+.aop-visual {
+    background: linear-gradient(135deg, rgba(139, 69, 19, 0.15) 0%, rgba(107, 68, 35, 0.1) 100%);
+    border-radius: 12px;
+}
+
+.aop-visual i {
+    font-size: 3.5rem;
+    color: #8b4513;
+    position: relative;
+    z-index: 2;
+}
+
+.belief-network {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background-image: 
+        radial-gradient(circle at 20% 30%, rgba(139, 69, 19, 0.3) 2px, transparent 2px),
+        radial-gradient(circle at 80% 70%, rgba(212, 175, 55, 0.3) 2px, transparent 2px),
+        radial-gradient(circle at 50% 50%, rgba(107, 68, 35, 0.3) 2px, transparent 2px);
+    background-size: 100% 100%;
+    opacity: 0.6;
+}
+
+.brain-sparks {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+}
+
+.brain-sparks::before,
+.brain-sparks::after {
+    content: '';
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    background: #d4af37;
+    border-radius: 50%;
+    box-shadow: 0 0 10px rgba(212, 175, 55, 0.8);
+    animation: sparkle 2s ease-in-out infinite;
+}
+
+.brain-sparks::before {
+    top: 20%;
+    left: 30%;
+    animation-delay: 0s;
+}
+
+.brain-sparks::after {
+    top: 60%;
+    right: 25%;
+    animation-delay: 1s;
+}
+
+@keyframes sparkle {
+    0%, 100% { opacity: 0.3; transform: scale(0.8); }
+    50% { opacity: 1; transform: scale(1.2); }
+}
+
+.tech-content h3 {
+    font-size: 1.6rem;
+    color: #3d2817;
+    margin-bottom: 1rem;
+    text-align: center;
+    font-weight: 700;
+}
+
+.tech-desc {
+    text-align: center;
+    color: #6b4423;
+    line-height: 1.8;
+    font-size: 1rem;
+}
+
+.tech-explanation {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+    margin-top: 1rem;
+}
+
+.bone-icon,
+.soul-icon {
+    font-size: 2rem;
+    flex-shrink: 0;
+}
+
+.tech-explanation strong {
+    display: block;
+    color: #3d2817;
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+}
+
+.tech-explanation p {
+    color: #6b4423;
+    line-height: 1.8;
+    font-size: 0.95rem;
+}
+
+/* 创作与社区区域 */
+.ugc-section {
+    margin-bottom: 6rem;
+}
+
+.ugc-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3rem;
+    margin-top: 3rem;
+}
+
+.ugc-left,
+.ugc-right {
+    background: rgba(250, 248, 243, 0.95);
+    border-radius: 20px;
+    padding: 2.5rem;
+    border: 2px solid rgba(212, 175, 55, 0.3);
+    box-shadow: 0 8px 30px rgba(107, 68, 35, 0.15);
+    transition: all 0.5s ease;
+}
+
+.ugc-left:hover,
+.ugc-right:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 20px 50px rgba(107, 68, 35, 0.25);
+    border-color: rgba(212, 175, 55, 0.6);
+}
+
+.ugc-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.ugc-header i {
+    font-size: 2rem;
+    color: #d4af37;
+}
+
+.ugc-header h3 {
+    font-size: 1.8rem;
+    color: #3d2817;
+    font-weight: 700;
+}
+
+.ugc-subtitle {
+    color: #6b4423;
+    font-size: 1rem;
+    margin-bottom: 2rem;
+    text-align: center;
+    font-style: italic;
+}
+
+.workshop-visual {
+    height: 150px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 2rem;
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.1) 0%, rgba(139, 69, 19, 0.05) 100%);
+    border-radius: 12px;
+}
+
+.workshop-desk {
+    display: flex;
+    gap: 2rem;
+    align-items: center;
+}
+
+.workshop-desk i {
+    font-size: 3rem;
+    color: #8b4513;
+    animation: floatIcon 3s ease-in-out infinite;
+}
+
+.workshop-desk i:nth-child(2) {
+    animation-delay: 0.5s;
+}
+
+.workshop-desk i:nth-child(3) {
+    animation-delay: 1s;
+}
+
+@keyframes floatIcon {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+
+.function-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.function-item {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+    padding: 1.5rem;
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: 12px;
+    border-left: 3px solid #d4af37;
+    transition: all 0.3s ease;
+}
+
+.function-item:hover {
+    transform: translateX(5px);
+    box-shadow: 0 4px 15px rgba(107, 68, 35, 0.1);
+}
+
+.function-icon {
+    font-size: 2rem;
+    flex-shrink: 0;
+}
+
+.function-content h4 {
+    font-size: 1.2rem;
+    color: #3d2817;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+}
+
+.function-content p {
+    color: #6b4423;
+    line-height: 1.7;
+    font-size: 0.95rem;
+}
+
+.library-visual {
+    height: 200px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    margin-bottom: 2rem;
+    background: linear-gradient(135deg, rgba(139, 69, 19, 0.1) 0%, rgba(107, 68, 35, 0.05) 100%);
+    border-radius: 12px;
+    padding: 1rem;
+}
+
+.books-shelf {
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-end;
+}
+
+.book {
+    width: 40px;
+    height: 60px;
+    background: linear-gradient(135deg, #8b4513, #6b4423);
+    border-radius: 2px;
+    box-shadow: 0 2px 8px rgba(107, 68, 35, 0.3);
+    animation: bookFloat 3s ease-in-out infinite;
+}
+
+.book:nth-child(1) { height: 70px; animation-delay: 0s; }
+.book:nth-child(2) { height: 55px; animation-delay: 0.3s; }
+.book:nth-child(3) { height: 65px; animation-delay: 0.6s; }
+.book:nth-child(4) { height: 50px; animation-delay: 0.9s; }
+
+@keyframes bookFloat {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-5px); }
+}
+
+.library-desc {
+    color: #6b4423;
+    line-height: 1.8;
+    font-size: 1rem;
+    text-align: center;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: 12px;
+}
+
+/* 联机与共鸣区域 */
+.connection-section {
+    margin-bottom: 4rem;
+}
+
+.connection-banner {
+    width: 100%;
+    background: linear-gradient(135deg, rgba(139, 69, 19, 0.1) 0%, rgba(107, 68, 35, 0.05) 100%);
+    border-radius: 24px;
+    padding: 4rem 3rem;
+    position: relative;
+    overflow: hidden;
+    border: 2px solid rgba(212, 175, 55, 0.3);
+    box-shadow: 0 10px 40px rgba(107, 68, 35, 0.2);
+}
+
+.connection-visual {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.ink-flow {
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, rgba(107, 68, 35, 0.6), transparent);
+    animation: inkFlow 8s ease-in-out infinite;
+}
+
+@keyframes inkFlow {
+    0% { left: -100%; }
+    100% { left: 100%; }
+}
+
+.user-silhouette {
+    position: absolute;
+    font-size: 4rem;
+    color: rgba(107, 68, 35, 0.3);
+    z-index: 1;
+}
+
+.left-user {
+    top: 20%;
+    left: 10%;
+    animation: floatUser 4s ease-in-out infinite;
+}
+
+.right-user {
+    top: 20%;
+    right: 10%;
+    animation: floatUser 4s ease-in-out infinite 0.5s;
+}
+
+@keyframes floatUser {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-15px); }
+}
+
+.connection-hands {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 100px;
+    height: 100px;
+    background: radial-gradient(circle, rgba(212, 175, 55, 0.2) 0%, transparent 70%);
+    border-radius: 50%;
+    animation: pulseHands 3s ease-in-out infinite;
+}
+
+@keyframes pulseHands {
+    0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.6; }
+    50% { transform: translate(-50%, -50%) scale(1.2); opacity: 0.9; }
+}
+
+.connection-content {
+    position: relative;
+    z-index: 2;
+    text-align: center;
+}
+
+.connection-content h2 {
+    font-size: 3rem;
+    color: #3d2817;
+    margin-bottom: 1rem;
+    font-weight: 800;
+    text-shadow: 2px 2px 8px rgba(107, 68, 35, 0.2);
+}
+
+.connection-subtitle {
+    font-size: 1.2rem;
+    color: #6b4423;
+    margin-bottom: 3rem;
+    line-height: 1.8;
+}
+
+.connection-features {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 2rem;
+    margin-bottom: 3rem;
+}
+
+.feature-item {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+    background: rgba(250, 248, 243, 0.9);
+    padding: 1.5rem;
+    border-radius: 12px;
+    border-left: 3px solid #d4af37;
+    text-align: left;
+}
+
+.feature-item i {
+    font-size: 2rem;
+    color: #d4af37;
+    flex-shrink: 0;
+}
+
+.feature-item h4 {
+    font-size: 1.2rem;
+    color: #3d2817;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+}
+
+.feature-item p {
+    color: #6b4423;
+    line-height: 1.7;
+    font-size: 0.95rem;
+}
+
+.find-party-button {
+    background: linear-gradient(135deg, #8b4513 0%, #6b4423 100%);
+    color: #fff;
+    border: 2px solid rgba(212, 175, 55, 0.3);
+    padding: 1.2rem 2.5rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+    border-radius: 50px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.8rem;
+    transition: all 0.4s ease;
+    box-shadow: 0 8px 30px rgba(107, 68, 35, 0.3);
+}
+
+.find-party-button:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 40px rgba(107, 68, 35, 0.4);
+    border-color: rgba(212, 175, 55, 0.5);
+    background: linear-gradient(135deg, #a0522d 0%, #8b4513 100%);
+}
+
+>>>>>>> Stashed changes
 /* 响应式设计 */
 @media (max-width: 768px) {
     .hero-title {
@@ -603,7 +1324,9 @@ body::after {
     }
     
     .concept-grid,
-    .play-mode-grid {
+    .play-mode-grid,
+    .gameplay-grid,
+    .tech-architecture {
         grid-template-columns: 1fr;
     }
     
@@ -611,5 +1334,40 @@ body::after {
         flex-direction: column;
         text-align: center;
     }
+
+    .ugc-container {
+        grid-template-columns: 1fr;
+    }
+
+    .connection-content h2 {
+        font-size: 2rem;
+    }
+
+    .connection-features {
+        grid-template-columns: 1fr;
+    }
+
+    .gameplay-visual {
+        height: 150px;
+    }
+
+    .tech-visual {
+        height: 150px;
+    }
+
+    .workshop-visual,
+    .library-visual {
+        height: 120px;
+    }
+
+    .connection-banner {
+        padding: 2rem 1.5rem;
+    }
+
+    .left-user,
+    .right-user {
+        font-size: 2.5rem;
+    }
+>>>>>>> Stashed changes
 }
 
