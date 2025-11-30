@@ -32,28 +32,30 @@ if (userDropdown && dropdownMenu) {
     });
 }
 
-// 退出登录（带确认对话框）
+// 退出登录（使用共享的确认对话框）
 const logoutBtn = document.getElementById('logoutBtn');
 if (logoutBtn) {
     logoutBtn.addEventListener('click', () => {
-        if (confirm('确定要退出登录吗？')) {
-            fetch(`${API_BASE}/api/logout`, { 
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            })
-            .then(() => {
-                localStorage.removeItem('token');
-                localStorage.removeItem('user');
-                window.location.href = '/frontend/pages/login.html';
-            })
-            .catch(() => {
-                localStorage.removeItem('token');
-                localStorage.removeItem('user');
-                window.location.href = '/frontend/pages/login.html';
-            });
-        }
+        showConfirm('确定要退出登录吗？').then((confirmed) => {
+            if (confirmed) {
+                fetch(`${API_BASE}/api/logout`, { 
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                })
+                .then(() => {
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('user');
+                    window.location.href = '/frontend/pages/home.html';
+                })
+                .catch(() => {
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('user');
+                    window.location.href = '/frontend/pages/home.html';
+                });
+            }
+        });
     });
 }
 

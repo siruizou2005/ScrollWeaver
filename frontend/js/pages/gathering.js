@@ -32,28 +32,30 @@ if (userDropdown && dropdownMenu) {
     });
 }
 
-// 退出登录（带确认对话框）
+// 退出登录（使用共享的确认对话框）
 const logoutBtn = document.getElementById('logoutBtn');
 if (logoutBtn) {
     logoutBtn.addEventListener('click', () => {
-        if (confirm('确定要退出登录吗？')) {
-            fetch(`${API_BASE}/api/logout`, { 
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            })
-            .then(() => {
-                localStorage.removeItem('token');
-                localStorage.removeItem('user');
-                window.location.href = '/frontend/pages/login.html';
-            })
-            .catch(() => {
-                localStorage.removeItem('token');
-                localStorage.removeItem('user');
-                window.location.href = '/frontend/pages/login.html';
-            });
-        }
+        showConfirm('确定要退出登录吗？').then((confirmed) => {
+            if (confirmed) {
+                fetch(`${API_BASE}/api/logout`, { 
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                })
+                .then(() => {
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('user');
+                    window.location.href = '/frontend/pages/home.html';
+                })
+                .catch(() => {
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('user');
+                    window.location.href = '/frontend/pages/home.html';
+                });
+            }
+        });
     });
 }
 
@@ -277,11 +279,10 @@ document.getElementById('businessCard')?.addEventListener('click', (e) => {
 });
 
 function startGame(gameType) {
-    // 狼人杀可以直接跳转到游戏页面
+    // 狼人杀跳转到专门的狼人杀页面（黑色风格）
     if (gameType === 'werewolf') {
-        // 跳转到游戏页面，不传递scroll_id，只传递type=werewolf和mode=game
-        // 这样游戏页面就不会加载任何书卷
-        window.location.href = `/game?type=werewolf&mode=game`;
+        // 跳转到专门的狼人杀页面，而不是书卷风格的game页面
+        window.location.href = '/frontend/pages/werewolf.html';
     } else {
         // 其他游戏暂时显示提示
         alert(`${gameType === 'who-is-ai' ? '谁是AI' : '商业博弈'}功能开发中，敬请期待！`);
