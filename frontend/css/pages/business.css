@@ -752,7 +752,8 @@ body::after {
     align-items: center;
     justify-content: center;
     z-index: 2000;
-    animation: fadeIn 0.3s ease;
+    opacity: 0;
+    animation: fadeIn 0.3s ease forwards;
 }
 
 /* 游戏结束模态框 */
@@ -768,7 +769,8 @@ body::after {
     align-items: center;
     justify-content: center;
     z-index: 1000;
-    animation: fadeIn 0.3s ease;
+    opacity: 0;
+    animation: fadeIn 0.3s ease forwards;
 }
 
 @keyframes fadeIn {
@@ -953,7 +955,9 @@ body::after {
     padding: 0;
     border-radius: 12px;
     box-shadow: 0 8px 32px rgba(61, 40, 23, 0.3);
-    animation: slideDown 0.3s ease;
+    opacity: 0;
+    transform: translateX(-50%) translateY(-20px);
+    animation: slideDown 0.3s ease forwards;
     transition: all 0.3s ease;
 }
 

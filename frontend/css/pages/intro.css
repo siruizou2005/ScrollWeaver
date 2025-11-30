@@ -53,7 +53,9 @@ body::before {
     margin-bottom: 24px;
     backdrop-filter: blur(10px);
     border: 1px solid rgba(212, 196, 176, 0.3);
-    animation: fadeInDown 0.6s ease-out;
+    opacity: 0;
+    transform: translateY(-20px);
+    animation: fadeInDown 0.6s ease-out forwards;
     flex-shrink: 0;
 }
 
@@ -159,6 +161,7 @@ body::before {
     flex-direction: row;
     gap: 24px;
     margin-top: 20px;
+    opacity: 0;
     animation: fadeIn 0.8s ease-out 0.2s both;
     max-width: 1400px;
     margin-left: auto;
@@ -749,7 +752,8 @@ body::before {
     align-items: center;
     justify-content: center;
     z-index: 9998; /* 低于 toast 的 z-index */
-    animation: fadeIn 0.3s ease;
+    opacity: 0;
+    animation: fadeIn 0.3s ease forwards;
 }
 
 .loading-overlay[style*="flex"] {
@@ -823,7 +827,9 @@ body::before {
     max-height: 90vh;
     overflow-y: auto;
     z-index: 1001;
-    animation: modalSlideIn 0.3s ease-out;
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+    animation: modalSlideIn 0.3s ease-out forwards;
 }
 
 @keyframes modalSlideIn {

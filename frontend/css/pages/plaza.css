@@ -222,7 +222,7 @@ body::after {
 
 /* 顶部导航栏 */
 .plaza-header {
-    background: rgba(250, 248, 243, 0.95);
+    background: rgba(250, 248, 243, 0.7);
     backdrop-filter: blur(10px);
     padding: 1rem 2rem;
     border-bottom: 2px solid rgba(212, 175, 55, 0.3);
@@ -498,7 +498,7 @@ body::after {
     cursor: pointer;
     transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
     border: 3px solid rgba(212, 175, 55, 0.3);
-    background: rgba(250, 248, 243, 0.95);
+    background: rgba(250, 248, 243, 0.7);
     /* 多层阴影 - 暖色调，真实悬浮感 */
     box-shadow: 
         0 4px 15px rgba(107, 68, 35, 0.12),
@@ -619,7 +619,7 @@ body::after {
     border-color: rgba(220, 38, 38, 0.4);
     background: linear-gradient(135deg, 
         rgba(220, 38, 38, 0.08) 0%, 
-        rgba(250, 248, 243, 0.95) 100%);
+        rgba(250, 248, 243, 0.7) 100%);
 }
 
 .gathering-card .gathering-illustration {
@@ -827,7 +827,7 @@ body::after {
         inset 0 2px 4px rgba(255, 255, 255, 0.4);
     background: linear-gradient(135deg, 
         rgba(220, 38, 38, 0.12) 0%, 
-        rgba(250, 248, 243, 0.95) 100%);
+        rgba(250, 248, 243, 0.7) 100%);
 }
 
 .portal-card.gathering-card:hover .portal-title {
@@ -1386,7 +1386,8 @@ body::after {
     height: 100%;
     background: rgba(61, 40, 23, 0.4);
     backdrop-filter: blur(4px);
-    animation: fadeInModal 0.3s ease;
+    opacity: 0;
+    animation: fadeInModal 0.3s ease forwards;
 }
 
 @keyframes fadeInModal {
@@ -1417,7 +1418,9 @@ body::after {
     box-shadow: 
         0 20px 60px rgba(61, 40, 23, 0.4),
         inset 0 1px 0 rgba(255, 255, 255, 0.5);
-    animation: slideInModal 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 0;
+    transform: translateY(-30px) scale(0.95);
+    animation: slideInModal 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
     /* 纸张纹理 */
     background-image: 
         repeating-linear-gradient(
@@ -1838,7 +1841,9 @@ body::after {
 
 .create-step {
     display: none;
-    animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 0;
+    transform: translateY(15px);
+    animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
     padding: 2rem;
 }
 
