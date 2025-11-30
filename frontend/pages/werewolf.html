@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 狼人杀 - ScrollWeaver</title>
+    <!-- 引入字体和图标库 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Lato:wght@400;700&display=swap"
+        rel="stylesheet">
+
+    <link rel="stylesheet" href="../css/pages/werewolf.css">
+</head>
+
+<body>
+    <!-- 背景层 -->
+    <div class="background-layer"></div>
+    <div class="overlay-layer"></div>
+
+    <div class="game-container">
+        <!-- 顶部栏 -->
+        <header class="game-header">
+            <button class="back-btn" id="backBtn">
+                <i class="fas fa-chevron-left"></i>
+                <span>返回广场</span>
+            </button>
+            <div class="game-info">
+                <h1 id="gameTitle"><i class="fas fa-moon"></i> AI 狼人杀 <span class="subtitle">ScrollWeaver</span></h1>
+                <div class="status-badge">
+                    <span class="status-dot"></span>
+                    <span id="gameStatus">准备中</span>
+                </div>
+            </div>
+            <div class="header-actions">
+                <button class="icon-btn" id="rulesBtn" title="规则说明">
+                    <i class="fas fa-scroll"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- 游戏主区域 -->
+        <main class="game-main">
+            <!-- 左侧：玩家列表 -->
+            <div class="panel players-panel">
+                <div class="panel-header">
+                    <h3><i class="fas fa-users"></i> 存活玩家</h3>
+                    <span class="player-count-badge" id="playerCount">0/0</span>
+                </div>
+                <div class="players-grid-wrapper">
+                    <div class="players-grid" id="playersGrid">
+                        <!-- 玩家卡片将动态生成 -->
+                        <div class="empty-state">等待加入...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 中间：游戏日志/聊天 -->
+            <div class="center-column">
+                <div class="panel game-log-panel">
+                    <div class="game-log-container" id="gameLog">
+                        <div class="log-message system-welcome">
+                            <i class="fas fa-crow"></i>
+                            <p>欢迎来到 ScrollWeaver 狼人杀</p>
+                            <span class="sub-text">夜幕降临，请保持警惕...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 交互区域 -->
+                <div class="panel interaction-panel">
+                    <div class="interaction-area" id="interactionArea">
+                        <div class="action-prompt" id="actionPrompt" style="display: none;">
+                            <div class="prompt-header">
+                                <span id="actionText">请选择你的行动...</span>
+                                <div class="timer-ring" id="actionTimer">30s</div>
+                            </div>
+                        </div>
+                        <div class="action-buttons" id="actionButtons">
+                            <!-- 动态生成的操作按钮 -->
+                            <button class="btn-primary glow-effect" id="startGameBtn">
+                                <i class="fas fa-play"></i> 开始游戏
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右侧：角色信息与状态 -->
+            <div class="right-column">
+                <!-- 身份卡片 -->
+                <div class="card-container">
+                    <div class="my-card">
+                        <div class="card-inner">
+                            <div class="card-front">
+                                <div class="card-pattern"></div>
+                                <div class="role-icon-wrapper">
+                                    <i class="fas fa-question"></i>
+                                </div>
+                                <h3>你的身份</h3>
+                                <p class="click-hint">等待发牌</p>
+                            </div>
+                            <div class="card-back" id="myRoleCard">
+                                <div class="card-pattern"></div>
+                                <div class="role-icon-large" id="myRoleIcon">🐺</div>
+                                <h3 id="myRoleName">未知</h3>
+                                <div class="role-divider"></div>
+                                <p id="myRoleDesc">游戏开始后揭晓...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 游戏状态 -->
+                <div class="panel stats-panel">
+                    <div class="stat-row">
+                        <div class="stat-icon"><i class="fas fa-hourglass-half"></i></div>
+                        <div class="stat-content">
+                            <span class="label">当前阶段</span>
+                            <span class="value" id="currentPhase">等待开始</span>
+                        </div>
+                    </div>
+                    <div class="stat-divider"></div>
+                    <div class="stat-row">
+                        <div class="stat-icon"><i class="fas fa-calendar-day"></i></div>
+                        <div class="stat-content">
+                            <span class="label">存活天数</span>
+                            <span class="value" id="dayCount">第 0 天</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- 游戏配置弹窗 -->
+    <div class="modal" id="configModal">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content glass-effect">
+            <div class="modal-header">
+                <h2><i class="fas fa-cog"></i> 游戏配置</h2>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>选择板子</label>
+                    <div class="select-wrapper">
+                        <select id="presetSelect">
+                            <option value="standard_12">12人标准局 (4狼4神4民)</option>
+                            <option value="simple_8">8人娱乐局 (2狼2神4民)</option>
+                            <option value="simple_6">6人新手局 (2狼2神2民)</option>
+                        </select>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>选择身份（测试用）</label>
+                    <div class="select-wrapper">
+                        <select id="roleSelect">
+                            <option value="">🎲 随机分配</option>
+                            <option value="werewolf">🐺 狼人</option>
+                            <option value="seer">🔮 预言家</option>
+                            <option value="witch">🧪 女巫</option>
+                            <option value="hunter">🏹 猎人</option>
+                            <option value="guard">🛡️ 守卫</option>
+                            <option value="villager">🧑‍🌾 村民</option>
+                        </select>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-text" id="cancelConfigBtn">取消</button>
+                <button class="btn-primary glow-effect" id="confirmConfigBtn">创建房间</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 确认对话框 -->
+    <div class="modal" id="confirmModal">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content glass-effect confirm-dialog">
+            <div class="modal-header">
+                <h2><i class="fas fa-exclamation-triangle"></i> 确认操作</h2>
+            </div>
+            <div class="modal-body">
+                <p id="confirmMessage">确定要执行此操作吗？</p>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-text" id="confirmCancelBtn">取消</button>
+                <button class="btn-primary glow-effect" id="confirmOkBtn">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 引入原有的 JS -->
+    <script src="../js/pages/werewolf.js"></script>
+</body>
+
+</html>

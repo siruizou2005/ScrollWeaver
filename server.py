@@ -16,6 +16,7 @@ from modules.utils.text_utils import remove_markdown
 from database import db
 from modules.core.socketio_manager import SocketIOManager
 from modules.core.sessions import SessionMode, SessionManager
+from modules.werewolf.werewolf_session import WerewolfSessionManager
 import socketio
 # Server class is now in modules.core.server, but ScrollWeaver wrapper is still in ScrollWeaver.py
 
@@ -51,6 +52,9 @@ socketio_manager = SocketIOManager()
 
 # 初始化会话管理器（用于聊天会话）
 session_manager = SessionManager()
+
+# 初始化狼人杀会话管理器
+werewolf_manager = WerewolfSessionManager()
 
 # Startup event handler for warmup
 @app.on_event("startup")
@@ -2611,6 +2615,64 @@ async def get_chat_extensions(session_id: str, current_user: dict = Depends(get_
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+
+# -------------------------------------------------------------------------
+# 狼人杀 API 接口
+# -------------------------------------------------------------------------
+
+@app.post("/api/werewolf/create")
+async def create_werewolf_game(request: Request):
+    """创建新的狼人杀游戏"""
+    data = await request.json()
+    preset = data.get("preset", "standard_12")
+    preferred_role = data.get("preferred_role")
+    
+    try:
+        game_id = werewolf_manager.create_game(preset, preferred_role)
+        return {"success": True, "game_id": game_id, "message": "游戏创建成功"}
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {"success": False, "error": str(e)}
+
+@app.post("/api/werewolf/start")
+async def start_werewolf_game(request: Request):
+    """开始狼人杀游戏"""
+    data = await request.json()
+    game_id = data.get("game_id")
+    
+    session = werewolf_manager.get_session(game_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="游戏不存在")
+        
+    # 异步启动游戏
+    asyncio.create_task(session.start_game())
+    
+    return {"success": True, "message": "游戏已启动"}
+
+@app.websocket("/ws/werewolf/{game_id}/{player_id}")
+async def werewolf_websocket_endpoint(websocket: WebSocket, game_id: str, player_id: str):
+    """狼人杀游戏WebSocket连接"""
+    session = werewolf_manager.get_session(game_id)
+    if not session:
+        await websocket.close(code=4004, reason="Game not found")
+        return
+        
+    await session.connect_player(player_id, websocket)
+    
+    try:
+        while True:
+            data = await websocket.receive_json()
+            # 处理玩家消息
+            await session.handle_message(player_id, data)
+            
+    except WebSocketDisconnect:
+        session.disconnect_player(player_id)
+    except Exception as e:
+        print(f"WebSocket error: {e}")
+        import traceback
+        traceback.print_exc()
+        session.disconnect_player(player_id)
 
 if __name__ == "__main__":
     uvicorn.run("server:app", host="0.0.0.0", port=8000, reload=True)

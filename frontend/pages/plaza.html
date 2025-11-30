@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>广场 - ScrollWeaver</title>
     <link rel="stylesheet" href="../css/pages/plaza.css">
+    <link rel="stylesheet" href="../css/common/confirm-dialog.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -71,6 +72,41 @@
         </div>
     </div>
 
+    <!-- 确认对话框 -->
+    <div class="modal" id="confirmModal">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content confirm-dialog">
+            <div class="modal-header">
+                <h2><i class="fas fa-exclamation-triangle"></i> 确认操作</h2>
+            </div>
+            <div class="modal-body">
+                <p id="confirmMessage">确定要执行此操作吗？</p>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-cancel" id="confirmCancelBtn">取消</button>
+                <button class="btn-confirm" id="confirmOkBtn">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 确认对话框 -->
+    <div class="modal" id="confirmModal">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content confirm-dialog">
+            <div class="modal-header">
+                <h2><i class="fas fa-exclamation-triangle"></i> 确认操作</h2>
+            </div>
+            <div class="modal-body">
+                <p id="confirmMessage">确定要执行此操作吗？</p>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-cancel" id="confirmCancelBtn">取消</button>
+                <button class="btn-confirm" id="confirmOkBtn">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/common/confirm-dialog.js"></script>
     <script src="../js/pages/plaza.js"></script>
 </body>
 </html>
