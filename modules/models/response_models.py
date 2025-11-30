@@ -222,3 +222,55 @@ class BatchMotivations(BaseModel):
     motivations: List[CharacterMotivation] = Field(
         description="List of character motivations, one for each character"
     )
+
+
+# 书卷配置模型
+class CharacterConfig(BaseModel):
+    """Model for a single character configuration."""
+    role_name: str = Field(
+        description="角色名称，必须是具体的人名（如'张三'、'李四'等），禁止使用'角色1'、'角色2'等占位符"
+    )
+    nickname: str = Field(
+        description="昵称，可与角色名相同"
+    )
+    profile: str = Field(
+        description="角色简介（100-150字），必须是对该角色的具体介绍，包括性格、背景、特点等，禁止使用'基于xxx的角色'这样的占位符"
+    )
+    gender: str = Field(
+        description="性别"
+    )
+    identity: List[str] = Field(
+        default_factory=list,
+        description="身份列表（如 ['学生', '主角']）"
+    )
+    motivation: str = Field(
+        default="",
+        description="角色的动机（50字以内）"
+    )
+
+
+class LocationConfig(BaseModel):
+    """Model for a single location configuration."""
+    location_name: str = Field(description="地点名称")
+    description: str = Field(description="地点简介（50字以内）")
+    detail: str = Field(description="地点详细描述（100-150字）")
+
+
+class WorldConfig(BaseModel):
+    """Model for world configuration."""
+    world_name: str = Field(description="世界观名称")
+    description: str = Field(description="详细的世界观描述（200-300字）")
+    language: Literal["zh", "en"] = Field(description="语言代码")
+
+
+class ScrollConfig(BaseModel):
+    """Model for complete scroll configuration."""
+    world: WorldConfig = Field(description="世界观配置")
+    characters: List[CharacterConfig] = Field(
+        description="角色列表，必须包含指定数量的角色，每个角色必须有具体的名称和介绍。每个角色必须有不同的名称，禁止使用占位符。",
+        min_length=1  # 至少1个角色，实际数量由调用方通过 schema 的 minItems/maxItems 控制
+    )
+    locations: List[LocationConfig] = Field(
+        description="地点列表，必须包含指定数量的地点。每个地点必须有唯一的名称。",
+        min_length=1  # 至少1个地点，实际数量由调用方通过 schema 的 minItems/maxItems 控制
+    )

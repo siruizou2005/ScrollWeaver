@@ -51,6 +51,16 @@ async function loadScrollInfo() {
         // 更新页面信息
         document.getElementById('scrollTitle').textContent = scrollData.title || '未知书卷';
         
+        // 更新共享按钮状态
+        const shareBtn = document.getElementById('shareBtn');
+        if (shareBtn && scrollData.is_public) {
+            shareBtn.classList.add('shared');
+            shareBtn.title = '已共享';
+        } else if (shareBtn) {
+            shareBtn.classList.remove('shared');
+            shareBtn.title = '分享';
+        }
+        
         // 显示世界观描述（过滤掉文件名等无关信息）
         let description = scrollData.description || '暂无描述';
         // 如果描述包含"从文档自动生成"等字样，尝试提取更有意义的内容
@@ -78,9 +88,6 @@ async function loadScrollInfo() {
         
         // 加载角色列表（仅用于私语模式的下拉选择）
         await loadCharacters(scrollId);
-        
-        // 加载历史进度
-        await loadHistory(scrollId);
         
     } catch (error) {
         console.error('加载书卷信息失败:', error);
@@ -332,49 +339,6 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 /**
- * 加载历史进度
- */
-async function loadHistory(scrollId) {
-    try {
-        // TODO: 调用API获取历史记录
-        const timeline = document.getElementById('historyTimeline');
-        
-        // 模拟数据
-        const acts = [
-            { act: 1, title: '第一幕：缘起', date: '2024-01-01' },
-            { act: 2, title: '第二幕：冲突', date: '2024-01-02' }
-        ];
-        
-        if (acts.length === 0) {
-            timeline.innerHTML = `
-                <div class="timeline-empty">
-                    <i class="fas fa-clock"></i>
-                    <p>暂无历史记录</p>
-                </div>
-            `;
-            return;
-        }
-        
-        timeline.innerHTML = '';
-        acts.forEach(act => {
-            const item = document.createElement('div');
-            item.className = 'timeline-item';
-            item.innerHTML = `
-                <h4>${act.title}</h4>
-                <p>${act.date}</p>
-            `;
-            item.addEventListener('click', () => {
-                enterStoryMode(act.act, false, false, null);
-            });
-            timeline.appendChild(item);
-        });
-        
-    } catch (error) {
-        console.error('加载历史进度失败:', error);
-    }
-}
-
-/**
  * 绑定事件监听器
  */
 function bindEventListeners() {
@@ -382,6 +346,24 @@ function bindEventListeners() {
     document.getElementById('backBtn').addEventListener('click', () => {
         window.location.href = '/frontend/pages/plaza.html';
     });
+    
+    // 共享按钮
+    const shareBtn = document.getElementById('shareBtn');
+    if (shareBtn) {
+        shareBtn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('共享按钮被点击');
+            try {
+                await handleShareScroll();
+            } catch (error) {
+                console.error('共享操作出错:', error);
+                alert('操作失败：' + (error.message || '未知错误'));
+            }
+        });
+    } else {
+        console.warn('共享按钮未找到');
+    }
     
     // 私语模式
     document.getElementById('enterChatBtn').addEventListener('click', () => {
@@ -570,6 +552,133 @@ async function joinGameRoom(roomCode) {
  * 显示/隐藏加载提示
  */
 function showLoading(show) {
-    document.getElementById('loadingOverlay').style.display = show ? 'flex' : 'none';
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    if (loadingOverlay) {
+        if (show) {
+            loadingOverlay.style.display = 'flex';
+            loadingOverlay.style.opacity = '1';
+        } else {
+            // 添加淡出动画
+            loadingOverlay.style.opacity = '0';
+            setTimeout(() => {
+                loadingOverlay.style.display = 'none';
+                loadingOverlay.style.opacity = '1'; // 恢复透明度，以便下次显示
+            }, 300);
+        }
+    }
+}
+
+/**
+ * 处理书卷共享
+ */
+async function handleShareScroll() {
+    try {
+        // 先获取当前书卷信息，检查是否已共享
+        const response = await fetch(`/api/scroll/${scrollId}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error('获取书卷信息失败');
+        }
+        
+        const scroll = await response.json();
+        const scrollData = scroll.scroll || scroll;
+        const isCurrentlyShared = scrollData.is_public || false;
+        
+        // 显示确认对话框
+        const message = isCurrentlyShared 
+            ? '确定要取消共享此书卷吗？取消后其他用户将无法在"阅卷共享书卷"中看到此书卷。'
+            : '确定要共享此书卷吗？共享后其他用户可以在"阅卷共享书卷"中看到此书卷。';
+        
+        // 修改确认对话框标题
+        const confirmModal = document.getElementById('confirmModal');
+        const modalHeader = confirmModal?.querySelector('.modal-header h2');
+        const originalTitle = modalHeader ? modalHeader.innerHTML : null;
+        
+        if (modalHeader) {
+            // 根据操作类型设置标题
+            if (isCurrentlyShared) {
+                modalHeader.innerHTML = '<i class="fas fa-share-alt"></i> 取消共享';
+            } else {
+                modalHeader.innerHTML = '<i class="fas fa-share-alt"></i> 确认共享';
+            }
+        }
+        
+        // 确保 showConfirm 函数可用，如果不可用则使用系统确认对话框
+        let confirmed = false;
+        if (typeof showConfirm === 'function') {
+            confirmed = await showConfirm(message);
+        } else {
+            // 回退到系统确认对话框
+            confirmed = window.confirm(message);
+        }
+        
+        // 恢复原始标题
+        if (modalHeader && originalTitle) {
+            modalHeader.innerHTML = originalTitle;
+        }
+        
+        if (!confirmed) {
+            return;
+        }
+        
+        // 执行共享/取消共享操作
+        showLoading(true);
+        
+        const shareResponse = await fetch(`/api/scroll/${scrollId}/share`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                is_public: !isCurrentlyShared
+            })
+        });
+        
+        if (!shareResponse.ok) {
+            const errorData = await shareResponse.json().catch(() => ({ detail: '操作失败' }));
+            throw new Error(errorData.detail || '共享操作失败');
+        }
+        
+        const result = await shareResponse.json();
+        
+        // 先关闭loading，再显示成功消息（避免同时显示造成显示异常）
+        showLoading(false);
+        
+        // 显示成功消息（使用页面内提示）
+        if (typeof showSuccess === 'function') {
+            showSuccess(result.message || (isCurrentlyShared ? '已取消共享' : '共享成功'));
+        } else {
+            // 回退到 alert
+            alert(result.message || (isCurrentlyShared ? '已取消共享' : '共享成功'));
+        }
+        
+        // 更新按钮状态（可选：改变图标或文字）
+        const shareBtn = document.getElementById('shareBtn');
+        if (shareBtn) {
+            if (!isCurrentlyShared) {
+                shareBtn.classList.add('shared');
+                shareBtn.title = '已共享';
+            } else {
+                shareBtn.classList.remove('shared');
+                shareBtn.title = '分享';
+            }
+        }
+        
+    } catch (error) {
+        console.error('共享书卷失败:', error);
+        showLoading(false);
+        // 显示错误消息（使用页面内提示）
+        if (typeof showError === 'function') {
+            showError(error.message || '共享操作失败，请重试');
+        } else {
+            // 回退到 alert
+            alert(error.message || '共享操作失败，请重试');
+        }
+    }
 }
 

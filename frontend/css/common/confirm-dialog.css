@@ -12,6 +12,10 @@
     animation: fadeInModal 0.3s ease;
 }
 
+.modal#confirmModal {
+    display: none;
+}
+
 @keyframes fadeInModal {
     from {
         opacity: 0;

@@ -125,6 +125,24 @@ body::before {
     justify-content: center;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     backdrop-filter: blur(10px);
+    position: relative;
+}
+
+.icon-btn.shared {
+    color: #d4af37;
+    border-color: #d4af37;
+}
+
+.icon-btn.shared::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 8px;
+    height: 8px;
+    background: #d4af37;
+    border-radius: 50%;
+    border: 2px solid white;
 }
 
 .icon-btn:hover {
@@ -159,7 +177,7 @@ body::before {
     min-width: 0;
 }
 
-/* 右侧：玩法选择和历史进度 */
+/* 右侧：玩法选择 */
 .intro-right {
     flex: 1;
     display: flex;
@@ -414,7 +432,7 @@ body::before {
     font-size: 14px;
 }
 
-/* 模式选择和历史进度 */
+/* 模式选择 */
 .mode-selection {
     background: rgba(255, 255, 255, 0.95);
     padding: 26px 30px;
@@ -432,24 +450,7 @@ body::before {
                 0 6px 16px rgba(0, 0, 0, 0.06);
 }
 
-/* 历史进度区域 - 在右侧下方 */
-.history-section {
-    background: rgba(255, 255, 255, 0.95);
-    padding: 24px 28px;
-    border-radius: 20px;
-    border: 1px solid rgba(212, 196, 176, 0.3);
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08), 
-                0 4px 12px rgba(0, 0, 0, 0.04);
-    backdrop-filter: blur(10px);
-    transition: all 0.3s ease;
-    flex: 1;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-}
-
-.mode-selection h2,
-.history-section h2 {
+.mode-selection h2 {
     font-size: 20px;
     margin-bottom: 18px;
     color: #6b5537;
@@ -462,33 +463,7 @@ body::before {
     flex-shrink: 0;
 }
 
-.history-section .timeline {
-    flex: 1;
-    overflow-y: auto;
-    min-height: 0;
-    padding-right: 4px;
-}
-
-.history-section .timeline::-webkit-scrollbar {
-    width: 6px;
-}
-
-.history-section .timeline::-webkit-scrollbar-track {
-    background: rgba(212, 196, 176, 0.2);
-    border-radius: 3px;
-}
-
-.history-section .timeline::-webkit-scrollbar-thumb {
-    background: rgba(139, 111, 71, 0.4);
-    border-radius: 3px;
-}
-
-.history-section .timeline::-webkit-scrollbar-thumb:hover {
-    background: rgba(139, 111, 71, 0.6);
-}
-
-.mode-selection h2 i,
-.history-section h2 i {
+.mode-selection h2 i {
     font-size: 24px;
     color: #8b6f47;
 }
@@ -761,100 +736,6 @@ body::before {
     background: white;
 }
 
-/* 历史进度时间轴 */
-.timeline {
-    position: relative;
-    padding-left: 30px;
-}
-
-.timeline::before {
-    content: '';
-    position: absolute;
-    left: 12px;
-    top: 0;
-    bottom: 0;
-    width: 3px;
-    background: linear-gradient(180deg, #8b6f47 0%, #d4c4b0 50%, #8b6f47 100%);
-    border-radius: 2px;
-}
-
-.timeline-item {
-    position: relative;
-    margin-bottom: 24px;
-    padding-left: 30px;
-    padding: 16px 20px 16px 40px;
-    background: rgba(248, 245, 240, 0.5);
-    border-radius: 12px;
-    border-left: 3px solid #8b6f47;
-    transition: all 0.3s ease;
-    cursor: pointer;
-}
-
-.timeline-item:hover {
-    background: rgba(255, 255, 255, 0.8);
-    transform: translateX(4px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-}
-
-.timeline-item::before {
-    content: '';
-    position: absolute;
-    left: -26px;
-    top: 20px;
-    width: 14px;
-    height: 14px;
-    border-radius: 50%;
-    background: #8b6f47;
-    border: 3px solid white;
-    box-shadow: 0 0 0 3px #d4c4b0, 0 2px 8px rgba(139, 111, 71, 0.3);
-    transition: all 0.3s ease;
-}
-
-.timeline-item:hover::before {
-    transform: scale(1.2);
-    box-shadow: 0 0 0 3px #d4c4b0, 0 4px 12px rgba(139, 111, 71, 0.4);
-}
-
-.timeline-item h4 {
-    color: #3d2817;
-    margin-bottom: 6px;
-    font-size: 17px;
-    font-weight: 600;
-}
-
-.timeline-item p {
-    color: #6b5537;
-    font-size: 14px;
-}
-
-.timeline-empty {
-    text-align: center;
-    padding: 50px 20px;
-    color: #8b6f47;
-}
-
-.timeline-empty i {
-    font-size: 56px;
-    margin-bottom: 20px;
-    opacity: 0.4;
-    animation: pulse 2s ease-in-out infinite;
-}
-
-@keyframes pulse {
-    0%, 100% {
-        opacity: 0.4;
-    }
-    50% {
-        opacity: 0.6;
-    }
-}
-
-.timeline-empty p {
-    font-size: 16px;
-    color: #8b6f47;
-    opacity: 0.7;
-}
-
 /* 加载提示 */
 .loading-overlay {
     position: fixed;
@@ -864,11 +745,15 @@ body::before {
     bottom: 0;
     background: rgba(0, 0, 0, 0.6);
     backdrop-filter: blur(4px);
-    display: flex;
+    display: none; /* 默认隐藏 */
     align-items: center;
     justify-content: center;
-    z-index: 9999;
+    z-index: 9998; /* 低于 toast 的 z-index */
     animation: fadeIn 0.3s ease;
+}
+
+.loading-overlay[style*="flex"] {
+    display: flex !important;
 }
 
 .loading-spinner {
@@ -1122,8 +1007,7 @@ body::before {
     }
     
     .world-summary,
-    .mode-selection,
-    .history-section {
+    .mode-selection {
         padding: 24px;
     }
     

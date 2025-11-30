@@ -13,8 +13,13 @@ function showConfirm(message) {
         const confirmMessage = document.getElementById('confirmMessage');
         if (confirmModal && confirmMessage) {
             confirmMessage.textContent = message;
+            // 确保模态框显示
+            confirmModal.style.display = 'flex';
+            confirmModal.style.alignItems = 'center';
+            confirmModal.style.justifyContent = 'center';
             confirmModal.classList.add('active');
         } else {
+            console.warn('确认对话框元素未找到，使用系统确认对话框');
             // 如果元素不存在，回退到系统确认对话框
             resolve(confirm(message));
         }
@@ -25,6 +30,7 @@ function closeConfirm(result) {
     const confirmModal = document.getElementById('confirmModal');
     if (confirmModal) {
         confirmModal.classList.remove('active');
+        confirmModal.style.display = 'none';
     }
     if (globalConfirmResolve) {
         globalConfirmResolve(result);

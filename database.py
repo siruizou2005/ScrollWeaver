@@ -330,6 +330,69 @@ class Database:
         conn.close()
         return story_id
     
+    def update_scroll_share_status(self, scroll_id: int, is_public: bool, user_id: int) -> bool:
+        """更新书卷的共享状态（只有书卷所有者可以更新）"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        # 检查书卷是否存在且属于该用户
+        cursor.execute('''
+            SELECT user_id FROM scrolls WHERE id = ?
+        ''', (scroll_id,))
+        result = cursor.fetchone()
+        
+        if not result:
+            conn.close()
+            return False
+        
+        if result[0] != user_id:
+            conn.close()
+            return False
+        
+        # 更新共享状态
+        cursor.execute('''
+            UPDATE scrolls SET is_public = ?, updated_at = ? WHERE id = ?
+        ''', (1 if is_public else 0, datetime.now().isoformat(), scroll_id))
+        
+        conn.commit()
+        conn.close()
+        return True
+    
+    def get_shared_scrolls(self, current_user_id: int) -> List[Dict]:
+        """获取共享的书卷列表（包括当前用户自己共享的书卷）"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        # 获取所有共享的书卷（包括用户自己的），并关联用户信息
+        cursor.execute('''
+            SELECT s.id, s.user_id, s.title, s.description, s.cover_image, s.scroll_type, 
+                   s.preset_path, s.world_dir, s.is_public, s.created_at, u.username
+            FROM scrolls s
+            LEFT JOIN users u ON s.user_id = u.id
+            WHERE s.is_public = 1 AND s.scroll_type != 'system'
+            ORDER BY s.created_at DESC
+        ''', ())
+        
+        results = cursor.fetchall()
+        scrolls = []
+        for row in results:
+            scrolls.append({
+                'id': row[0],
+                'user_id': row[1],
+                'title': row[2],
+                'description': row[3],
+                'cover_image': row[4],
+                'scroll_type': row[5],
+                'preset_path': row[6],
+                'world_dir': row[7],
+                'is_public': bool(row[8]),
+                'created_at': row[9],
+                'author': row[10]  # 共享人用户名
+            })
+        
+        conn.close()
+        return scrolls
+    
     def get_user_stories(self, user_id: int) -> List[Dict]:
         """获取用户的故事列表"""
         conn = sqlite3.connect(self.db_path)
