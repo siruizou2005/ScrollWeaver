@@ -1530,19 +1530,28 @@ async def create_scroll(request: Request, current_user: dict = Depends(get_curre
                 writer.writerow(row)
         
         # 4. 创建角色文件
+        # 首先生成所有角色的code
+        char_code_map = {}  # 存储角色名到code的映射
+        for char in data['characters']:
+            char_name = char.get('name', '').strip()
+            if not char_name:
+                continue
+            
+            # 从name生成code
+            char_code = re.sub(r'[^\w\s-]', '', char_name.lower())
+            char_code = re.sub(r'[-\s]+', '_', char_code)
+            char_code = f"{char_code}-zh"  # 添加语言后缀
+            char_code_map[char_name] = char_code
+        
         performer_codes = []
         for char in data['characters']:
             char_name = char.get('name', '').strip()
             if not char_name:
                 continue  # 跳过名称为空的角色
             
-            # 如果code为空或无效，从name生成
-            char_code = char.get('code', '').strip()
+            char_code = char_code_map.get(char_name)
             if not char_code:
-                import re
-                char_code = re.sub(r'[^\w\s-]', '', char_name.lower())
-                char_code = re.sub(r'[-\s]+', '_', char_code)
-                print(f"警告：角色 '{char_name}' 的代码为空，自动生成为: {char_code}")
+                continue
             
             performer_codes.append(char_code)
             
@@ -1552,18 +1561,21 @@ async def create_scroll(request: Request, current_user: dict = Depends(get_curre
             # 构建角色关系
             relations = {}
             for other_char in data['characters']:
-                if other_char['code'] != char_code:
-                    relations[other_char['code']] = {
-                        "relation": [],
-                        "detail": ""
-                    }
+                other_name = other_char.get('name', '').strip()
+                if other_name and other_name != char_name:
+                    other_code = char_code_map.get(other_name)
+                    if other_code:
+                        relations[other_code] = {
+                            "relation": [],
+                            "detail": ""
+                        }
             
             char_data = {
                 "role_code": char_code,
                 "role_name": char['name'],
                 "source": source_name,
                 "activity": 1,
-                "profile": char['profile'],
+                "profile": char.get('description', char.get('profile', '')),
                 "nickname": char.get('nickname', char['name']),
                 "relation": relations
             }
@@ -1687,7 +1699,8 @@ async def upload_document(
             os.environ['GEMINI_API_KEY'] = gemini_api_key
             
             # 创建客户端（使用Gemini Developer API，不是Vertex AI）
-            client = genai.Client(vertexai=False)
+            # 新API需要显式传递 api_key 参数
+            client = genai.Client(api_key=gemini_api_key, vertexai=False)
             
             print(f"[上传文档] 开始使用 Gemini API（新API）一次性提取所有信息...")
             
@@ -1746,7 +1759,7 @@ async def upload_document(
                 
                 print(f"[上传文档] 使用 Gemini API 处理 TXT 文件: {file.filename}")
                 response = client.models.generate_content(
-                    model="gemini-2.5-flash",
+                    model="gemini-2.5-pro",
                     contents=[extraction_prompt, file_text]
                 )
             else:
@@ -1760,7 +1773,7 @@ async def upload_document(
                 
                 # 使用新API的方式：直接使用 Part.from_bytes
                 response = client.models.generate_content(
-                    model="gemini-2.5-flash",
+                    model="gemini-2.5-pro",
                     contents=[
                         types.Part.from_bytes(
                             data=file_data,

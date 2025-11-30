@@ -184,27 +184,55 @@ if (generateForm) {
         progressFill.style.width = '0%';
         progressText.textContent = '正在上传文档...';
         
+        // 模拟上传进度
+        let currentProgress = 0;
+        let uploadInterval = null;
+        let progressPromise = new Promise((resolve) => {
+            // 模拟上传进度，逐渐增加到80%
+            uploadInterval = setInterval(() => {
+                currentProgress += Math.random() * 10 + 5; // 每次增加5-15%
+                if (currentProgress >= 80) {
+                    currentProgress = 80;
+                    clearInterval(uploadInterval);
+                    progressFill.style.width = '80%';
+                    progressText.textContent = '正在制作书卷...';
+                    resolve(); // 到达80%后resolve
+                } else {
+                    progressFill.style.width = currentProgress + '%';
+                }
+            }, 150); // 每150ms更新一次
+        });
+        
         try {
-            const response = await fetch(`${API_BASE}/api/upload-document`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                },
-                body: formData
-            });
+            // 同时进行上传和进度条动画
+            const [response] = await Promise.all([
+                fetch(`${API_BASE}/api/upload-document`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: formData
+                }),
+                progressPromise // 等待进度条到达80%
+            ]);
+            
+            // 确保清除进度条动画（防止重复）
+            if (uploadInterval) {
+                clearInterval(uploadInterval);
+            }
             
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
                 throw new Error(errorData.detail || '上传失败');
             }
             
+            // 进度条到100%
             progressFill.style.width = '100%';
-            progressText.textContent = '文档处理完成，正在创建书卷...';
+            progressText.textContent = '书卷创建成功！';
             
             const result = await response.json();
             
             if (result.success) {
-                progressText.textContent = '书卷创建成功！';
                 setTimeout(() => {
                     closeGenerateModalFunc();
                     // 跳转到书卷详情页或刷新页面
@@ -218,6 +246,10 @@ if (generateForm) {
                 throw new Error(result.message || '创建失败');
             }
         } catch (error) {
+            // 清除进度条动画
+            if (uploadInterval) {
+                clearInterval(uploadInterval);
+            }
             console.error('上传文档失败:', error);
             progressText.textContent = `错误: ${error.message}`;
             alert(`上传失败: ${error.message}`);

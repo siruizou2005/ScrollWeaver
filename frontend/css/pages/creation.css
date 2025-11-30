@@ -544,6 +544,16 @@ body {
     max-width: 700px;
     max-height: 90vh;
     overflow-y: auto;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+/* 确保步骤指示器和标题固定，内容区域可滚动 */
+.create-scroll-modal h2,
+.create-scroll-modal .step-indicator {
+    flex-shrink: 0;
 }
 
 .create-scroll-modal h2 {
@@ -623,10 +633,16 @@ body {
     display: none;
     animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     padding: 2rem;
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    min-height: 0;
+    max-height: calc(90vh - 200px); /* 减去标题和步骤指示器的高度 */
 }
 
 .create-step.active {
-    display: block;
+    display: flex;
+    flex-direction: column;
 }
 
 @keyframes fadeIn {
