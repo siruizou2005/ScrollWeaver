@@ -9,11 +9,16 @@ body {
     font-family: 'Noto Serif SC', 'Inter', sans-serif;
     background: linear-gradient(135deg, #f5f3f0 0%, #e8e6e1 100%);
     min-height: 100vh;
+    width: 100vw;
     display: flex;
     align-items: center;
     justify-content: center;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
     position: relative;
+    margin: 0;
+    padding: 20px;
+    box-sizing: border-box;
 }
 
 /* 背景纹理 */
@@ -49,24 +54,30 @@ body::before {
 
 .login-container {
     width: 100%;
-    height: 100vh;
+    min-height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
     perspective: 2000px;
     position: relative;
     z-index: 1;
+    padding: 20px;
+    box-sizing: border-box;
 }
 
 /* 展开的书卷 */
 .scroll-book {
     width: 900px;
+    max-width: 90vw;
     height: 650px;
+    max-height: 90vh;
     display: flex;
+    flex-direction: row;
     position: relative;
     transform-style: preserve-3d;
     animation: bookFloat 4s ease-in-out infinite;
     filter: drop-shadow(0 20px 60px rgba(0, 0, 0, 0.5));
+    margin: 0 auto;
 }
 
 @keyframes bookFloat {
@@ -81,15 +92,22 @@ body::before {
 /* 书页 */
 .book-page {
     width: 400px;
+    flex: 0 0 400px;
     height: 100%;
+    min-height: 100%;
     background: #faf8f3;
     position: relative;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
     box-shadow: 
         inset 0 0 30px rgba(107, 68, 35, 0.08),
         0 10px 40px rgba(0, 0, 0, 0.15);
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-top: 2rem;
+    padding-bottom: 2rem;
+    box-sizing: border-box;
 }
 
 .left-page {
@@ -129,6 +147,9 @@ body::before {
     padding: 2rem;
     position: relative;
     z-index: 1;
+    box-sizing: border-box;
+    overflow-y: visible;
+    overflow-x: hidden;
 }
 
 .page-title {
@@ -263,7 +284,9 @@ body::before {
 /* 书脊 */
 .book-spine {
     width: 30px;
+    flex: 0 0 30px;
     height: 100%;
+    min-height: 100%;
     background: linear-gradient(180deg, 
         #6b4423 0%, 
         #8b4513 25%,
@@ -275,6 +298,7 @@ body::before {
         inset -5px 0 20px rgba(0, 0, 0, 0.4),
         inset 5px 0 20px rgba(0, 0, 0, 0.4);
     z-index: 2;
+    flex-shrink: 0;
 }
 
 .book-spine::before {
@@ -314,47 +338,78 @@ body::before {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
+    width: 100%;
+    max-width: 100%;
+    padding: 1rem 1.5rem;
+    box-sizing: border-box;
+    min-height: auto;
 }
 
 .decorative-title {
-    font-size: 3rem;
+    font-size: 2.5rem;
     font-weight: 800;
     color: #3d2817;
     margin-bottom: 0.5rem;
     letter-spacing: 0.1em;
     text-shadow: 2px 2px 4px rgba(107, 68, 35, 0.2);
+    line-height: 1.2;
 }
 
 .decorative-subtitle {
-    font-size: 1.5rem;
+    font-size: 1.3rem;
     color: #6b4423;
-    margin-bottom: 2rem;
+    margin-bottom: 1.5rem;
     font-weight: 600;
+    line-height: 1.3;
 }
 
 .decorative-line {
     width: 100px;
     height: 2px;
     background: linear-gradient(90deg, transparent, #d4af37, transparent);
-    margin: 2rem 0;
+    margin: 1.5rem 0;
     box-shadow: 0 2px 4px rgba(212, 175, 55, 0.3);
+    flex-shrink: 0;
 }
 
 .decorative-text {
     color: #6b4423;
-    line-height: 1.8;
-    font-size: 1rem;
+    line-height: 1.6;
+    font-size: 0.95rem;
+    width: 100%;
 }
 
 .decorative-text p {
-    margin: 0.5rem 0;
+    margin: 0.4rem 0;
+}
+
+.decorative-features {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid rgba(212, 175, 55, 0.2);
+    width: 100%;
+}
+
+.decorative-features p {
+    margin: 0.8rem 0;
+    color: #8b4513;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.decorative-features i {
+    color: #d4af37;
+    font-size: 1rem;
 }
 
 .decorative-pattern {
-    margin-top: 3rem;
-    width: 200px;
-    height: 200px;
+    margin-top: 2rem;
+    width: 150px;
+    height: 150px;
     background: 
         radial-gradient(circle, rgba(212, 175, 55, 0.1) 0%, transparent 70%),
         repeating-linear-gradient(
@@ -366,6 +421,7 @@ body::before {
         );
     border-radius: 50%;
     opacity: 0.6;
+    flex-shrink: 0;
 }
 
 /* 翻页动画层 */
@@ -426,6 +482,8 @@ body::before {
 /* 表单切换动画 */
 .form-section {
     animation: fadeIn 0.3s ease;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 @keyframes fadeIn {
@@ -443,24 +501,43 @@ body::before {
 @media (max-width: 1024px) {
     .scroll-book {
         width: 700px;
+        max-width: 95vw;
         height: 550px;
+        max-height: 85vh;
     }
     
     .book-page {
         width: 320px;
+        flex: 0 0 320px;
+    }
+    
+    .book-spine {
+        width: 20px;
+        flex: 0 0 20px;
     }
 }
 
 @media (max-width: 768px) {
+    body {
+        padding: 10px;
+    }
+    
+    .login-container {
+        padding: 10px;
+    }
+    
     .scroll-book {
-        width: 90%;
+        width: 100%;
+        max-width: 100%;
         height: auto;
         min-height: 500px;
         flex-direction: column;
+        max-height: none;
     }
     
     .book-page {
         width: 100%;
+        flex: 1 1 auto;
         height: auto;
         min-height: 400px;
     }
@@ -475,11 +552,27 @@ body::before {
     
     .book-spine {
         width: 100%;
+        flex: 0 0 auto;
         height: 20px;
+        min-height: 20px;
     }
     
     .book-spine::after {
         transform: translate(-50%, -50%) rotate(0deg);
         font-size: 0.6rem;
+    }
+    
+    .page-content {
+        width: 90%;
+        max-width: 100%;
+        padding: 1.5rem;
+    }
+    
+    .page-title {
+        font-size: 2rem;
+    }
+    
+    .decorative-title {
+        font-size: 2rem;
     }
 }
