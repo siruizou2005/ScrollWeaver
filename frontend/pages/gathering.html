@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>雅集 - ScrollWeaver</title>
+    <link rel="stylesheet" href="../css/pages/gathering.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="gathering-container">
+        <!-- 顶部导航栏（复用广场页样式） -->
+        <header class="gathering-header">
+            <div class="header-content">
+                <div class="logo">ScrollWeaver</div>
+                <div class="user-section">
+                    <div class="user-dropdown">
+                        <span class="username" id="username">用户名</span>
+                        <i class="fas fa-chevron-down"></i>
+                        <div class="dropdown-menu">
+                            <a href="#" class="dropdown-item">个人设置</a>
+                            <a href="#" class="dropdown-item">账户信息</a>
+                        </div>
+                    </div>
+                    <button class="logout-btn" id="logoutBtn">退出</button>
+                </div>
+            </div>
+        </header>
+        
+        <!-- 主要内容 -->
+        <div class="gathering-content">
+            <h1 class="page-title">雅集</h1>
+            
+            <div class="gathering-cards-container">
+                <!-- 左侧：入卷同游 -->
+                <div class="gathering-card left-card">
+                    <h2 class="card-title">入卷同游</h2>
+                    
+                    <!-- 创建房间按钮 -->
+                    <button class="create-room-btn" id="createRoomBtn">
+                        <i class="fas fa-plus"></i> 创建房间
+                    </button>
+                    
+                    <!-- 房间列表 -->
+                    <div class="room-list" id="roomList">
+                        <!-- 房间卡片将在这里动态生成 -->
+                    </div>
+                </div>
+                
+                <!-- 右侧：博弈 -->
+                <div class="gathering-card right-card">
+                    <h2 class="card-title">博弈</h2>
+                    
+                    <!-- 游戏列表 -->
+                    <div class="game-list">
+                        <!-- 狼人杀 -->
+                        <div class="game-card" id="werewolfCard">
+                            <h3 class="game-title">狼人杀</h3>
+                            <p class="game-description">经典推理游戏，在谎言与真相中寻找答案</p>
+                            <button class="start-game-btn">开始游戏</button>
+                        </div>
+                        
+                        <!-- 谁是AI -->
+                        <div class="game-card" id="whoIsAICard">
+                            <h3 class="game-title">谁是AI</h3>
+                            <p class="game-description">识别AI与人类，考验你的判断力</p>
+                            <button class="start-game-btn">开始游戏</button>
+                        </div>
+                        
+                        <!-- 商业博弈 -->
+                        <div class="game-card" id="businessCard">
+                            <h3 class="game-title">商业博弈</h3>
+                            <p class="game-description">策略经营游戏，体验商业竞争的智慧</p>
+                            <button class="start-game-btn">开始游戏</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 底部提示 -->
+            <p class="future-feature-hint">后续将开发玩家创建游戏</p>
+        </div>
+    </div>
+    
+    <!-- 创建房间模态框 -->
+    <div class="modal" id="createRoomModal">
+        <div class="modal-content">
+            <span class="close" id="closeCreateRoomModal">&times;</span>
+            <h2>创建房间</h2>
+            <form id="createRoomForm">
+                <div class="form-group">
+                    <label for="roomName">房间名称</label>
+                    <input type="text" id="roomName" placeholder="输入房间名称" required>
+                </div>
+                <div class="form-group">
+                    <label for="roomPassword">暗号（可选）</label>
+                    <input type="text" id="roomPassword" placeholder="输入暗号，留空则无需暗号">
+                </div>
+                <button type="submit" class="submit-btn">创建</button>
+            </form>
+        </div>
+    </div>
+    
+    <script src="../js/pages/gathering.js"></script>
+</body>
+</html>
+

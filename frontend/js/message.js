@@ -11,9 +11,11 @@ document.addEventListener('DOMContentLoaded', function () {
     // 生成随机的客户端ID
     const clientId = Math.random().toString(36).substring(7);
 
-    // 从URL获取scroll_id
+    // 从URL获取参数
     const urlParams = new URLSearchParams(window.location.search);
     const scrollId = urlParams.get('scroll_id');
+    const gameType = urlParams.get('type');
+    const gameMode = urlParams.get('mode');
 
     // WebSocket连接
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -21,8 +23,12 @@ document.addEventListener('DOMContentLoaded', function () {
     const ws = new WebSocket(wsUrl);
     window.ws = ws;
 
-    // 如果有scroll_id，连接建立后立即发送init消息加载预设
-    let scrollIdToLoad = scrollId;
+    // 如果是狼人杀游戏模式（type=werewolf且mode=game），不加载书卷
+    // 如果有scroll_id且不是游戏模式，连接建立后立即发送init消息加载预设
+    let scrollIdToLoad = null;
+    if (scrollId && !(gameType === 'werewolf' && gameMode === 'game')) {
+        scrollIdToLoad = scrollId;
+    }
 
     // 立即显示加载动画（如果有scroll_id）
     if (scrollIdToLoad) {
