@@ -1,0 +1,16 @@
+{
+ "地点1": {
+  "location_code": "地点1",
+  "location_name": "地点1",
+  "description": "基于'同学想要求学，家里穷家长不让'的地点",
+  "detail": "",
+  "source": "user_2_求学路"
+ },
+ "地点2": {
+  "location_code": "地点2",
+  "location_name": "地点2",
+  "description": "基于'同学想要求学，家里穷家长不让'的地点",
+  "detail": "",
+  "source": "user_2_求学路"
+ }
+}

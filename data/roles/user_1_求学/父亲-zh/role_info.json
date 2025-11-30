@@ -1,0 +1,14 @@
+{
+  "role_code": "父亲-zh",
+  "role_name": "父亲",
+  "source": "user_1_求学",
+  "activity": 1,
+  "profile": "认为上学没有必要",
+  "nickname": "父亲",
+  "relation": {
+    "学生-zh": {
+      "relation": [],
+      "detail": ""
+    }
+  }
+}

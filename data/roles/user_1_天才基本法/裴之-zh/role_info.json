@@ -3,22 +3,14 @@
   "role_name": "裴之",
   "source": "user_1_天才基本法",
   "activity": 1,
-  "profile": "林朝夕暗恋多年的校园男神，即将出国深造。他在数学领域可能非常出色，被认为是解决数学难题的权威人选。虽然未直接出场，但他的存在和动向对林朝夕有重要影响。",
-  "nickname": "男神",
+  "profile": "林朝夕暗恋多年的校园男神，即将出国深造。他前往的学校正是林朝夕父亲当年为她放弃的那所。暗示可能与数学相关（“找你们裴之去？”）。",
+  "nickname": "裴之",
   "relation": {
     "林朝夕-zh": {
       "relation": [],
       "detail": ""
     },
-    "老林-zh": {
-      "relation": [],
-      "detail": ""
-    },
-    "主任-zh": {
-      "relation": [],
-      "detail": ""
-    },
-    "苏小明-zh": {
+    "老林先生-zh": {
       "relation": [],
       "detail": ""
     },
@@ -26,7 +18,7 @@
       "relation": [],
       "detail": ""
     },
-    "小萌妹-zh": {
+    "苏小明-zh": {
       "relation": [],
       "detail": ""
     }

@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>商业博弈 - ScrollWeaver</title>
+    <link rel="stylesheet" href="../css/pages/business.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- 右上角返回按钮 -->
+    <button class="top-back-btn" onclick="goBack()" title="返回">
+        <i class="fas fa-arrow-left"></i>
+    </button>
+    
+    <div class="business-container">
+        <!-- 主要内容 -->
+        <div class="business-content">
+            <h1 class="page-title">商业博弈</h1>
+            
+            <!-- 游戏信息卡片 -->
+            <div class="info-card">
+                <h2 class="info-title">游戏规则</h2>
+                <div class="rules-content">
+                    <p><strong>边际成本：</strong>10元</p>
+                    <p><strong>市场需求：</strong>Q = 20 - P_min（最低价者获得全部需求）</p>
+                    <p><strong>价格范围：</strong>8-20元</p>
+                    <p><strong>纳什均衡：</strong>10元（竞争，利润为0）</p>
+                    <p><strong>垄断均衡：</strong>15元（合作，总利润最大）</p>
+                    <p><strong>游戏局数：</strong>20局</p>
+                </div>
+            </div>
+            
+            <!-- 游戏区域 -->
+            <div class="game-area">
+                <!-- 左侧：当前状态 -->
+                <div class="status-panel">
+                    <h3 class="panel-title">当前状态</h3>
+                    <div class="status-info">
+                        <div class="status-item">
+                            <span class="status-label">当前轮次：</span>
+                            <span class="status-value" id="currentRound">0 / 20</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">累计利润（你）：</span>
+                            <span class="status-value profit-human" id="totalProfitHuman">0.00</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">累计利润（AI）：</span>
+                            <span class="status-value profit-ai" id="totalProfitAI">0.00</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">市场状态：</span>
+                            <span class="status-value" id="marketState">等待开始</span>
+                        </div>
+                    </div>
+                    
+                    <!-- 开始游戏按钮 -->
+                    <div class="start-section" id="startSection">
+                        <button class="start-btn" id="startBtn" onclick="startGame()">
+                            <i class="fas fa-play"></i> 开始游戏
+                        </button>
+                        <p class="start-hint">点击开始按钮开始商业博弈</p>
+                    </div>
+                    
+                    <!-- 输入区域 -->
+                    <div class="input-section" id="inputSection" style="display: none;">
+                        <label for="priceInput" class="input-label">请输入本轮价格（8-20元）：</label>
+                        <div class="input-group">
+                            <input type="number" id="priceInput" min="8" max="20" step="1" 
+                                   placeholder="输入价格" class="price-input" disabled>
+                            <button class="submit-btn" id="submitBtn" onclick="submitPrice()" disabled>
+                                <i class="fas fa-paper-plane"></i> 提交
+                            </button>
+                        </div>
+                        <p class="input-hint">上一轮：AI出价 <span id="lastPriceAI">-</span> 元，你出价 <span id="lastPriceHuman">-</span> 元</p>
+                    </div>
+                    
+                    <!-- 等待AI思考 -->
+                    <div class="waiting-section" id="waitingSection" style="display: none;">
+                        <div class="loading-spinner"></div>
+                        <p>AI正在思考中...</p>
+                    </div>
+                </div>
+                
+                <!-- 右侧：历史记录和排行榜 -->
+                <div class="right-panel">
+                    <!-- 历史记录 -->
+                    <div class="history-panel">
+                        <h3 class="panel-title">历史记录</h3>
+                        <div class="history-list" id="historyList">
+                            <p class="empty-message">暂无记录</p>
+                        </div>
+                    </div>
+                    
+                    <!-- 排行榜 -->
+                    <div class="leaderboard-panel">
+                        <h3 class="panel-title">排行榜</h3>
+                        <div class="leaderboard-list" id="leaderboardList">
+                            <p class="empty-message">加载中...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 确认对话框 -->
+            <div class="confirm-modal" id="confirmModal" style="display: none;">
+                <div class="modal-content">
+                    <h2 id="confirmTitle">确认退出</h2>
+                    <p id="confirmMessage">游戏正在进行中，确定要退出吗？退出后当前游戏进度将丢失。</p>
+                    <div class="modal-actions">
+                        <button class="btn-primary" id="confirmOkBtn">确定</button>
+                        <button class="btn-secondary" id="confirmCancelBtn">取消</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 游戏结束提示 -->
+            <div class="game-over-modal" id="gameOverModal" style="display: none;">
+                <div class="modal-content">
+                    <h2>游戏结束</h2>
+                    <div class="final-stats">
+                        <p>你的累计利润：<span id="finalProfitHuman">0.00</span>元</p>
+                        <p>AI累计利润：<span id="finalProfitAI">0.00</span>元</p>
+                        <p class="winner-text" id="winnerText"></p>
+                    </div>
+                    <div class="modal-actions">
+                        <button class="btn-primary" onclick="startNewGame()">再来一局</button>
+                        <button class="btn-secondary" onclick="goBack()">返回雅集</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="../js/pages/business.js"></script>
+</body>
+</html>
+

@@ -17,6 +17,8 @@ from database import db
 from modules.core.socketio_manager import SocketIOManager
 from modules.core.sessions import SessionMode, SessionManager
 from modules.werewolf.werewolf_session import WerewolfSessionManager
+from modules.business.business_game import BusinessGameManager
+from modules.gathering.who_is_human_game import WhoIsHumanGameManager
 import socketio
 # Server class is now in modules.core.server, but ScrollWeaver wrapper is still in ScrollWeaver.py
 
@@ -55,6 +57,12 @@ session_manager = SessionManager()
 
 # 初始化狼人杀会话管理器
 werewolf_manager = WerewolfSessionManager()
+
+# 初始化商业博弈管理器
+business_manager = BusinessGameManager()
+
+# 初始化谁是人类游戏管理器
+who_is_human_manager = WhoIsHumanGameManager()
 
 # Startup event handler for warmup
 @app.on_event("startup")
@@ -2859,6 +2867,245 @@ async def werewolf_websocket_endpoint(websocket: WebSocket, game_id: str, player
         import traceback
         traceback.print_exc()
         session.disconnect_player(player_id)
+
+# -------------------------------------------------------------------------
+# 商业博弈 API 接口
+# -------------------------------------------------------------------------
+
+@app.post("/api/business/create")
+async def create_business_game(request: Request, current_user: dict = Depends(get_current_user)):
+    """创建新的商业博弈游戏"""
+    try:
+        username = current_user.get('username', '用户')
+        game_id = business_manager.create_game(current_user['id'], username)
+        return {"success": True, "game_id": game_id, "message": "游戏创建成功"}
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {"success": False, "error": str(e)}
+
+@app.post("/api/business/submit-price")
+async def submit_business_price(request: Request, current_user: dict = Depends(get_current_user)):
+    """提交价格（用于非WebSocket模式）"""
+    try:
+        data = await request.json()
+        game_id = data.get("game_id")
+        price = data.get("price")
+        
+        if not game_id or price is None:
+            raise HTTPException(status_code=400, detail="缺少game_id或price")
+        
+        session = business_manager.get_session(game_id)
+        if not session:
+            raise HTTPException(status_code=404, detail="游戏不存在")
+        
+        if session.user_id != current_user['id']:
+            raise HTTPException(status_code=403, detail="无权访问此游戏")
+        
+        # 这里需要异步处理，但为了简化，先返回成功
+        # 实际应该通过WebSocket处理
+        return {"success": True, "message": "价格已提交"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/business/leaderboard")
+async def get_business_leaderboard(current_user: Optional[dict] = Depends(get_optional_user)):
+    """获取商业博弈排行榜（按累计利润降序）"""
+    try:
+        # 从数据库获取排行榜数据
+        leaderboard = db.get_business_leaderboard(limit=100)
+        return {"success": True, "leaderboard": leaderboard}
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {"success": False, "error": str(e), "leaderboard": []}
+
+@app.post("/api/business/save-result")
+async def save_business_result(request: Request, current_user: dict = Depends(get_current_user)):
+    """保存游戏结果到数据库"""
+    try:
+        data = await request.json()
+        game_id = data.get("game_id")
+        
+        if not game_id:
+            raise HTTPException(status_code=400, detail="缺少game_id")
+        
+        session = business_manager.get_session(game_id)
+        if not session:
+            raise HTTPException(status_code=404, detail="游戏不存在")
+        
+        if session.user_id != current_user['id']:
+            raise HTTPException(status_code=403, detail="无权访问此游戏")
+        
+        stats = session.get_final_stats()
+        
+        # 保存到数据库
+        db.save_business_result(
+            user_id=current_user['id'],
+            username=current_user.get('username', '用户'),
+            game_id=game_id,
+            total_profit=stats['total_profit_human'],
+            total_rounds=stats['total_rounds'],
+            history=stats['history']
+        )
+        
+        return {"success": True, "stats": stats}
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.websocket("/ws/business/{game_id}")
+async def business_websocket_endpoint(websocket: WebSocket, game_id: str):
+    """商业博弈WebSocket连接"""
+    await websocket.accept()
+    
+    # 从查询参数获取token进行验证
+    token = websocket.query_params.get("token")
+    if not token:
+        await websocket.close(code=4003, reason="No token provided")
+        return
+    
+    # 验证token并获取用户信息
+    try:
+        user = db.verify_token(token)
+        if not user:
+            await websocket.close(code=4003, reason="Invalid token")
+            return
+    except:
+        await websocket.close(code=4003, reason="Token verification failed")
+        return
+    
+    session = business_manager.get_session(game_id)
+    if not session:
+        await websocket.close(code=4004, reason="Game not found")
+        return
+    
+    # 验证用户权限
+    if session.user_id != user['id']:
+        await websocket.close(code=4003, reason="Unauthorized")
+        return
+    
+    await session.connect(websocket)
+    
+    try:
+        while True:
+            data = await websocket.receive_json()
+            message_type = data.get("type")
+            
+            if message_type == "submit_price":
+                price = data.get("price")
+                if price is not None:
+                    await session.handle_price_input(price)
+            elif message_type == "get_state":
+                await session.send_game_state()
+            else:
+                await session.send_error(f"未知消息类型: {message_type}")
+                
+    except WebSocketDisconnect:
+        pass
+    except Exception as e:
+        print(f"Business game WebSocket error: {e}")
+        import traceback
+        traceback.print_exc()
+    finally:
+        # 游戏结束时保存结果
+        if session.is_finished:
+            try:
+                stats = session.get_final_stats()
+                db.save_business_result(
+                    user_id=session.user_id,
+                    username=session.username,
+                    game_id=game_id,
+                    total_profit=stats['total_profit_human'],
+                    total_rounds=stats['total_rounds'],
+                    history=stats['history']
+                )
+            except Exception as e:
+                print(f"Failed to save business result: {e}")
+
+# -------------------------------------------------------------------------
+# 谁是人类游戏 API 接口
+# -------------------------------------------------------------------------
+
+@app.post("/api/who-is-human/create")
+async def create_who_is_human_game(request: Request, current_user: dict = Depends(get_current_user)):
+    """创建新的谁是人类游戏"""
+    try:
+        username = current_user.get('username', '用户')
+        game_id = who_is_human_manager.create_game(current_user['id'], username)
+        return {"success": True, "game_id": game_id, "message": "游戏创建成功"}
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {"success": False, "error": str(e)}
+
+@app.websocket("/ws/who-is-human/{game_id}")
+async def who_is_human_websocket_endpoint(websocket: WebSocket, game_id: str):
+    """谁是人类游戏WebSocket连接"""
+    await websocket.accept()
+    
+    # 从查询参数获取token进行验证
+    token = websocket.query_params.get("token")
+    if not token:
+        await websocket.close(code=4003, reason="No token provided")
+        return
+    
+    # 验证token并获取用户信息
+    try:
+        user = db.verify_token(token)
+        if not user:
+            await websocket.close(code=4003, reason="Invalid token")
+            return
+    except:
+        await websocket.close(code=4003, reason="Token verification failed")
+        return
+    
+    session = who_is_human_manager.get_session(game_id)
+    if not session:
+        await websocket.close(code=4004, reason="Game not found")
+        return
+    
+    # 验证用户权限
+    if session.user_id != user['id']:
+        await websocket.close(code=4003, reason="Unauthorized")
+        return
+    
+    await session.connect(websocket)
+    
+    try:
+        while True:
+            data = await websocket.receive_json()
+            message_type = data.get("type")
+            
+            if message_type == "start_game":
+                await session.start_game()
+            elif message_type == "submit_description":
+                description = data.get("description")
+                if description:
+                    await session.submit_human_description(description)
+            elif message_type == "submit_vote":
+                voter_id = data.get("voter_id")
+                voted_player_id = data.get("voted_player_id")
+                if voter_id and voted_player_id:
+                    await session.submit_vote(voter_id, voted_player_id)
+            elif message_type == "get_state":
+                await session.send_game_state()
+            else:
+                await session.send_error(f"未知消息类型: {message_type}")
+                
+    except WebSocketDisconnect:
+        pass
+    except Exception as e:
+        print(f"Who is human game WebSocket error: {e}")
+        import traceback
+        traceback.print_exc()
 
 if __name__ == "__main__":
     uvicorn.run("server:app", host="0.0.0.0", port=8000, reload=True)

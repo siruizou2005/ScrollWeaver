@@ -1,51 +1,30 @@
 {
-  "Hospital": {
-    "location_code": "Hospital",
+  "HOSPITAL": {
+    "location_code": "HOSPITAL",
     "location_name": "医院",
-    "description": "林朝夕的父亲被确诊为早发性阿尔茨海默症的地点。",
-    "detail": "位于一个热闹的街道旁，窗外雨帘中车辆行人穿梭，梧桐树静默矗立，一切都雾蒙蒙的，像一幅印象派油画。",
+    "description": "林朝夕父亲被确诊早发性阿尔茨海默症的地方。",
+    "detail": "对林朝夕一家具有重大意义的地点，毗邻一家打卤面店和繁华的街道。是命运转折的开始。",
     "source": "user_1_天才基本法"
   },
-  "NoodleShop": {
-    "location_code": "NoodleShop",
+  "DALU_NOODLE_SHOP": {
+    "location_code": "DALU_NOODLE_SHOP",
     "location_name": "打卤面店",
-    "description": "医院附近的一家面店，林朝夕和父亲在确诊后在此用餐。",
-    "detail": "恰逢中午，下雨天水汽充盈，店里热气腾腾，提供打卤面和炸猪排。",
+    "description": "医院旁边的一家面馆。",
+    "detail": "中午时分，雨天水汽充盈，店内热气腾腾。林朝夕和父亲在此用餐，并进行了关于父亲病情和家庭未来的重要对话。这里充满了日常生活的烟火气。",
     "source": "user_1_天才基本法"
   },
-  "UniversityTown": {
-    "location_code": "UniversityTown",
-    "location_name": "大学城",
-    "description": "多个高校聚集的区域，也是高校联合智力竞赛的举办地。",
-    "detail": "一个集合了多所大学的区域，经常举办联合活动和竞赛。",
+  "BUSY_STREET": {
+    "location_code": "BUSY_STREET",
+    "location_name": "医院附近的街道",
+    "description": "医院和面店外繁华的街道。",
+    "detail": "下着雨，车辆和行人在雨帘中穿梭。法国梧桐静默矗立，水滴从叶片上坠落，一切都显得雾蒙蒙的，像一幅颜色很淡的印象派油画，氛围喧嚣与宁静并存。",
     "source": "user_1_天才基本法"
   },
-  "SanweiUniversity": {
-    "location_code": "SanweiUniversity",
-    "location_name": "三味大学",
-    "description": "林朝夕就读的大学，其数学系被认为非常强大。",
-    "detail": "在大学城高校联合智力竞赛中，被认为是拥有强大数学背景的学校。",
-    "source": "user_1_天才基本法"
-  },
-  "BaicaoUniversity": {
-    "location_code": "BaicaoUniversity",
-    "location_name": "百草大学",
-    "description": "安潇潇就读的大学，与三味大学存在竞争关系。",
-    "detail": "大学城中另一所参与智力竞赛的大学，其学生会学习部负责出备选题。",
-    "source": "user_1_天才基本法"
-  },
-  "StudentActivityCenter": {
-    "location_code": "StudentActivityCenter",
-    "location_name": "学生生活动中心二楼",
-    "description": "林朝夕所在学校用于学生社团活动和会议的场所。",
-    "detail": "该中心二楼的会议室是大学城高校联合智力竞赛筹备会议的地点。",
-    "source": "user_1_天才基本法"
-  },
-  "ConferenceRoom": {
-    "location_code": "ConferenceRoom",
-    "location_name": "会议室",
-    "description": "学生生活动中心内，高校联合智力竞赛筹备会议的召开地点。",
-    "detail": "会议桌旁坐着来自各高校的代表，讨论智力竞赛的题目，气氛从吵闹到安静。",
+  "MEETING_ROOM": {
+    "location_code": "MEETING_ROOM",
+    "location_name": "大学生活动中心二楼会议室",
+    "description": "大学城高校联合智力竞赛的会议场所。",
+    "detail": "起初嘈杂，林朝夕进入后瞬间安静。来自不同高校的学生会代表在此讨论和筛选竞赛题目。林朝夕在这里展示了她的才华，也首次与竞争对手安潇潇正面交锋。",
     "source": "user_1_天才基本法"
   }
 }

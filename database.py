@@ -77,6 +77,30 @@ class Database:
             )
         ''')
         
+        # 商业博弈游戏记录表
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS business_games (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                username TEXT NOT NULL,
+                game_id TEXT UNIQUE NOT NULL,
+                total_profit REAL NOT NULL DEFAULT 0,
+                total_rounds INTEGER NOT NULL DEFAULT 0,
+                history TEXT,  -- JSON格式的游戏历史
+                created_at TEXT NOT NULL,
+                finished_at TEXT,
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            )
+        ''')
+        
+        # 创建索引以提高查询性能
+        cursor.execute('''
+            CREATE INDEX IF NOT EXISTS idx_business_games_user_id ON business_games(user_id)
+        ''')
+        cursor.execute('''
+            CREATE INDEX IF NOT EXISTS idx_business_games_total_profit ON business_games(total_profit DESC)
+        ''')
+        
         conn.commit()
         conn.close()
         
@@ -447,6 +471,100 @@ class Database:
                 'story_data': json.loads(result[5]) if result[5] else {},
                 'created_at': result[6],
                 'updated_at': result[7]
+            }
+        return None
+    
+    def save_business_result(self, user_id: int, username: str, game_id: str, 
+                            total_profit: float, total_rounds: int, history: List[Dict]) -> bool:
+        """保存商业博弈游戏结果"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        try:
+            # 检查是否已存在该游戏记录
+            cursor.execute('SELECT id FROM business_games WHERE game_id = ?', (game_id,))
+            existing = cursor.fetchone()
+            
+            history_json = json.dumps(history, ensure_ascii=False)
+            
+            if existing:
+                # 更新现有记录
+                cursor.execute('''
+                    UPDATE business_games 
+                    SET total_profit = ?, total_rounds = ?, history = ?, finished_at = ?
+                    WHERE game_id = ?
+                ''', (total_profit, total_rounds, history_json, datetime.now().isoformat(), game_id))
+            else:
+                # 插入新记录
+                cursor.execute('''
+                    INSERT INTO business_games 
+                    (user_id, username, game_id, total_profit, total_rounds, history, created_at, finished_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (user_id, username, game_id, total_profit, total_rounds, history_json,
+                      datetime.now().isoformat(), datetime.now().isoformat()))
+            
+            conn.commit()
+            conn.close()
+            return True
+        except Exception as e:
+            print(f"保存商业博弈结果失败: {e}")
+            conn.close()
+            return False
+    
+    def get_business_leaderboard(self, limit: int = 100) -> List[Dict]:
+        """获取商业博弈排行榜（按累计利润降序）"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        # 获取每个用户的最佳成绩（累计利润最高的那一局）
+        cursor.execute('''
+            SELECT user_id, username, MAX(total_profit) as best_profit, 
+                   COUNT(*) as game_count, MAX(finished_at) as last_played
+            FROM business_games
+            GROUP BY user_id, username
+            ORDER BY best_profit DESC
+            LIMIT ?
+        ''', (limit,))
+        
+        results = cursor.fetchall()
+        leaderboard = []
+        
+        for row in results:
+            user_id, username, best_profit, game_count, last_played = row
+            leaderboard.append({
+                'user_id': user_id,
+                'username': username,
+                'total_profit': round(best_profit, 2),  # 使用最佳成绩作为排行榜依据
+                'game_count': game_count,
+                'last_played': last_played
+            })
+        
+        conn.close()
+        return leaderboard
+    
+    def get_user_business_stats(self, user_id: int) -> Optional[Dict]:
+        """获取用户的商业博弈统计信息"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            SELECT COUNT(*) as total_games, 
+                   MAX(total_profit) as best_profit,
+                   AVG(total_profit) as avg_profit,
+                   SUM(total_profit) as total_profit_sum
+            FROM business_games
+            WHERE user_id = ?
+        ''', (user_id,))
+        
+        result = cursor.fetchone()
+        conn.close()
+        
+        if result and result[0] > 0:
+            return {
+                'total_games': result[0],
+                'best_profit': round(result[1] or 0, 2),
+                'avg_profit': round(result[2] or 0, 2),
+                'total_profit_sum': round(result[3] or 0, 2)
             }
         return None
 

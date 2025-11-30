@@ -1,0 +1,26 @@
+{
+  "role_code": "苏小明-zh",
+  "role_name": "苏小明",
+  "source": "user_1_天才基本法_3pro",
+  "activity": 1,
+  "profile": "三味大学学生会主席，林朝夕的同学或朋友。负责组织高校联合智力竞赛。性格随和，与林朝夕关系不错，在得知老林病情后表示震惊和关心。",
+  "nickname": "主席",
+  "relation": {
+    "林朝夕-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "林会计-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "安潇潇-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "裴之-zh": {
+      "relation": [],
+      "detail": ""
+    }
+  }
+}

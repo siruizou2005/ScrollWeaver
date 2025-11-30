@@ -17,6 +17,10 @@ from .response_models import (
     ThoughtChain,
     CharacterMotivation,
     BatchMotivations,
+    CharacterConfig,
+    LocationConfig,
+    WorldConfig,
+    ScrollConfig,
 )
 
 __all__ = [
@@ -37,5 +41,9 @@ __all__ = [
     "ThoughtChain",
     "CharacterMotivation",
     "BatchMotivations",
+    "CharacterConfig",
+    "LocationConfig",
+    "WorldConfig",
+    "ScrollConfig",
 ]
 

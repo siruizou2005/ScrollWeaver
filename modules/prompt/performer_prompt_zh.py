@@ -1,5 +1,7 @@
 INTERVENTION_PROMPT = """
-!!!当前的全局事件：{intervention}
+!!!【重要】当前全局事件和场景：{intervention}
+
+**你必须基于上述事件和场景来行动，你的行动必须符合当前事件描述的场景。禁止使用与当前事件无关的场景（如事件描述的是竞赛筹备，你就不能在打卤面店或医院行动）。**
 """
 
 SCRIPT_ATTENTION_PROMPT = """
@@ -191,6 +193,9 @@ ROLE_PLAN_PROMPT = """
 
 ## 你的状态
 {status}
+
+## 当前地点
+{location}
 
 ## 和你在一起的其它角色（当前场景中出现的角色）
 {other_roles_info}

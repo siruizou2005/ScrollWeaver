@@ -32,6 +32,14 @@ if (userDropdown && dropdownMenu) {
     });
 }
 
+// Logo点击返回广场页
+const logo = document.querySelector('.logo.seal-logo');
+if (logo) {
+    logo.addEventListener('click', () => {
+        window.location.href = '/frontend/pages/plaza.html';
+    });
+}
+
 // 退出登录（使用共享的确认对话框）
 const logoutBtn = document.getElementById('logoutBtn');
 if (logoutBtn) {

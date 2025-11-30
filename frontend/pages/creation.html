@@ -14,7 +14,9 @@
         <!-- 顶部导航栏（复用广场页样式） -->
         <header class="creation-header">
             <div class="header-content">
-                <div class="logo">ScrollWeaver</div>
+                <div class="logo seal-logo">
+                    <img src="/frontend/assets/images/logo.png" alt="ScrollWeaver" class="logo-image">
+                </div>
                 <div class="user-section">
                     <div class="user-dropdown">
                         <span class="username" id="username">用户名</span>
@@ -45,14 +47,13 @@
                 </div>
                 
                 <!-- 凭空造物 -->
-                <div class="creation-card disabled" id="promptCard">
+                <div class="creation-card" id="promptCard">
                     <div class="card-icon">
                         <i class="fas fa-magic"></i>
                     </div>
                     <h2 class="card-title">凭空造物</h2>
                     <p class="card-subtitle">Prompt</p>
                     <p class="card-description">输入一句话，AI生成配置</p>
-                    <span class="coming-soon">即将推出</span>
                 </div>
                 
                 <!-- 手动编织 -->
@@ -91,6 +92,50 @@
                     <div class="progress-fill" id="progressFill"></div>
                 </div>
                 <p id="progressText">正在处理文档...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 凭空造物模态框 -->
+    <div class="modal" id="promptModal">
+        <div class="modal-content">
+            <span class="close" id="closePromptModal">&times;</span>
+            <h2>凭空造物</h2>
+            <p>输入一句话描述，AI将自动生成完整的世界观、角色和地点配置</p>
+            <form id="promptForm">
+                <div class="form-group">
+                    <label for="promptDescription">描述你的世界 *</label>
+                    <textarea id="promptDescription" rows="4" placeholder="例如：赛博朋克版红楼梦、现代都市修仙、魔法学院冒险..." required></textarea>
+                    <small>用一句话描述你想要创建的世界，AI会根据你的描述生成完整的配置</small>
+                </div>
+                <div class="form-group">
+                    <label for="promptScrollTitle">书卷名称 *</label>
+                    <input type="text" id="promptScrollTitle" placeholder="输入书卷名称" required>
+                </div>
+                <div class="form-group">
+                    <label for="promptLanguage">语言 *</label>
+                    <select id="promptLanguage" required>
+                        <option value="zh">中文</option>
+                        <option value="en">English</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="numCharacters">角色数量</label>
+                    <input type="number" id="numCharacters" min="2" max="10" value="5" required>
+                    <small>生成的角色数量（2-10个）</small>
+                </div>
+                <div class="form-group">
+                    <label for="numLocations">地点数量</label>
+                    <input type="number" id="numLocations" min="2" max="10" value="5" required>
+                    <small>生成的地点数量（2-10个）</small>
+                </div>
+                <button type="submit" class="submit-btn">开始生成</button>
+            </form>
+            <div class="upload-progress" id="promptProgress" style="display: none;">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="promptProgressFill"></div>
+                </div>
+                <p id="promptProgressText">正在生成书卷配置...</p>
             </div>
         </div>
     </div>

@@ -1,0 +1,16 @@
+{
+  "experiment_subname": "user_2_求学_2",
+  "source": "user_2_求学_2",
+  "world_file_path": "./data/worlds/user_2_求学_2/general.json",
+  "map_file_path": "./data/maps/user_2_求学_2.csv",
+  "loc_file_path": "./data/locations/user_2_求学_2.json",
+  "role_file_dir": "./data/roles/",
+  "performer_codes": [
+    "李老汉-zh",
+    "王先生-zh",
+    "李明-zh"
+  ],
+  "intervention": "同学想要求学，家里穷父母不让",
+  "script": "",
+  "language": "zh"
+}

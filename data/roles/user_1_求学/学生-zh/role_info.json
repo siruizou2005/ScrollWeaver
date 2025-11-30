@@ -1,0 +1,14 @@
+{
+  "role_code": "学生-zh",
+  "role_name": "学生",
+  "source": "user_1_求学",
+  "activity": 1,
+  "profile": "想要上学",
+  "nickname": "学生",
+  "relation": {
+    "父亲-zh": {
+      "relation": [],
+      "detail": ""
+    }
+  }
+}

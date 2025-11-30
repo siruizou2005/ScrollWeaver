@@ -32,6 +32,14 @@ if (userDropdown && dropdownMenu) {
     });
 }
 
+// Logo点击返回广场页
+const logo = document.querySelector('.logo.seal-logo');
+if (logo) {
+    logo.addEventListener('click', () => {
+        window.location.href = '/frontend/pages/plaza.html';
+    });
+}
+
 // 退出登录（使用共享的确认对话框）
 const logoutBtn = document.getElementById('logoutBtn');
 if (logoutBtn) {
@@ -62,8 +70,10 @@ if (logoutBtn) {
 // 模态框控制
 const generateModal = document.getElementById('generateModal');
 const createModal = document.getElementById('createModal');
+const promptModal = document.getElementById('promptModal');
 const closeGenerateModal = document.getElementById('closeGenerateModal');
 const closeCreateModal = document.getElementById('closeCreateModal');
+const closePromptModal = document.getElementById('closePromptModal');
 
 // 打开生成书卷模态框
 function openGenerateModal() {
@@ -100,6 +110,24 @@ function closeCreateModalFunc() {
     }
 }
 
+// 打开凭空造物模态框
+function openPromptModal() {
+    if (promptModal) {
+        promptModal.classList.add('active');
+    }
+}
+
+// 关闭凭空造物模态框
+function closePromptModalFunc() {
+    if (promptModal) {
+        promptModal.classList.remove('active');
+        document.getElementById('promptForm').reset();
+        document.getElementById('promptProgress').style.display = 'none';
+        document.getElementById('numCharacters').value = '5';
+        document.getElementById('numLocations').value = '5';
+    }
+}
+
 // 点击外部关闭模态框
 if (generateModal) {
     generateModal.addEventListener('click', (e) => {
@@ -117,12 +145,24 @@ if (createModal) {
     });
 }
 
+if (promptModal) {
+    promptModal.addEventListener('click', (e) => {
+        if (e.target === promptModal) {
+            closePromptModalFunc();
+        }
+    });
+}
+
 if (closeGenerateModal) {
     closeGenerateModal.addEventListener('click', closeGenerateModalFunc);
 }
 
 if (closeCreateModal) {
     closeCreateModal.addEventListener('click', closeCreateModalFunc);
+}
+
+if (closePromptModal) {
+    closePromptModal.addEventListener('click', closePromptModalFunc);
 }
 
 // ESC键关闭模态框
@@ -134,6 +174,9 @@ document.addEventListener('keydown', (e) => {
         if (createModal && createModal.classList.contains('active')) {
             closeCreateModalFunc();
         }
+        if (promptModal && promptModal.classList.contains('active')) {
+            closePromptModalFunc();
+        }
     }
 });
 
@@ -142,10 +185,9 @@ document.getElementById('ragCard')?.addEventListener('click', () => {
     openGenerateModal();
 });
 
-// 凭空造物（Prompt）- 占位卡片
-document.getElementById('promptCard')?.addEventListener('click', (e) => {
-    e.preventDefault();
-    alert('功能即将推出，敬请期待！');
+// 凭空造物（Prompt）- 打开凭空造物功能
+document.getElementById('promptCard')?.addEventListener('click', () => {
+    openPromptModal();
 });
 
 // 手动编织（Editor）- 打开制作书卷功能
@@ -515,6 +557,97 @@ function generatePreview() {
             </ul>
         </div>
     `;
+}
+
+// 凭空造物表单提交
+const promptForm = document.getElementById('promptForm');
+if (promptForm) {
+    promptForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const description = document.getElementById('promptDescription').value.trim();
+        const title = document.getElementById('promptScrollTitle').value.trim();
+        const language = document.getElementById('promptLanguage').value;
+        const numCharacters = parseInt(document.getElementById('numCharacters').value);
+        const numLocations = parseInt(document.getElementById('numLocations').value);
+        
+        if (!description) {
+            alert('请输入世界描述');
+            return;
+        }
+        
+        if (!title) {
+            alert('请输入书卷名称');
+            return;
+        }
+        
+        // 显示进度条
+        const progressDiv = document.getElementById('promptProgress');
+        const progressFill = document.getElementById('promptProgressFill');
+        const progressText = document.getElementById('promptProgressText');
+        progressDiv.style.display = 'block';
+        progressFill.style.width = '0%';
+        progressText.textContent = '正在生成书卷配置...';
+        
+        // 模拟进度
+        let currentProgress = 0;
+        const progressInterval = setInterval(() => {
+            currentProgress += Math.random() * 15 + 5;
+            if (currentProgress >= 90) {
+                currentProgress = 90;
+                clearInterval(progressInterval);
+            }
+            progressFill.style.width = currentProgress + '%';
+        }, 200);
+        
+        try {
+            const response = await fetch(`${API_BASE}/api/generate-scroll-from-prompt`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    description: description,
+                    title: title,
+                    language: language,
+                    num_characters: numCharacters,
+                    num_locations: numLocations
+                })
+            });
+            
+            clearInterval(progressInterval);
+            
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.detail || '生成失败');
+            }
+            
+            progressFill.style.width = '100%';
+            progressText.textContent = '书卷生成成功！';
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                setTimeout(() => {
+                    closePromptModalFunc();
+                    // 跳转到书卷详情页
+                    if (result.scroll_id) {
+                        window.location.href = `/frontend/pages/intro.html?scroll_id=${result.scroll_id}`;
+                    } else {
+                        window.location.href = '/frontend/pages/library.html';
+                    }
+                }, 1000);
+            } else {
+                throw new Error(result.message || '生成失败');
+            }
+        } catch (error) {
+            clearInterval(progressInterval);
+            console.error('生成书卷失败:', error);
+            progressText.textContent = `错误: ${error.message}`;
+            alert(`生成失败: ${error.message}`);
+        }
+    });
 }
 
 // 提交创建书卷

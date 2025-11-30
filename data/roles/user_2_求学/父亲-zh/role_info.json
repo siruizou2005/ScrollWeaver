@@ -1,0 +1,14 @@
+{
+  "role_code": "父亲-zh",
+  "role_name": "父亲",
+  "source": "user_2_求学",
+  "activity": 1,
+  "profile": "穷，不要孩子上学",
+  "nickname": "父亲",
+  "relation": {
+    "同学-zh": {
+      "relation": [],
+      "detail": ""
+    }
+  }
+}
