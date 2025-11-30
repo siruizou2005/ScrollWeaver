@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>藏书阁 - ScrollWeaver</title>
+    <link rel="stylesheet" href="../css/pages/library.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="library-container">
+        <!-- 顶部导航栏（复用广场页样式） -->
+        <header class="library-header">
+            <div class="header-content">
+                <div class="logo">ScrollWeaver</div>
+                <div class="user-section">
+                    <div class="user-dropdown">
+                        <span class="username" id="username">用户名</span>
+                        <i class="fas fa-chevron-down"></i>
+                        <div class="dropdown-menu">
+                            <a href="#" class="dropdown-item">个人设置</a>
+                            <a href="#" class="dropdown-item">账户信息</a>
+                        </div>
+                    </div>
+                    <button class="logout-btn" id="logoutBtn">退出</button>
+                </div>
+            </div>
+        </header>
+        
+        <!-- 主要内容 -->
+        <div class="library-content">
+            <h1 class="page-title">藏书阁</h1>
+            
+            <!-- 书卷列表（复用现有样式） -->
+            <div class="bookshelf-container">
+                <div class="bookshelf-grid" id="bookshelfGrid">
+                    <!-- 书卷卡片将在这里动态生成 -->
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="../js/pages/library.js"></script>
+</body>
+</html>
+

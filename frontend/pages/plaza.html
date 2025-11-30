@@ -11,174 +11,62 @@
 </head>
 <body>
     <div class="plaza-container">
-        <!-- 顶部导航 -->
+        <!-- 顶部导航栏 -->
         <header class="plaza-header">
             <div class="header-content">
-                <h1 class="logo">ScrollWeaver</h1>
-                <div class="user-info">
-                    <span id="username"></span>
+                <div class="logo">ScrollWeaver</div>
+                <div class="user-section">
+                    <div class="user-dropdown">
+                        <span class="username" id="username">用户名</span>
+                        <i class="fas fa-chevron-down"></i>
+                        <div class="dropdown-menu">
+                            <a href="#" class="dropdown-item">个人设置</a>
+                            <a href="#" class="dropdown-item">账户信息</a>
+                        </div>
+                    </div>
                     <button class="logout-btn" id="logoutBtn">退出</button>
                 </div>
             </div>
         </header>
 
-        <!-- 主要操作按钮 -->
-        <div class="main-actions">
-            <button class="action-btn" id="generateScrollBtn">
-                <i class="fas fa-magic"></i>
-                <span>生成书卷</span>
-            </button>
-            <button class="action-btn" id="createScrollBtn">
-                <i class="fas fa-pen-nib"></i>
-                <span>制作书卷</span>
-            </button>
-            <button class="action-btn active" id="browseScrollsBtn">
-                <i class="fas fa-book-open"></i>
-                <span>进入已有书卷</span>
-            </button>
-        </div>
-
-        <!-- 普通书架 -->
-        <div class="bookshelf-container">
-            <div class="bookshelf-grid" id="bookshelfGrid">
-                <!-- 书卷卡片将在这里动态生成 -->
-            </div>
-        </div>
-    </div>
-
-    <!-- 生成书卷模态框 -->
-    <div class="modal" id="generateModal">
-        <div class="modal-content">
-            <span class="close" id="closeGenerateModal">&times;</span>
-            <h2>生成书卷</h2>
-            <p>上传文档（1万字以内，20页以内），系统将自动提取世界观和人物卡</p>
-            <form id="generateForm">
-                <div class="form-group">
-                    <label for="documentFile">选择文档</label>
-                    <input type="file" id="documentFile" accept=".txt,.doc,.docx,.pdf" required>
-                    <small>支持格式：TXT, DOC, DOCX, PDF</small>
+        <!-- 四象阵区域 -->
+        <div class="four-portals-container">
+            <div class="four-portals-grid">
+                <!-- 左上：制卷 -->
+                <div class="portal-card creation-card" id="creationCard">
+                    <div class="portal-background creation-bg"></div>
+                    <div class="portal-content">
+                        <h2 class="portal-title">天工</h2>
+                        <p class="portal-subtitle">创建属于你的书卷</p>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label for="scrollTitle">书卷名称</label>
-                    <input type="text" id="scrollTitle" placeholder="输入书卷名称" required>
+                
+                <!-- 右上：雅集 -->
+                <div class="portal-card gathering-card" id="gatheringCard">
+                    <div class="portal-background gathering-bg"></div>
+                    <div class="portal-content">
+                        <h2 class="portal-title">雅集</h2>
+                        <p class="portal-subtitle">入卷同游与博弈游戏</p>
+                    </div>
                 </div>
-                <button type="submit" class="submit-btn">开始生成</button>
-            </form>
-            <div class="upload-progress" id="uploadProgress" style="display: none;">
-                <div class="progress-bar">
-                    <div class="progress-fill" id="progressFill"></div>
+                
+                <!-- 左下：藏书 -->
+                <div class="portal-card library-card" id="libraryCard">
+                    <div class="portal-background library-bg"></div>
+                    <div class="portal-content">
+                        <h2 class="portal-title">藏书阁</h2>
+                        <p class="portal-subtitle">我的书卷 / 历史记录 / 收藏</p>
+                    </div>
                 </div>
-                <p id="progressText">正在处理文档...</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- 制作书卷模态框 -->
-    <div class="modal" id="createModal">
-        <div class="modal-content create-scroll-modal">
-            <span class="close" id="closeCreateModal">&times;</span>
-            <h2>制作书卷</h2>
-            <p class="step-indicator">
-                <span class="step active" data-step="1">基本信息</span>
-                <span class="step" data-step="2">世界观</span>
-                <span class="step" data-step="3">地点</span>
-                <span class="step" data-step="4">角色</span>
-                <span class="step" data-step="5">完成</span>
-            </p>
-            
-            <!-- 步骤1：基本信息 -->
-            <div class="create-step active" data-step="1">
-                <h3>第一步：基本信息</h3>
-                <div class="form-group">
-                    <label for="createScrollTitle">书卷名称 *</label>
-                    <input type="text" id="createScrollTitle" placeholder="例如：我的奇幻世界" required>
-                    <small>这是你的书卷的名称，会显示在书架上</small>
+                
+                <!-- 右下：阅卷 -->
+                <div class="portal-card explore-card" id="exploreCard">
+                    <div class="portal-background explore-bg"></div>
+                    <div class="portal-content">
+                        <h2 class="portal-title">阅卷</h2>
+                        <p class="portal-subtitle">浏览共享书卷</p>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label for="createLanguage">语言 *</label>
-                    <select id="createLanguage" required>
-                        <option value="zh">中文</option>
-                        <option value="en">English</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="createDescription">简短描述</label>
-                    <textarea id="createDescription" rows="3" placeholder="用一句话描述你的书卷..."></textarea>
-                </div>
-                <div class="step-buttons">
-                    <button type="button" class="btn-next" onclick="nextStep(2)">下一步</button>
-                </div>
-            </div>
-            
-            <!-- 步骤2：世界观 -->
-            <div class="create-step" data-step="2">
-                <h3>第二步：世界观设定</h3>
-                <div class="form-group">
-                    <label for="worldName">世界名称 *</label>
-                    <input type="text" id="worldName" placeholder="例如：中土世界" required>
-                </div>
-                <div class="form-group">
-                    <label for="worldDescription">世界观描述 *</label>
-                    <textarea id="worldDescription" rows="6" placeholder="详细描述这个世界的基本设定、时代背景、主要规则等..." required></textarea>
-                    <small>描述这个世界的核心设定，包括时代、背景、主要规则等</small>
-                </div>
-                <div class="step-buttons">
-                    <button type="button" class="btn-prev" onclick="prevStep(1)">上一步</button>
-                    <button type="button" class="btn-next" onclick="nextStep(3)">下一步</button>
-                </div>
-            </div>
-            
-            <!-- 步骤3：地点 -->
-            <div class="create-step" data-step="3">
-                <h3>第三步：地点设定</h3>
-                <p class="step-hint">添加故事中重要的地点，至少添加一个地点</p>
-                <div id="locationsContainer">
-                    <!-- 地点项将动态添加 -->
-                </div>
-                <button type="button" class="btn-add" onclick="addLocation()">
-                    <i class="fas fa-plus"></i> 添加地点
-                </button>
-                <div class="step-buttons">
-                    <button type="button" class="btn-prev" onclick="prevStep(2)">上一步</button>
-                    <button type="button" class="btn-next" onclick="nextStep(4)">下一步</button>
-                </div>
-            </div>
-            
-            <!-- 步骤4：角色 -->
-            <div class="create-step" data-step="4">
-                <h3>第四步：角色创建</h3>
-                <p class="step-hint">添加故事中的主要角色，至少添加一个角色</p>
-                <div id="charactersContainer">
-                    <!-- 角色项将动态添加 -->
-                </div>
-                <button type="button" class="btn-add" onclick="addCharacter()">
-                    <i class="fas fa-plus"></i> 添加角色
-                </button>
-                <div class="step-buttons">
-                    <button type="button" class="btn-prev" onclick="prevStep(3)">上一步</button>
-                    <button type="button" class="btn-next" onclick="nextStep(5)">下一步</button>
-                </div>
-            </div>
-            
-            <!-- 步骤5：完成 -->
-            <div class="create-step" data-step="5">
-                <h3>第五步：确认创建</h3>
-                <div id="previewContent">
-                    <!-- 预览内容将动态生成 -->
-                </div>
-                <div class="step-buttons">
-                    <button type="button" class="btn-prev" onclick="prevStep(4)">上一步</button>
-                    <button type="button" class="btn-submit" onclick="submitCreateScroll()">
-                        <i class="fas fa-check"></i> 创建书卷
-                    </button>
-                </div>
-            </div>
-            
-            <div class="create-progress" id="createProgress" style="display: none;">
-                <div class="progress-bar">
-                    <div class="progress-fill" id="createProgressFill"></div>
-                </div>
-                <p id="createProgressText">正在创建书卷...</p>
             </div>
         </div>
     </div>

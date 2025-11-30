@@ -33,6 +33,36 @@ body::before {
     z-index: 0;
 }
 
+/* 背景动态效果 - 水墨烟云 */
+body::after {
+    content: '';
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 200px;
+    background: linear-gradient(
+        to top,
+        rgba(107, 68, 35, 0.05) 0%,
+        rgba(107, 68, 35, 0.02) 50%,
+        transparent 100%
+    );
+    pointer-events: none;
+    z-index: 0;
+    animation: cloudFlow 20s ease-in-out infinite;
+}
+
+@keyframes cloudFlow {
+    0%, 100% {
+        transform: translateX(0);
+        opacity: 0.5;
+    }
+    50% {
+        transform: translateX(50px);
+        opacity: 0.8;
+    }
+}
+
 .plaza-container {
     min-height: 100vh;
     padding-bottom: 2rem;
@@ -40,13 +70,16 @@ body::before {
     z-index: 1;
 }
 
-/* 顶部导航 */
+/* 顶部导航栏 */
 .plaza-header {
     background: rgba(250, 248, 243, 0.95);
     backdrop-filter: blur(10px);
     padding: 1rem 2rem;
     border-bottom: 2px solid rgba(212, 175, 55, 0.3);
     box-shadow: 0 2px 10px rgba(107, 68, 35, 0.1);
+    position: sticky;
+    top: 0;
+    z-index: 100;
 }
 
 .header-content {
@@ -60,14 +93,86 @@ body::before {
 .logo {
     font-size: 1.8rem;
     font-weight: 700;
-    color: #3d2817;
-    text-shadow: 2px 2px 4px rgba(107, 68, 35, 0.2);
+    color: #dc2626;
+    font-family: 'Noto Serif SC', serif;
+    border: 2px solid #dc2626;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    background: rgba(250, 248, 243, 0.9);
+    text-shadow: 1px 1px 2px rgba(107, 68, 35, 0.1);
 }
 
-.user-info {
+.user-section {
     display: flex;
     align-items: center;
     gap: 1rem;
+}
+
+.user-dropdown {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+}
+
+.username {
+    font-size: 1rem;
+    color: #3d2817;
+    font-weight: 600;
+}
+
+.user-dropdown i {
+    font-size: 0.8rem;
+    color: #6b4423;
+    transition: transform 0.3s ease;
+}
+
+.user-dropdown:hover i {
+    transform: rotate(180deg);
+}
+
+.dropdown-menu {
+    position: absolute;
+    top: calc(100% + 0.5rem);
+    right: 0;
+    background: rgba(250, 248, 243, 0.98);
+    border: 2px solid rgba(212, 175, 55, 0.3);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(107, 68, 35, 0.15);
+    min-width: 150px;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: all 0.3s ease;
+    z-index: 1000;
+}
+
+.dropdown-menu.show {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.dropdown-item {
+    display: block;
+    padding: 0.75rem 1rem;
+    color: #3d2817;
+    text-decoration: none;
+    transition: background 0.2s ease;
+    font-size: 0.95rem;
+}
+
+.dropdown-item:hover {
+    background: rgba(212, 175, 55, 0.1);
+}
+
+.dropdown-item:first-child {
+    border-radius: 6px 6px 0 0;
+}
+
+.dropdown-item:last-child {
+    border-radius: 0 0 6px 6px;
 }
 
 .logout-btn {
@@ -79,6 +184,7 @@ body::before {
     cursor: pointer;
     transition: all 0.3s ease;
     font-weight: 600;
+    font-size: 0.95rem;
 }
 
 .logout-btn:hover {
@@ -88,14 +194,123 @@ body::before {
     box-shadow: 0 4px 10px rgba(107, 68, 35, 0.2);
 }
 
-/* 主要操作按钮 */
-.main-actions {
-    max-width: 1400px;
-    margin: 2rem auto;
+/* 四象阵容器 */
+.four-portals-container {
+    width: 100%;
+    height: calc(100vh - 80px);
     display: flex;
+    align-items: center;
     justify-content: center;
+    padding: 2rem;
+    position: relative;
+}
+
+.four-portals-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
     gap: 2rem;
-    padding: 0 2rem;
+    width: 100%;
+    max-width: 1400px;
+    height: 100%;
+    max-height: 800px;
+}
+
+.portal-card {
+    position: relative;
+    border-radius: 16px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 2px solid rgba(212, 175, 55, 0.3);
+    background: rgba(250, 248, 243, 0.95);
+    box-shadow: 0 4px 20px rgba(107, 68, 35, 0.1);
+    min-height: 300px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.portal-background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0.1;
+    z-index: 0;
+}
+
+.portal-content {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    padding: 2.5rem;
+}
+
+.portal-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #3d2817;
+    margin-bottom: 0.5rem;
+    font-family: 'Noto Serif SC', serif;
+}
+
+.portal-subtitle {
+    font-size: 1.1rem;
+    color: #6b4423;
+    font-weight: 500;
+}
+
+/* 制卷卡片 - 金光效果 */
+.portal-card.creation-card:hover,
+.portal-card.library-card:hover,
+.portal-card.explore-card:hover {
+    transform: translateY(-8px) scale(1.02);
+    box-shadow: 
+        0 8px 30px rgba(107, 68, 35, 0.2),
+        0 0 20px rgba(197, 160, 89, 0.6);
+    border-color: rgba(197, 160, 89, 0.8);
+}
+
+/* 雅集卡片 - 红光效果（颜色突出） */
+.portal-card.gathering-card {
+    background: linear-gradient(135deg, 
+        rgba(220, 38, 38, 0.1) 0%, 
+        rgba(250, 248, 243, 0.95) 100%);
+    border-color: rgba(220, 38, 38, 0.4);
+}
+
+.portal-card.gathering-card:hover {
+    transform: translateY(-8px) scale(1.02);
+    box-shadow: 
+        0 8px 30px rgba(107, 68, 35, 0.2),
+        0 0 25px rgba(220, 38, 38, 0.6);
+    border-color: rgba(220, 38, 38, 0.8);
+    background: linear-gradient(135deg, 
+        rgba(220, 38, 38, 0.15) 0%, 
+        rgba(250, 248, 243, 0.95) 100%);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .four-portals-grid {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto;
+        gap: 1.5rem;
+    }
+    
+    .portal-card {
+        min-height: 200px;
+    }
+    
+    .portal-title {
+        font-size: 2rem;
+    }
+    
+    .portal-subtitle {
+        font-size: 1rem;
+    }
 }
 
 .action-btn {
