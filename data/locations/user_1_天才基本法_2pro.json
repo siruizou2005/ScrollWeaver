@@ -1,0 +1,37 @@
+{
+  "NOODLE_SHOP": {
+    "location_code": "NOODLE_SHOP",
+    "location_name": "打卤面店",
+    "description": "医院边的一家面店，父女二人在此讨论病情的地方。",
+    "detail": "一家充满热气和生活气息的小店。在这里，老林用幽默的方式宣告了自己的病情，并向林朝夕传达了“世界上所有事情，都可能发生在任何一个人身上”的人生观。这个平凡的场景承载了故事开篇的核心情感冲突。",
+    "source": "user_1_天才基本法_2pro"
+  },
+  "UNI_ACTIVITY_CENTER": {
+    "location_code": "UNI_ACTIVITY_CENTER",
+    "location_name": "大学生活动中心",
+    "description": "大学城高校联合智力竞赛的筹备会议地点。",
+    "detail": "位于大学校园内，是学生组织活动的主要场所。林朝夕在这里参与了竞赛题目的筛选工作，展现了她敏锐的思维，并与来自其他学校的学生代表（如安潇潇）产生了交集。",
+    "source": "user_1_天才基本法_2pro"
+  },
+  "SANWEI_UNIVERSITY": {
+    "location_code": "SANWEI_UNIVERSITY",
+    "location_name": "三味大学",
+    "description": "林朝夕和苏小明所在的大学。",
+    "detail": "主角林朝夕就读的大学，也是大学城智力竞赛的参与方之一。数学系非常强大，裴之就是该校的学生。校名“三味”在文中由其他学校学生提及。",
+    "source": "user_1_天才基本法_2pro"
+  },
+  "BAICAO_UNIVERSITY": {
+    "location_code": "BAICAO_UNIVERSITY",
+    "location_name": "百草大学",
+    "description": "安潇潇所在的大学，是三味大学的竞争对手。",
+    "detail": "大学城内的另一所高校，与主角所在的大学是“死敌”。其学生会代表安潇潇在会议上表现出竞争姿态。",
+    "source": "user_1_天才基本法_2pro"
+  },
+  "HOSPITAL": {
+    "location_code": "HOSPITAL",
+    "location_name": "医院",
+    "description": "老林被确诊早发性阿尔茨海默病的地方。",
+    "detail": "故事的起点，在这里，林朝夕和父亲平静地接受了诊断结果，开启了故事的主线剧情。",
+    "source": "user_1_天才基本法_2pro"
+  }
+}

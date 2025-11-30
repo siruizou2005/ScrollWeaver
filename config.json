@@ -12,6 +12,7 @@
     "OPENAI_API_KEY":"REDACTED",
     "OPENAI_API_BASE":"https://www.chataiapi.com/v1",
     "GEMINI_API_KEY":"REDACTED",
+    "GOOGLE_API_KEY":"REDACTED",
     "ANTHROPIC_API_KEY":"",
     "OPENROUTER_API_KEY":"",
     "DASHSCOPE_API_KEY":"",

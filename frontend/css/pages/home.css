@@ -694,27 +694,6 @@ body::after {
 .creation-visual .visual-content i {
     font-size: 4rem;
     color: #d4af37;
-    animation: floatText 3s ease-in-out infinite;
-}
-
-.floating-text {
-    position: absolute;
-    font-size: 0.9rem;
-    color: #8b4513;
-    opacity: 0.6;
-    animation: floatAround 4s ease-in-out infinite;
-}
-
-@keyframes floatText {
-    0%, 100% { transform: translateY(0) rotate(0deg); }
-    50% { transform: translateY(-10px) rotate(5deg); }
-}
-
-@keyframes floatAround {
-    0%, 100% { transform: translate(0, 0); opacity: 0.6; }
-    25% { transform: translate(20px, -15px); opacity: 0.8; }
-    50% { transform: translate(-15px, -25px); opacity: 0.4; }
-    75% { transform: translate(-20px, -10px); opacity: 0.7; }
 }
 
 .simulation-visual {
@@ -995,24 +974,31 @@ body::after {
     font-weight: 700;
 }
 
+.tech-arch-desc {
+    text-align: left;
+    color: #6b4423;
+    line-height: 1.8;
+    font-size: 0.95rem;
+    margin-bottom: 1rem;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: 8px;
+    border-left: 3px solid #d4af37;
+}
+
 .tech-desc {
     text-align: center;
     color: #6b4423;
     line-height: 1.8;
     font-size: 1rem;
-}
-
-.tech-explanation {
-    display: flex;
-    gap: 1rem;
-    align-items: flex-start;
+    font-style: italic;
     margin-top: 1rem;
 }
 
-.bone-icon,
-.soul-icon {
-    font-size: 2rem;
-    flex-shrink: 0;
+.tech-explanation {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(212, 175, 55, 0.2);
 }
 
 .tech-explanation strong {

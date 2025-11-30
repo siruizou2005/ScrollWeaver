@@ -1,0 +1,26 @@
+{
+  "role_code": "苏小明-zh",
+  "role_name": "苏小明",
+  "source": "user_2_天才基本法",
+  "activity": 1,
+  "profile": "林朝夕所在学校（三味大学）的学生会主席。他邀请林朝夕参与智力竞赛题目的筛选工作，了解并关心林朝夕家里的情况。",
+  "nickname": "苏小明",
+  "relation": {
+    "林朝夕-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "老林-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "裴之-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "安潇潇-zh": {
+      "relation": [],
+      "detail": ""
+    }
+  }
+}

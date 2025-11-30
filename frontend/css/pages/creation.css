@@ -32,16 +32,60 @@ body {
     align-items: center;
 }
 
-.logo {
-    font-size: 1.8rem;
-    font-weight: 700;
-    color: #dc2626;
-    font-family: 'Noto Serif SC', serif;
-    border: 2px solid #dc2626;
-    padding: 0.5rem 1rem;
-    border-radius: 4px;
-    background: rgba(250, 248, 243, 0.9);
-    text-shadow: 1px 1px 2px rgba(107, 68, 35, 0.1);
+.logo.seal-logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.4rem;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    position: relative;
+    box-shadow: 
+        0 4px 12px rgba(107, 68, 35, 0.2),
+        0 0 0 2px rgba(212, 175, 55, 0.1);
+    transform: rotate(-1deg);
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.logo-image {
+    max-height: 60px;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    display: block;
+    filter: drop-shadow(2px 2px 4px rgba(107, 68, 35, 0.3));
+    transition: all 0.3s ease;
+}
+
+.logo.seal-logo::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: radial-gradient(circle, rgba(212, 175, 55, 0.2) 0%, transparent 70%);
+    border-radius: 8px;
+    z-index: -1;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.logo.seal-logo:hover {
+    transform: rotate(0deg) scale(1.05);
+    box-shadow: 
+        0 6px 20px rgba(107, 68, 35, 0.3),
+        0 0 0 3px rgba(212, 175, 55, 0.2);
+}
+
+.logo.seal-logo:hover .logo-image {
+    filter: drop-shadow(3px 3px 6px rgba(107, 68, 35, 0.4));
+}
+
+.logo.seal-logo:hover::before {
+    opacity: 1;
 }
 
 .user-section {
@@ -255,7 +299,8 @@ body {
     max-width: 500px;
     width: 90%;
     max-height: 90vh;
-    overflow: hidden;
+    overflow-y: auto;
+    overflow-x: hidden;
     border: 3px solid rgba(212, 175, 55, 0.4);
     position: relative;
     box-shadow: 
@@ -271,6 +316,8 @@ body {
             rgba(107, 68, 35, 0.02) 4px
         ),
         linear-gradient(to bottom, #faf8f3 0%, #f5f1e8 100%);
+    display: flex;
+    flex-direction: column;
 }
 
 @keyframes slideInModal {
@@ -333,6 +380,7 @@ body {
     text-shadow: 1px 1px 2px rgba(107, 68, 35, 0.1);
     border-bottom: 2px solid rgba(212, 175, 55, 0.2);
     background: linear-gradient(to bottom, rgba(250, 248, 243, 0.5), transparent);
+    flex-shrink: 0;
 }
 
 .modal-content > p {
@@ -341,6 +389,14 @@ body {
     color: #6b4423;
     font-size: 0.95rem;
     line-height: 1.6;
+    flex-shrink: 0;
+}
+
+.modal-content form {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    min-height: 0;
 }
 
 .form-group {

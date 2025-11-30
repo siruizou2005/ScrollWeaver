@@ -1,0 +1,30 @@
+{
+  "role_code": "裴之-zh",
+  "role_name": "裴之",
+  "source": "user_1_天才基本法_2pro",
+  "activity": 1,
+  "profile": "林朝夕暗恋多年的校园男神，即将出国深造。据称是数学系的天才，被认为是解决难题的关键人物。他在故事初期并未直接出场，但对林朝夕的心理和选择有重要影响。",
+  "nickname": "校园男神",
+  "relation": {
+    "林朝夕-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "老林-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "安潇潇-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "苏小明-zh": {
+      "relation": [],
+      "detail": ""
+    },
+    "教务主任-zh": {
+      "relation": [],
+      "detail": ""
+    }
+  }
+}

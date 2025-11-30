@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>谁是人类 - ScrollWeaver</title>
+    <link rel="stylesheet" href="../css/pages/who-is-human.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- 右上角返回按钮 -->
+    <button class="top-back-btn" onclick="goBack()" title="返回">
+        <i class="fas fa-arrow-left"></i>
+    </button>
+    
+    <div class="who-is-human-container">
+        <!-- 主要内容 -->
+        <div class="who-is-human-content">
+            <h1 class="page-title">谁是人类</h1>
+            
+            <!-- 游戏信息卡片（可折叠） -->
+            <div class="info-card">
+                <h2 class="info-title" onclick="toggleRules()">
+                    <i class="fas fa-chevron-down rules-icon" id="rulesIcon"></i>
+                    游戏规则
+                </h2>
+                <div class="rules-content" id="rulesContent">
+                    <p><strong>玩法：</strong>裁判会给出一个物品，4位玩家（3个AI + 你）需要描述这个物品</p>
+                    <p><strong>目标：</strong>通过描述来辨别谁是人类，投票淘汰可疑玩家</p>
+                    <p><strong>规则：</strong>不能直接说出物品名称，用一句话描述</p>
+                    <p><strong>轮次：</strong>每轮得票最多的玩家出局，正常2轮结束，平局则加时</p>
+                </div>
+            </div>
+            
+            <!-- 游戏区域 -->
+            <div class="game-area">
+                <!-- 左侧：当前状态 -->
+                <div class="status-panel">
+                    <h3 class="panel-title">当前状态</h3>
+                    <div class="status-info">
+                        <div class="status-item">
+                            <span class="status-label">当前轮次：</span>
+                            <div class="round-progress-container">
+                                <span class="status-value" id="currentRound">0 / 2</span>
+                                <div class="round-indicators" id="roundIndicators">
+                                    <span class="round-dot" data-round="1"></span>
+                                    <span class="round-dot" data-round="2"></span>
+                                    <span class="round-dot overtime-dot" data-round="3" style="display: none;"></span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">当前物品：</span>
+                            <span class="status-value" id="currentItem">等待开始</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">游戏状态：</span>
+                            <span class="status-value" id="gameState">等待开始</span>
+                        </div>
+                    </div>
+                    
+                    <!-- 开始游戏按钮 -->
+                    <div class="start-section" id="startSection">
+                        <button class="start-btn" id="startBtn" onclick="startGame()">
+                            <i class="fas fa-play"></i> 开始游戏
+                        </button>
+                        <p class="start-hint">点击开始按钮开始游戏</p>
+                    </div>
+                    
+                    <!-- 输入描述区域 -->
+                    <div class="input-section" id="inputSection" style="display: none;">
+                        <label for="descriptionInput" class="input-label">请输入你对物品的描述：</label>
+                        <div class="input-group">
+                            <textarea id="descriptionInput" 
+                                      placeholder="用一句话描述这个物品，但不能直接说出物品名称..." 
+                                      class="description-input" 
+                                      rows="3"
+                                      disabled></textarea>
+                        </div>
+                        <button class="submit-btn" id="submitDescriptionBtn" onclick="submitDescription()" disabled>
+                            <i class="fas fa-paper-plane"></i> 提交描述
+                        </button>
+                    </div>
+                    
+                    <!-- 等待AI描述 -->
+                    <div class="waiting-section" id="waitingSection" style="display: none;">
+                        <div class="loading-spinner"></div>
+                        <p>AI正在生成描述中...</p>
+                    </div>
+                </div>
+                
+                <!-- 右侧：描述和投票区域 -->
+                <div class="right-panel">
+                    <!-- 上一轮发言历史 -->
+                    <div class="history-panel" id="historyPanel" style="display: none;">
+                        <h3 class="panel-title">上一轮发言</h3>
+                        <div class="history-list" id="historyList">
+                            <!-- 上一轮发言将在这里显示 -->
+                        </div>
+                    </div>
+                    
+                    <!-- 描述列表 -->
+                    <div class="descriptions-panel">
+                        <h3 class="panel-title">当前轮玩家描述</h3>
+                        <div class="descriptions-list" id="descriptionsList">
+                            <p class="empty-message">等待描述...</p>
+                        </div>
+                    </div>
+                    
+                    <!-- 投票区域 -->
+                    <div class="voting-panel" id="votingPanel" style="display: none;">
+                        <h3 class="panel-title">投票</h3>
+                        <p class="voting-hint">请选择你认为应该出局的玩家：</p>
+                        <div class="voting-options" id="votingOptions">
+                            <!-- 投票选项将在这里动态生成 -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 游戏结束提示 -->
+            <div class="game-over-modal" id="gameOverModal" style="display: none;">
+                <div class="modal-content">
+                    <h2>游戏结束</h2>
+                    <div class="final-stats">
+                        <p>总轮次：<span id="finalRounds">0</span>轮</p>
+                        <p>被识别次数：<span id="finalFoundCount">0</span>次</p>
+                        <p class="winner-text" id="winnerText"></p>
+                    </div>
+                    <div class="modal-actions">
+                        <button class="btn-primary" onclick="startNewGame()">再来一局</button>
+                        <button class="btn-secondary" onclick="goBack()">返回雅集</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="../js/pages/who-is-human.js"></script>
+</body>
+</html>
+

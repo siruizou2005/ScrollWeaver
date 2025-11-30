@@ -1,0 +1,21 @@
+{
+ "role_code": "角色3-zh",
+ "role_name": "角色3",
+ "nickname": "角色3",
+ "profile": "基于'同学想要求学，家里穷家长不让'的角色",
+ "gender": "未知",
+ "identity": [],
+ "motivation": "",
+ "activity": 1.0,
+ "relation": {
+  "角色1-zh": {
+   "relation": [],
+   "detail": ""
+  },
+  "角色2-zh": {
+   "relation": [],
+   "detail": ""
+  }
+ },
+ "source": "user_2_求学路"
+}

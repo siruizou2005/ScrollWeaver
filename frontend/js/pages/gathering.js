@@ -32,6 +32,14 @@ if (userDropdown && dropdownMenu) {
     });
 }
 
+// Logo点击返回广场页
+const logo = document.querySelector('.logo.seal-logo');
+if (logo) {
+    logo.addEventListener('click', () => {
+        window.location.href = '/frontend/pages/plaza.html';
+    });
+}
+
 // 退出登录（使用共享的确认对话框）
 const logoutBtn = document.getElementById('logoutBtn');
 if (logoutBtn) {
@@ -260,12 +268,12 @@ document.getElementById('werewolfCard')?.addEventListener('click', (e) => {
     }
 });
 
-document.getElementById('whoIsAICard')?.addEventListener('click', (e) => {
+document.getElementById('whoIsHumanCard')?.addEventListener('click', (e) => {
     if (e.target.classList.contains('start-game-btn')) {
         e.stopPropagation();
-        startGame('who-is-ai');
+        startGame('who-is-human');
     } else {
-        startGame('who-is-ai');
+        startGame('who-is-human');
     }
 });
 
@@ -283,9 +291,15 @@ function startGame(gameType) {
     if (gameType === 'werewolf') {
         // 跳转到专门的狼人杀页面，而不是书卷风格的game页面
         window.location.href = '/frontend/pages/werewolf.html';
+    } else if (gameType === 'business') {
+        // 商业博弈跳转到商业博弈页面
+        window.location.href = '/frontend/pages/business.html';
+    } else if (gameType === 'who-is-human') {
+        // 谁是人类跳转到谁是人类页面
+        window.location.href = '/frontend/pages/who-is-human.html';
     } else {
         // 其他游戏暂时显示提示
-        alert(`${gameType === 'who-is-ai' ? '谁是AI' : '商业博弈'}功能开发中，敬请期待！`);
+        alert('未知游戏功能开发中，敬请期待！');
     }
 }
 

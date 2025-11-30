@@ -8,14 +8,23 @@
     <link rel="stylesheet" href="../css/common/confirm-dialog.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
+    <!-- 鼠标跟随水墨效果容器 -->
+    <canvas id="inkTrailCanvas" class="ink-trail-canvas"></canvas>
+    
+    <!-- 漂浮粒子容器 -->
+    <div class="floating-particles" id="floatingParticles"></div>
+    
     <div class="plaza-container">
         <!-- 顶部导航栏 -->
         <header class="plaza-header">
             <div class="header-content">
-                <div class="logo">ScrollWeaver</div>
+                <div class="logo seal-logo">
+                    <img src="/frontend/assets/images/logo.png" alt="ScrollWeaver" class="logo-image">
+                </div>
                 <div class="user-section">
                     <div class="user-dropdown">
                         <span class="username" id="username">用户名</span>
@@ -25,7 +34,9 @@
                             <a href="#" class="dropdown-item">账户信息</a>
                         </div>
                     </div>
-                    <button class="logout-btn" id="logoutBtn">退出</button>
+                    <button class="logout-btn jade-btn" id="logoutBtn">
+                        <span class="jade-text">退出</span>
+                    </button>
                 </div>
             </div>
         </header>
@@ -35,56 +46,55 @@
             <div class="four-portals-grid">
                 <!-- 左上：制卷 -->
                 <div class="portal-card creation-card" id="creationCard">
-                    <div class="portal-background creation-bg"></div>
+                    <div class="portal-background creation-bg">
+                        <div class="card-illustration creation-illustration"></div>
+                    </div>
                     <div class="portal-content">
-                        <h2 class="portal-title">天工</h2>
+                        <h2 class="portal-title calligraphy-text">天工</h2>
                         <p class="portal-subtitle">创建属于你的书卷</p>
                     </div>
+                    <div class="card-glow creation-glow"></div>
+                    <div class="border-glow creation-border-glow"></div>
                 </div>
                 
                 <!-- 右上：雅集 -->
                 <div class="portal-card gathering-card" id="gatheringCard">
-                    <div class="portal-background gathering-bg"></div>
+                    <div class="portal-background gathering-bg">
+                        <div class="card-illustration gathering-illustration"></div>
+                    </div>
                     <div class="portal-content">
-                        <h2 class="portal-title">雅集</h2>
+                        <h2 class="portal-title calligraphy-text">雅集</h2>
                         <p class="portal-subtitle">入卷同游与博弈游戏</p>
                     </div>
+                    <div class="card-glow gathering-glow"></div>
+                    <div class="border-glow gathering-border-glow"></div>
                 </div>
                 
                 <!-- 左下：藏书 -->
                 <div class="portal-card library-card" id="libraryCard">
-                    <div class="portal-background library-bg"></div>
+                    <div class="portal-background library-bg">
+                        <div class="card-illustration library-illustration"></div>
+                    </div>
                     <div class="portal-content">
-                        <h2 class="portal-title">藏书阁</h2>
+                        <h2 class="portal-title calligraphy-text">藏书阁</h2>
                         <p class="portal-subtitle">我的书卷 / 历史记录 / 收藏</p>
                     </div>
+                    <div class="card-glow library-glow"></div>
+                    <div class="border-glow library-border-glow"></div>
                 </div>
                 
                 <!-- 右下：阅卷 -->
                 <div class="portal-card explore-card" id="exploreCard">
-                    <div class="portal-background explore-bg"></div>
+                    <div class="portal-background explore-bg">
+                        <div class="card-illustration explore-illustration"></div>
+                    </div>
                     <div class="portal-content">
-                        <h2 class="portal-title">阅卷</h2>
+                        <h2 class="portal-title calligraphy-text">阅卷</h2>
                         <p class="portal-subtitle">浏览共享书卷</p>
                     </div>
+                    <div class="card-glow explore-glow"></div>
+                    <div class="border-glow explore-border-glow"></div>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 确认对话框 -->
-    <div class="modal" id="confirmModal">
-        <div class="modal-backdrop"></div>
-        <div class="modal-content confirm-dialog">
-            <div class="modal-header">
-                <h2><i class="fas fa-exclamation-triangle"></i> 确认操作</h2>
-            </div>
-            <div class="modal-body">
-                <p id="confirmMessage">确定要执行此操作吗？</p>
-            </div>
-            <div class="modal-actions">
-                <button class="btn-cancel" id="confirmCancelBtn">取消</button>
-                <button class="btn-confirm" id="confirmOkBtn">确定</button>
             </div>
         </div>
     </div>

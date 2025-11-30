@@ -1,6 +1,0 @@
-,hospital_001,noodle_shop_001,university_city_001,activity_center_001,conference_room_001
-hospital_001,0,1,1,1,1
-noodle_shop_001,1,0,1,1,1
-university_city_001,1,1,0,1,1
-activity_center_001,1,1,1,0,1
-conference_room_001,1,1,1,1,0

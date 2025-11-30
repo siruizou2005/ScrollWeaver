@@ -312,7 +312,9 @@ class Performer:
         # 第一阶段：思考链（如果启用）
         thought_result = None
         if use_thought_chain:
-            context = f"你需要基于你的目标、状态和提供的其它信息实行下一步行动。当前地点: {self.location_name}"
+            # 在context中加入事件信息，确保思考链也考虑当前事件
+            event_context = f"\n当前全局事件: {intervention}" if intervention else ""
+            context = f"你需要基于你的目标、状态和提供的其它信息实行下一步行动。当前地点: {self.location_name}{event_context}"
             thought_result = self.think(
                 context=context,
                 other_roles_info=other_roles_info,

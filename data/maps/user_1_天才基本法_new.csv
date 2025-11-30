@@ -1,6 +1,0 @@
-,hospital,noodle_restaurant,street,bus,meeting_room
-hospital,0,1,1,1,1
-noodle_restaurant,1,0,1,1,1
-street,1,1,0,1,1
-bus,1,1,1,0,1
-meeting_room,1,1,1,1,0
