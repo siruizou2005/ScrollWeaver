@@ -32,16 +32,60 @@ body {
     align-items: center;
 }
 
-.logo {
-    font-size: 1.8rem;
-    font-weight: 700;
-    color: #dc2626;
-    font-family: 'Noto Serif SC', serif;
-    border: 2px solid #dc2626;
-    padding: 0.5rem 1rem;
-    border-radius: 4px;
-    background: rgba(250, 248, 243, 0.9);
-    text-shadow: 1px 1px 2px rgba(107, 68, 35, 0.1);
+.logo.seal-logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.4rem;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    position: relative;
+    box-shadow: 
+        0 4px 12px rgba(107, 68, 35, 0.2),
+        0 0 0 2px rgba(212, 175, 55, 0.1);
+    transform: rotate(-1deg);
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.logo-image {
+    max-height: 60px;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    display: block;
+    filter: drop-shadow(2px 2px 4px rgba(107, 68, 35, 0.3));
+    transition: all 0.3s ease;
+}
+
+.logo.seal-logo::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: radial-gradient(circle, rgba(212, 175, 55, 0.2) 0%, transparent 70%);
+    border-radius: 8px;
+    z-index: -1;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.logo.seal-logo:hover {
+    transform: rotate(0deg) scale(1.05);
+    box-shadow: 
+        0 6px 20px rgba(107, 68, 35, 0.3),
+        0 0 0 3px rgba(212, 175, 55, 0.2);
+}
+
+.logo.seal-logo:hover .logo-image {
+    filter: drop-shadow(3px 3px 6px rgba(107, 68, 35, 0.4));
+}
+
+.logo.seal-logo:hover::before {
+    opacity: 1;
 }
 
 .user-section {
@@ -466,6 +510,48 @@ body {
     background: linear-gradient(135deg, rgba(139, 69, 19, 0.15), rgba(139, 69, 19, 0.25));
     color: #8b4513;
     border-color: rgba(139, 69, 19, 0.3);
+}
+
+/* 书卷卡片底部区域 */
+.scroll-card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(212, 175, 55, 0.2);
+}
+
+/* 取消共享按钮 */
+.unshare-btn {
+    padding: 0.5rem 1rem;
+    background: rgba(220, 38, 38, 0.1);
+    color: #dc2626;
+    border: 1px solid rgba(220, 38, 38, 0.3);
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: 'Noto Serif SC', serif;
+}
+
+.unshare-btn:hover {
+    background: rgba(220, 38, 38, 0.15);
+    border-color: rgba(220, 38, 38, 0.5);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(220, 38, 38, 0.2);
+}
+
+.unshare-btn:active {
+    transform: translateY(0);
+}
+
+.unshare-btn i {
+    font-size: 0.875rem;
 }
 
 /* 响应式设计 */

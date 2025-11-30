@@ -9,17 +9,19 @@ import json
 import re
 from typing import Dict, List, Optional, Any
 from sw_utils import load_json_file, save_json_file, get_models
+from modules.models import ScrollConfig
+from google import genai
 
 
 class FastScrollGenerator:
     """快速书卷生成器类"""
     
-    def __init__(self, llm_name: str = "gemini-2.5-pro", llm=None):
+    def __init__(self, llm_name: str = "gemini-2.5-flash", llm=None):
         """
         初始化快速书卷生成器
         
         Args:
-            llm_name: LLM 模型名称，默认使用 gemini-2.5-pro（文档要求 gemini-3-pro，但当前可能不可用）
+            llm_name: LLM 模型名称，默认使用 gemini-2.5-flash（支持结构化输出）
             llm: 可选的 LLM 实例，如果提供则直接使用
         """
         self.llm_name = llm_name
@@ -27,6 +29,37 @@ class FastScrollGenerator:
             self.llm = get_models(llm_name)
         else:
             self.llm = llm
+        
+        # 初始化 Google genai 客户端（用于结构化输出）
+        try:
+            # 尝试从环境变量获取 API Key
+            api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GEMINI_API_KEYS", "")
+            if not api_key:
+                # 尝试从 config.json 读取
+                try:
+                    config_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "config.json")
+                    if os.path.exists(config_path):
+                        config_data = load_json_file(config_path)
+                        api_key = config_data.get("GEMINI_API_KEY", "")
+                except:
+                    pass
+            
+            # 处理多个 key 的情况
+            if api_key:
+                if "," in api_key:
+                    api_key = api_key.split(",")[0].strip()
+                api_key = api_key.strip()
+            
+            if api_key:
+                os.environ['GEMINI_API_KEY'] = api_key
+                self.genai_client = genai.Client(vertexai=False)
+                print("[FastScrollGenerator] Google genai 客户端初始化成功")
+            else:
+                self.genai_client = None
+                print("[FastScrollGenerator] 警告: 未找到 GEMINI_API_KEY，将使用 LLM 接口")
+        except Exception as e:
+            print(f"[FastScrollGenerator] 初始化 genai 客户端失败: {e}")
+            self.genai_client = None
     
     def generate_scroll_config(self,
                               user_description: str,
@@ -56,35 +89,136 @@ class FastScrollGenerator:
         
         try:
             print(f"[FastScrollGenerator] 开始生成书卷配置: {user_description}")
-            response = self.llm.chat(prompt, temperature=0.8)
+            print(f"[FastScrollGenerator] 需要生成 {num_characters} 个角色，{num_locations} 个地点")
             
-            # 解析响应
-            if isinstance(response, str):
-                # 尝试解析 JSON
+            # 优先使用结构化输出（如果 genai_client 可用）
+            if self.genai_client:
                 try:
-                    # 移除可能的 markdown 代码块标记
-                    response = response.strip()
-                    if response.startswith("```json"):
-                        response = response[7:]
-                    if response.startswith("```"):
-                        response = response[3:]
-                    if response.endswith("```"):
-                        response = response[:-3]
-                    response = response.strip()
+                    print("[FastScrollGenerator] 使用结构化输出生成配置...")
                     
-                    config_data = json.loads(response)
-                except json.JSONDecodeError as e:
-                    print(f"[FastScrollGenerator] JSON 解析失败: {e}")
-                    print(f"[FastScrollGenerator] 原始响应: {response[:500]}")
-                    # 返回默认配置
-                    return self._generate_default_config(user_description, language, num_characters, num_locations)
+                    # 获取 Pydantic 模型的 JSON Schema
+                    schema = ScrollConfig.model_json_schema()
+                    
+                    # 确保 schema 中明确要求生成指定数量的角色和地点
+                    # 通过修改 schema 的 minItems 来强制要求
+                    if "properties" in schema and "characters" in schema["properties"]:
+                        schema["properties"]["characters"]["minItems"] = num_characters
+                        schema["properties"]["characters"]["maxItems"] = num_characters
+                    if "properties" in schema and "locations" in schema["properties"]:
+                        schema["properties"]["locations"]["minItems"] = num_locations
+                        schema["properties"]["locations"]["maxItems"] = num_locations
+                    
+                    response = self.genai_client.models.generate_content(
+                        model=self.llm_name,
+                        contents=prompt,
+                        config={
+                            "temperature": 0.8,
+                            "response_mime_type": "application/json",
+                            "response_json_schema": schema,
+                        },
+                    )
+                    
+                    # 解析结构化响应
+                    scroll_config = ScrollConfig.model_validate_json(response.text)
+                    
+                    # 验证角色数量
+                    if len(scroll_config.characters) < num_characters:
+                        print(f"[FastScrollGenerator] 警告: 只生成了 {len(scroll_config.characters)} 个角色，需要 {num_characters} 个")
+                    
+                    # 验证地点数量
+                    if len(scroll_config.locations) < num_locations:
+                        print(f"[FastScrollGenerator] 警告: 只生成了 {len(scroll_config.locations)} 个地点，需要 {num_locations} 个")
+                    
+                    # 转换为字典格式
+                    config_data = {
+                        "world": {
+                            "world_name": scroll_config.world.world_name,
+                            "description": scroll_config.world.description,
+                            "language": scroll_config.world.language
+                        },
+                        "characters": [
+                            {
+                                "role_name": char.role_name,
+                                "nickname": char.nickname,
+                                "profile": char.profile,
+                                "gender": char.gender,
+                                "identity": char.identity,
+                                "motivation": char.motivation
+                            }
+                            for char in scroll_config.characters
+                        ],
+                        "locations": [
+                            {
+                                "location_name": loc.location_name,
+                                "description": loc.description,
+                                "detail": loc.detail
+                            }
+                            for loc in scroll_config.locations
+                        ]
+                    }
+                    
+                    print(f"[FastScrollGenerator] 结构化输出成功，生成了 {len(config_data['characters'])} 个角色，{len(config_data['locations'])} 个地点")
+                    
+                except Exception as e:
+                    print(f"[FastScrollGenerator] 结构化输出失败: {e}，回退到普通输出")
+                    import traceback
+                    traceback.print_exc()
+                    # 回退到普通输出
+                    response = self.llm.chat(prompt, temperature=0.8)
+                    
+                    # 解析响应
+                    if isinstance(response, str):
+                        # 尝试解析 JSON
+                        try:
+                            # 移除可能的 markdown 代码块标记
+                            response = response.strip()
+                            if response.startswith("```json"):
+                                response = response[7:]
+                            if response.startswith("```"):
+                                response = response[3:]
+                            if response.endswith("```"):
+                                response = response[:-3]
+                            response = response.strip()
+                            
+                            config_data = json.loads(response)
+                        except json.JSONDecodeError as e:
+                            print(f"[FastScrollGenerator] JSON 解析失败: {e}")
+                            print(f"[FastScrollGenerator] 原始响应: {response[:500]}")
+                            # 返回默认配置
+                            return self._generate_default_config(user_description, language, num_characters, num_locations)
+                    else:
+                        config_data = response
             else:
-                config_data = response
+                # 使用普通 LLM 接口
+                response = self.llm.chat(prompt, temperature=0.8)
+                
+                # 解析响应
+                if isinstance(response, str):
+                    # 尝试解析 JSON
+                    try:
+                        # 移除可能的 markdown 代码块标记
+                        response = response.strip()
+                        if response.startswith("```json"):
+                            response = response[7:]
+                        if response.startswith("```"):
+                            response = response[3:]
+                        if response.endswith("```"):
+                            response = response[:-3]
+                        response = response.strip()
+                        
+                        config_data = json.loads(response)
+                    except json.JSONDecodeError as e:
+                        print(f"[FastScrollGenerator] JSON 解析失败: {e}")
+                        print(f"[FastScrollGenerator] 原始响应: {response[:500]}")
+                        # 返回默认配置
+                        return self._generate_default_config(user_description, language, num_characters, num_locations)
+                else:
+                    config_data = response
             
             # 验证和规范化配置
             config = self._validate_and_normalize_config(config_data, user_description, language, num_characters, num_locations)
             
-            print(f"[FastScrollGenerator] 书卷配置生成成功")
+            print(f"[FastScrollGenerator] 书卷配置生成成功，最终包含 {len(config['characters'])} 个角色，{len(config['locations'])} 个地点")
             return config
             
         except Exception as e:
@@ -112,9 +246,9 @@ class FastScrollGenerator:
 
 2. **角色列表 (characters)**: 生成 {num_characters} 个主要角色
    每个角色包含：
-   - role_name: 角色名称
+   - role_name: 角色名称（必须是具体的人名，如"张三"、"李四"等，禁止使用"角色1"、"角色2"等占位符）
    - nickname: 昵称（可与角色名相同）
-   - profile: 角色简介（100-150字）
+   - profile: 角色简介（100-150字，必须是对该角色的具体介绍，包括性格、背景、特点等，禁止使用"基于xxx的角色"这样的占位符）
    - gender: 性别
    - identity: 身份列表（如 ["学生", "主角"]）
    - motivation: 角色的动机（50字以内）
@@ -158,9 +292,15 @@ class FastScrollGenerator:
 
 要求：
 - 世界观描述应该丰富详细，体现设定的特色
+- **必须生成恰好 {num_characters} 个角色**，不能多也不能少。这是硬性要求，如果角色数量不足，系统将无法正常工作。
+- 角色必须有具体的人名（如"张三"、"李四"、"王五"等），禁止使用"角色1"、"角色2"等占位符
+- 角色的profile必须是对该角色的具体介绍，包括性格、背景、特点等，禁止使用"基于xxx的角色"这样的占位符
 - 角色应该有鲜明的个性和背景
+- **必须生成恰好 {num_locations} 个地点**，不能多也不能少。这是硬性要求，如果地点数量不足，系统将无法正常工作。
 - 地点应该与世界观相符
 - 输出必须是有效的 JSON 格式，不要包含 Markdown 代码块标记
+
+**重要提醒：请确保 characters 数组包含恰好 {num_characters} 个元素，locations 数组包含恰好 {num_locations} 个元素。**
 """
         return prompt
     
@@ -182,9 +322,9 @@ Please generate the following:
 
 2. **Character List (characters)**: Generate {num_characters} main characters
    Each character includes:
-   - role_name: Character name
+   - role_name: Character name (must be a specific name like "John", "Mary", etc., DO NOT use placeholders like "Character1", "Character2")
    - nickname: Nickname (can be same as role_name)
-   - profile: Character profile (100-150 words)
+   - profile: Character profile (100-150 words, must be a specific introduction of the character including personality, background, traits, etc., DO NOT use placeholders like "A character based on xxx")
    - gender: Gender
    - identity: List of identities (e.g., ["student", "protagonist"])
    - motivation: Character motivation (within 50 words)
@@ -228,9 +368,15 @@ Please output in JSON format as follows:
 
 Requirements:
 - World description should be rich and detailed, reflecting the setting's characteristics
+- **You MUST generate exactly {num_characters} characters**, no more, no less. This is a hard requirement. If the number of characters is insufficient, the system will not work properly.
+- Characters must have specific names (like "John", "Mary", "Tom", etc.), DO NOT use placeholders like "Character1", "Character2"
+- Character profiles must be specific introductions of each character including personality, background, traits, etc., DO NOT use placeholders like "A character based on xxx"
 - Characters should have distinct personalities and backgrounds
+- **You MUST generate exactly {num_locations} locations**, no more, no less. This is a hard requirement. If the number of locations is insufficient, the system will not work properly.
 - Locations should match the world setting
 - Output must be valid JSON format, do not include Markdown code block markers
+
+**IMPORTANT REMINDER: Please ensure the characters array contains exactly {num_characters} elements and the locations array contains exactly {num_locations} elements.**
 """
         return prompt
     
@@ -262,22 +408,106 @@ Requirements:
         for i, char in enumerate(characters[:num_characters]):
             if not isinstance(char, dict):
                 continue
+            
+            role_name = char.get("role_name", "").strip()
+            profile = char.get("profile", "").strip()
+            
+            # 检查角色名称是否是占位符（更严格的检查）
+            is_placeholder_name = False
+            if not role_name:
+                is_placeholder_name = True
+            elif role_name.startswith("角色") and len(role_name) > 2:
+                # 检查是否是"角色1"、"角色2"等格式
+                remaining = role_name[2:].strip()
+                if remaining.isdigit() or remaining == "":
+                    is_placeholder_name = True
+            
+            # 如果角色名是占位符，使用LLM生成具体名称
+            if is_placeholder_name:
+                try:
+                    # 尝试使用LLM生成角色名称
+                    name_prompt = f"""根据以下描述，生成一个具体的角色名称（必须是真实的人名，如"张三"、"李四"、"王五"等，不要使用"角色1"、"角色2"等占位符）。
+
+用户描述：{user_description}
+角色序号：第{len(normalized_characters)+1}个角色
+
+请只返回角色名称，不要返回其他内容。"""
+                    name_response = self.llm.chat(name_prompt, temperature=0.9)
+                    if isinstance(name_response, str):
+                        generated_name = name_response.strip()
+                        # 清理可能的引号或多余字符
+                        generated_name = generated_name.strip('"\'`').strip()
+                        if generated_name and len(generated_name) <= 10 and not generated_name.startswith("角色"):
+                            role_name = generated_name
+                        else:
+                            # 如果生成失败，使用常见的中文姓名
+                            common_names = ["张三", "李四", "王五", "赵六", "钱七", "孙八", "周九", "吴十"]
+                            role_name = common_names[len(normalized_characters) % len(common_names)]
+                    else:
+                        common_names = ["张三", "李四", "王五", "赵六", "钱七", "孙八", "周九", "吴十"]
+                        role_name = common_names[len(normalized_characters) % len(common_names)]
+                except Exception as e:
+                    print(f"[FastScrollGenerator] 生成角色名称失败: {e}")
+                    common_names = ["张三", "李四", "王五", "赵六", "钱七", "孙八", "周九", "吴十"]
+                    role_name = common_names[len(normalized_characters) % len(common_names)]
+            
+            # 检查profile是否是占位符（更严格的检查）
+            is_placeholder_profile = False
+            if not profile:
+                is_placeholder_profile = True
+            elif "基于" in profile and "的角色" in profile:
+                is_placeholder_profile = True
+            elif profile.startswith("基于") or profile.endswith("的角色"):
+                is_placeholder_profile = True
+            
+            # 如果profile是占位符，使用LLM生成具体介绍
+            if is_placeholder_profile:
+                try:
+                    # 使用LLM生成角色介绍
+                    profile_prompt = f"""根据以下信息，生成一个角色的具体介绍（100-150字），包括性格、背景、特点等。
+
+用户描述：{user_description}
+角色名称：{role_name}
+角色序号：第{len(normalized_characters)+1}个角色
+
+要求：
+1. 必须是对该角色的具体介绍，包括性格、背景、特点等
+2. 禁止使用"基于xxx的角色"这样的占位符
+3. 介绍应该生动具体，符合{user_description}的世界观
+
+请只返回角色介绍，不要返回其他内容。"""
+                    profile_response = self.llm.chat(profile_prompt, temperature=0.8)
+                    if isinstance(profile_response, str):
+                        generated_profile = profile_response.strip()
+                        # 清理可能的引号或多余字符
+                        generated_profile = generated_profile.strip('"\'`').strip()
+                        if generated_profile and len(generated_profile) > 20 and not ("基于" in generated_profile and "的角色" in generated_profile):
+                            profile = generated_profile
+                        else:
+                            profile = f"{role_name}是一个在{user_description}世界中的角色，具有独特的性格和背景。"
+                    else:
+                        profile = f"{role_name}是一个在{user_description}世界中的角色，具有独特的性格和背景。"
+                except Exception as e:
+                    print(f"[FastScrollGenerator] 生成角色介绍失败: {e}")
+                    profile = f"{role_name}是一个在{user_description}世界中的角色，具有独特的性格和背景。"
+            
             normalized_char = {
-                "role_name": char.get("role_name", f"角色{i+1}"),
-                "nickname": char.get("nickname", char.get("role_name", f"角色{i+1}")),
-                "profile": char.get("profile", ""),
+                "role_name": role_name,
+                "nickname": char.get("nickname", role_name).strip() or role_name,
+                "profile": profile,
                 "gender": char.get("gender", "未知"),
                 "identity": char.get("identity", []) if isinstance(char.get("identity"), list) else [],
-                "motivation": char.get("motivation", "")
+                "motivation": char.get("motivation", "").strip()
             }
             normalized_characters.append(normalized_char)
         
-        # 如果角色数量不够，补充默认角色
+        # 如果角色数量不够，补充默认角色（使用更合理的默认值）
         while len(normalized_characters) < num_characters:
+            char_num = len(normalized_characters) + 1
             normalized_characters.append({
-                "role_name": f"角色{len(normalized_characters)+1}",
-                "nickname": f"角色{len(normalized_characters)+1}",
-                "profile": f"基于'{user_description}'的角色",
+                "role_name": f"角色{char_num}",
+                "nickname": f"角色{char_num}",
+                "profile": f"一个在{user_description}世界中的角色，具有独特的性格和背景。",
                 "gender": "未知",
                 "identity": [],
                 "motivation": ""
@@ -387,21 +617,84 @@ Requirements:
             
             # 保存角色
             characters = config.get("characters", [])
+            world_language = world.get('language', 'zh')
+            
+            # 首先生成所有角色的代码映射
+            char_code_map = {}  # 存储角色名到完整代码的映射
             for char in characters:
-                role_code = self._name_to_code(char.get("role_name", ""))
-                role_dir = f"{roles_dir}/{role_code}-{world.get('language', 'zh')}"
+                role_name = char.get("role_name", "")
+                if not role_name:
+                    continue
+                base_code = self._name_to_code(role_name)
+                full_code = f"{base_code}-{world_language}"
+                char_code_map[role_name] = full_code
+            
+            # 然后保存每个角色，并设置关系
+            for char in characters:
+                role_name = char.get("role_name", "").strip()
+                if not role_name:
+                    continue
+                
+                # 最终检查：确保role_name不是占位符
+                final_role_name = role_name
+                if final_role_name.startswith("角色") and len(final_role_name) > 2:
+                    remaining = final_role_name[2:].strip()
+                    if remaining.isdigit() or remaining == "":
+                        # 使用常见的中文姓名替换占位符
+                        common_names = ["张三", "李四", "王五", "赵六", "钱七", "孙八", "周九", "吴十", "郑一", "冯二"]
+                        char_index = len([c for c in characters if c.get("role_name", "").startswith("角色")])
+                        final_role_name = common_names[char_index % len(common_names)]
+                        # 更新char_code_map
+                        base_code = self._name_to_code(final_role_name)
+                        full_code = f"{base_code}-{world_language}"
+                        char_code_map[final_role_name] = full_code
+                    
+                role_code = char_code_map.get(final_role_name)
+                if not role_code:
+                    # 如果找不到，重新生成code
+                    base_code = self._name_to_code(final_role_name)
+                    role_code = f"{base_code}-{world_language}"
+                    char_code_map[final_role_name] = role_code
+                    
+                role_dir = f"{roles_dir}/{role_code}"
                 os.makedirs(role_dir, exist_ok=True)
+                
+                # 构建角色关系（与其他所有角色的关系）
+                relations = {}
+                for other_char in characters:
+                    other_name = other_char.get("role_name", "").strip()
+                    if other_name and other_name != final_role_name:
+                        # 检查other_name是否也是占位符
+                        if other_name.startswith("角色") and len(other_name) > 2:
+                            remaining = other_name[2:].strip()
+                            if remaining.isdigit() or remaining == "":
+                                continue  # 跳过占位符角色
+                        other_code = char_code_map.get(other_name)
+                        if other_code:
+                            relations[other_code] = {
+                                "relation": [],
+                                "detail": ""
+                            }
+                
+                # 最终检查：确保profile不是占位符
+                final_profile = char.get("profile", "").strip()
+                if not final_profile or ("基于" in final_profile and "的角色" in final_profile) or final_profile.startswith("基于") or final_profile.endswith("的角色"):
+                    world_name = world.get('world_name', '')
+                    if world_name:
+                        final_profile = f"{final_role_name}是一个在{world_name}世界中的角色，具有独特的性格和背景。"
+                    else:
+                        final_profile = f"{final_role_name}是一个具有独特性格和背景的角色。"
                 
                 role_info = {
                     "role_code": role_code,
-                    "role_name": char.get("role_name", ""),
-                    "nickname": char.get("nickname", char.get("role_name", "")),
-                    "profile": char.get("profile", ""),
+                    "role_name": final_role_name,
+                    "nickname": char.get("nickname", final_role_name).strip() or final_role_name,
+                    "profile": final_profile,
                     "gender": char.get("gender", "未知"),
                     "identity": char.get("identity", []),
-                    "motivation": char.get("motivation", ""),
+                    "motivation": char.get("motivation", "").strip(),
                     "activity": 1.0,
-                    "relation": {},
+                    "relation": relations,
                     "source": source_name
                 }
                 

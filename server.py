@@ -1349,6 +1349,37 @@ async def get_scrolls(request: Request, current_user: Optional[dict] = Depends(g
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/api/scrolls/shared")
+async def get_shared_scrolls(current_user: dict = Depends(get_current_user)):
+    """获取共享的书卷列表（排除当前用户自己的书卷）"""
+    try:
+        scrolls = db.get_shared_scrolls(current_user['id'])
+        return {"success": True, "scrolls": scrolls}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/scroll/{scroll_id}/share")
+async def share_scroll(scroll_id: int, request: Request, current_user: dict = Depends(get_current_user)):
+    """共享/取消共享书卷"""
+    try:
+        data = await request.json()
+        is_public = data.get('is_public', True)
+        
+        # 更新共享状态
+        success = db.update_scroll_share_status(scroll_id, is_public, current_user['id'])
+        
+        if not success:
+            raise HTTPException(status_code=403, detail="无权操作此书卷或书卷不存在")
+        
+        return {
+            "success": True,
+            "message": "共享状态已更新" if is_public else "已取消共享"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/api/scroll/{scroll_id}")
 async def get_scroll_for_intro(scroll_id: int):
     """获取单个书卷（用于intro页面）"""
@@ -1621,6 +1652,148 @@ async def create_scroll(request: Request, current_user: dict = Depends(get_curre
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/generate-scroll-from-prompt")
+async def generate_scroll_from_prompt(request: Request, current_user: dict = Depends(get_current_user)):
+    """凭空造物功能：从用户描述生成完整的书卷配置"""
+    try:
+        data = await request.json()
+        
+        # 验证必填字段
+        description = data.get('description', '').strip()
+        title = data.get('title', '').strip()
+        language = data.get('language', 'zh')
+        num_characters = int(data.get('num_characters', 5))
+        num_locations = int(data.get('num_locations', 5))
+        
+        if not description:
+            raise HTTPException(status_code=400, detail="缺少世界描述")
+        if not title:
+            raise HTTPException(status_code=400, detail="缺少书卷名称")
+        
+        # 验证数量范围
+        if num_characters < 2 or num_characters > 10:
+            raise HTTPException(status_code=400, detail="角色数量必须在2-10之间")
+        if num_locations < 2 or num_locations > 10:
+            raise HTTPException(status_code=400, detail="地点数量必须在2-10之间")
+        
+        print(f"[凭空造物] 开始生成书卷: {title}, 用户ID: {current_user['id']}")
+        print(f"[凭空造物] 描述: {description}")
+        print(f"[凭空造物] 角色数: {num_characters}, 地点数: {num_locations}")
+        
+        # 导入 FastScrollGenerator
+        from modules.utils.fast_scroll_generator import FastScrollGenerator
+        
+        # 初始化生成器（使用支持结构化输出的模型）
+        generator = FastScrollGenerator(llm_name="gemini-2.5-flash")
+        
+        # 生成书卷配置
+        config = generator.generate_scroll_config(
+            user_description=description,
+            language=language,
+            num_characters=num_characters,
+            num_locations=num_locations
+        )
+        
+        # 生成source名称（基于标题）
+        import re
+        source_name = re.sub(r'[^\w\s-]', '', title)
+        source_name = re.sub(r'[-\s]+', '_', source_name).lower()
+        source_name = f"user_{current_user['id']}_{source_name}"
+        
+        # 保存书卷配置到文件系统
+        base_dir = "./data"
+        paths = generator.save_scroll_config(config, source_name, base_dir)
+        
+        world_file = paths.get("world_file")
+        roles_dir = paths.get("roles_dir")
+        locations_file = paths.get("locations_file")
+        
+        if not world_file or not roles_dir or not locations_file:
+            raise HTTPException(status_code=500, detail="保存书卷配置失败")
+        
+        # 创建地图文件（CSV格式）
+        map_file = f"{base_dir}/maps/{source_name}.csv"
+        os.makedirs(os.path.dirname(map_file), exist_ok=True)
+        
+        # 读取地点数据以获取地点代码
+        locations_data = load_json_file(locations_file)
+        location_codes = list(locations_data.keys())
+        
+        import csv
+        with open(map_file, 'w', newline='', encoding='utf-8') as f:
+            writer = csv.writer(f)
+            # 表头
+            writer.writerow([''] + location_codes)
+            # 距离矩阵（默认距离为1）
+            for loc_code in location_codes:
+                row = [loc_code]
+                for target_code in location_codes:
+                    if loc_code == target_code:
+                        row.append(0)
+                    else:
+                        row.append(1)
+                writer.writerow(row)
+        
+        # 获取所有角色代码
+        performer_codes = []
+        world_data = load_json_file(world_file)
+        world_language = world_data.get('language', language)
+        
+        # 从角色目录中读取所有角色代码
+        if os.path.exists(roles_dir):
+            for item in os.listdir(roles_dir):
+                role_dir = os.path.join(roles_dir, item)
+                if os.path.isdir(role_dir):
+                    # 角色代码就是目录名（已包含语言后缀，如 "zhang_san-zh"）
+                    role_info_file = os.path.join(role_dir, "role_info.json")
+                    if os.path.exists(role_info_file):
+                        # 验证角色信息文件存在，确保这是一个有效的角色目录
+                        performer_codes.append(item)
+        
+        # 创建预设文件
+        preset_file = f"./experiment_presets/user_{current_user['id']}_{source_name}.json"
+        os.makedirs(os.path.dirname(preset_file), exist_ok=True)
+        
+        preset_data = {
+            "experiment_subname": source_name,
+            "source": source_name,
+            "world_file_path": world_file,
+            "map_file_path": map_file,
+            "loc_file_path": locations_file,
+            "role_file_dir": f"./data/roles/",
+            "performer_codes": performer_codes,
+            "intervention": description,
+            "script": "",
+            "language": world_language
+        }
+        with open(preset_file, 'w', encoding='utf-8') as f:
+            json.dump(preset_data, f, ensure_ascii=False, indent=2)
+        
+        # 在数据库中创建书卷记录
+        world_dir = os.path.dirname(world_file)
+        scroll_id = db.create_scroll(
+            user_id=current_user['id'],
+            title=title,
+            description=description,
+            scroll_type='user',
+            preset_path=preset_file,
+            world_dir=world_dir
+        )
+        
+        print(f"[凭空造物] 书卷生成成功: scroll_id={scroll_id}")
+        
+        return {
+            "success": True,
+            "scroll_id": scroll_id,
+            "message": "书卷生成成功"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"生成书卷失败: {str(e)}")
 
 @app.post("/api/upload-document")
 async def upload_document(

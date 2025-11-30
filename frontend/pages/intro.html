@@ -107,18 +107,6 @@
                         </div>
                     </div>
                 </section>
-
-                <!-- 历史进度 - 在右侧下方，需要滚动才能看到 -->
-                <section class="history-section">
-                    <h2><i class="fas fa-history"></i> 历史进度</h2>
-                    <div class="timeline" id="historyTimeline">
-                        <!-- 时间轴将在这里动态生成 -->
-                        <div class="timeline-empty">
-                            <i class="fas fa-clock"></i>
-                            <p>暂无历史记录</p>
-                        </div>
-                    </div>
-                </section>
             </div>
         </div>
     </div>
@@ -168,6 +156,27 @@
         </div>
     </div>
 
+    <!-- 确认对话框 -->
+    <div class="modal" id="confirmModal">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content confirm-dialog">
+            <div class="modal-header">
+                <h2><i class="fas fa-share-alt"></i> 确认共享</h2>
+            </div>
+            <div class="modal-body">
+                <p id="confirmMessage">确定要共享此书卷吗？共享后其他用户可以在"阅卷共享书卷"中看到此书卷。</p>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-cancel" id="confirmCancelBtn">取消</button>
+                <button class="btn-confirm" id="confirmOkBtn">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <link rel="stylesheet" href="../css/common/confirm-dialog.css">
+    <link rel="stylesheet" href="../css/common/toast.css">
+    <script src="../js/common/confirm-dialog.js"></script>
+    <script src="../js/common/toast.js"></script>
     <script src="../js/intro.js"></script>
 </body>
 </html>

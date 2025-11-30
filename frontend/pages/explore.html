@@ -6,6 +6,7 @@
     <title>阅卷 - ScrollWeaver</title>
     <link rel="stylesheet" href="../css/pages/explore.css">
     <link rel="stylesheet" href="../css/common/confirm-dialog.css">
+    <link rel="stylesheet" href="../css/common/toast.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 </head>
@@ -14,7 +15,9 @@
         <!-- 顶部导航栏（复用广场页样式） -->
         <header class="explore-header">
             <div class="header-content">
-                <div class="logo">ScrollWeaver</div>
+                <div class="logo seal-logo">
+                    <img src="/frontend/assets/images/logo.png" alt="ScrollWeaver" class="logo-image">
+                </div>
                 <div class="user-section">
                     <div class="user-dropdown">
                         <span class="username" id="username">用户名</span>
@@ -66,6 +69,7 @@
     </div>
     
     <script src="../js/common/confirm-dialog.js"></script>
+    <script src="../js/common/toast.js"></script>
     <script src="../js/pages/explore.js"></script>
 </body>
 </html>
