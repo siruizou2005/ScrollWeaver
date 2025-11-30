@@ -23,3 +23,10 @@ Gemini_Generated_Image_*.png
 # Large directories
 SillyTavern-release/
 3D模型/
+
+# User-created local scrolls (should not be uploaded to GitHub)
+experiment_presets/user_*.json
+data/locations/user_*.json
+data/maps/user_*.csv
+data/roles/user_*/
+data/worlds/user_*/
