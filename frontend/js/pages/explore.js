@@ -62,7 +62,7 @@ if (logoutBtn) {
 // 标签切换
 const tabButtons = document.querySelectorAll('.tab-btn');
 const bookshelfGrid = document.getElementById('bookshelfGrid');
-let currentTab = 'shared';
+let currentTab = 'system';
 
 tabButtons.forEach(btn => {
     btn.addEventListener('click', () => {
@@ -196,7 +196,7 @@ function createScrollCard(scroll, type) {
 
 // 页面加载完成后初始化
 document.addEventListener('DOMContentLoaded', () => {
-    // 默认加载共享书卷
-    loadScrolls('shared');
+    // 默认加载系统书卷
+    loadScrolls('system');
 });
 
