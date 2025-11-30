@@ -16,7 +16,10 @@ scrollweaver.db
 frontend/node_modules/
 frontend/.next/
 frontend/next-env.d.ts
-frontend/.next/
 
 # Other files
 Gemini_Generated_Image_*.png
+
+# Large directories
+SillyTavern-release/
+3D模型/
