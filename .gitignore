@@ -11,6 +11,10 @@ BookWorld_test.py
 model_cache/
 .cursor
 scrollweaver.db
+*.log
+server_debug.log
+server_output.log
+server.log
 
 # Frontend dependencies
 frontend/node_modules/

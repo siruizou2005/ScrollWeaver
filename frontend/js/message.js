@@ -405,6 +405,17 @@ document.addEventListener('DOMContentLoaded', function () {
         else if (message.type === 'error') {
             // 错误消息
             addSystemMessage(`错误: ${message.data.message}`);
+            
+            // 如果正在加载书卷，收到错误时隐藏加载覆盖层
+            if (isLoadingStory) {
+                isLoadingStory = false;
+                hideLoadingOverlay();
+                if (controlBtn) {
+                    controlBtn.classList.remove('loading');
+                    controlBtn.disabled = false;
+                }
+            }
+            
             // 如果是"不是您的回合"的错误，确保输入框被禁用
             if (message.data.message && message.data.message.includes('不是您的回合')) {
                 waitingForInput = false;

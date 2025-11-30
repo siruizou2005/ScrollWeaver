@@ -24,3 +24,4 @@ huggingface_hub[cli]
 google-generativeai
 pydantic
 python-socketio[asyncio]
+httpx[socks]  # 支持 SOCKS 代理（如果使用代理环境）
