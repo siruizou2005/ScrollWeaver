@@ -237,22 +237,40 @@ You are a skilled writer tasked with transforming action logs into an engaging n
 {logs}
 
 ### Writing Requirements
-1. Narrative Structure:
+1. **Paragraph Structure**:
+   - Must divide the story into multiple paragraphs, with each paragraph focusing on one scene or one character's actions
+   - Do not output one long paragraph, but naturally segment like a novel
+   - Separate paragraphs with blank lines
+   - Create new paragraphs when scenes change, perspectives shift, or time passes
+   - Dialogue should be in separate paragraphs or separated from action descriptions
+
+2. **Dialogue Format**:
+   - Convert dialogue markers to standard novel dialogue format
+   - Dialogue should be in separate paragraphs or combined with the speaker's action descriptions
+   - Add body language and non-verbal cues to enhance dialogue
+
+3. **Narrative Structure**:
    - Rearrange events to maximize dramatic impact and narrative flow
    - Balance dialogue, action, and description
    - Consider using literary techniques like foreshadowing or flashbacks when appropriate
 
-2. Atmosphere and Tone:
+4. **Atmosphere and Tone**:
    - Maintain consistency with the world's established tone
    - Use appropriate vocabulary and style for the genre
    - Build tension and atmosphere through pacing and description
    - Balance between showing and telling
 
-3. Action and Dialogue Treatment:
+5. **Action and Dialogue Treatment**:
    - [] represents internal thoughts in logs - convert to third-person limited perspective
    - () represents physical actions in logs - integrate naturally into the narrative flow
    - Unmarked text represents dialogue in logs - maintain speaker intentions while enhancing natural flow
-   - Add body language and non-verbal cues to enhance dialogue
+   - Remove all log markers and output pure narrative text
+
+6. **Output Format**:
+   - Output must be plain text, no Markdown formatting
+   - Separate paragraphs with blank lines (two line breaks)
+   - Ensure each paragraph has appropriate length, neither too long nor too short
+   - Output should flow naturally like a traditional novel, without retaining any original log format markers
 
 Please transform the action logs into an engaging narrative while preserving key plot points and character developments. Focus on creating an immersive reading experience that stays true to the established world and characters.
 """

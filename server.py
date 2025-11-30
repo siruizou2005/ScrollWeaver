@@ -1157,9 +1157,28 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                         story_text = re.sub(r'（([^）]*)）', r'\1', story_text)
                         # 「」内的对话：转换为引号
                         story_text = re.sub(r'「([^」]*)」', r'"\1"', story_text)
-                        # 清理多余的空格和换行
-                        story_text = re.sub(r'\s+', ' ', story_text)
-                        story_text = re.sub(r'\n\s*\n', '\n\n', story_text)
+                        # 清理多余的空格和换行，但保留段落之间的空行
+                        # 首先规范化段落之间的空行为两个换行符（保留段落分隔）
+                        story_text = re.sub(r'\n\s*\n\s*\n+', '\n\n', story_text)
+                        # 规范化单个换行符后的空格（段落内的换行）
+                        story_text = re.sub(r'\n +', '\n', story_text)
+                        story_text = re.sub(r' +\n', '\n', story_text)
+                        # 清理段落内的多个连续空格为单个空格（但不影响换行符和空行）
+                        lines = story_text.split('\n')
+                        cleaned_lines = []
+                        for line in lines:
+                            if line.strip() == '':
+                                # 保留空行作为段落分隔符
+                                cleaned_lines.append('')
+                            else:
+                                # 清理每行内的多余空格，但保留行首行尾的空格（如果有意义的话）
+                                cleaned_line = re.sub(r'[ \t]+', ' ', line)
+                                # 清理行首行尾的空格
+                                cleaned_line = cleaned_line.strip()
+                                cleaned_lines.append(cleaned_line)
+                        story_text = '\n'.join(cleaned_lines)
+                        # 确保段落之间有空行分隔（如果原本有多个空行，保留为两个）
+                        story_text = re.sub(r'\n\n\n+', '\n\n', story_text)
                         story_text = story_text.strip()
                     
                     # 保存故事到数据库（如果用户已登录）

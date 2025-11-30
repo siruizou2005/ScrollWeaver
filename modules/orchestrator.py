@@ -415,25 +415,25 @@ class Orchestrator:
         return response
     
     def log2story(self,logs):
-        from .models import StoryText
         import re
+        # 将日志列表转换为字符串，每个记录用换行符分隔
+        if isinstance(logs, list):
+            logs_text = "\n".join(str(log) for log in logs)
+        else:
+            logs_text = str(logs)
         prompt = self._LOG2STORY_PROMPT.format(**{
-            "logs":logs
+            "logs":logs_text
         })
         try:
-            # 使用结构化输出
-            response_model = self.llm.chat(prompt, response_model=StoryText)
-            response = response_model.story
+            # 直接使用文本输出，不使用结构化输出
+            response = self.llm.chat(prompt)
+            if not isinstance(response, str):
+                response = str(response)
         except Exception as e:
-            print(f"[Orchestrator] 故事生成结构化输出失败: {e}")
-            # 回退到文本输出
-            try:
-                response = self.llm.chat(prompt)
-                if not isinstance(response, str):
-                    response = str(response)
-            except Exception as e2:
-                print(f"[Orchestrator] 文本输出也失败: {e2}")
-                response = "故事正在继续发展。" if self.language == "zh" else "The story continues to develop."
+            print(f"[Orchestrator] 故事生成文本输出失败: {e}")
+            import traceback
+            traceback.print_exc()
+            response = "故事正在继续发展。" if self.language == "zh" else "The story continues to develop."
         
         # 注意：后处理逻辑已移至server.py的故事输出部分
         # 这里只返回原始响应，保持log2story函数的通用性
