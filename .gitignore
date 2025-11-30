@@ -11,3 +11,12 @@ BookWorld_test.py
 model_cache/
 .cursor
 scrollweaver.db
+
+# Frontend dependencies
+frontend/node_modules/
+frontend/.next/
+frontend/next-env.d.ts
+frontend/.next/
+
+# Other files
+Gemini_Generated_Image_*.png
