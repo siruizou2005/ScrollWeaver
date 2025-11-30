@@ -212,7 +212,9 @@ body::before {
 .message {
     display: flex;
     margin-bottom: 20px;
-    animation: fadeInUp 0.4s ease-out;
+    opacity: 0;
+    transform: translateY(10px);
+    animation: fadeInUp 0.4s ease-out forwards;
 }
 
 @keyframes fadeInUp {

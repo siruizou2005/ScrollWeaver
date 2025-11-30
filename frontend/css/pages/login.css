@@ -481,7 +481,9 @@ body::before {
 
 /* 表单切换动画 */
 .form-section {
-    animation: fadeIn 0.3s ease;
+    opacity: 0;
+    transform: translateX(-10px);
+    animation: fadeIn 0.3s ease forwards;
     width: 100%;
     box-sizing: border-box;
 }

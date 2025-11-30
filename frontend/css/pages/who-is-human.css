@@ -1069,7 +1069,8 @@ body::after {
     align-items: center;
     justify-content: center;
     z-index: 1000;
-    animation: fadeIn 0.3s ease;
+    opacity: 0;
+    animation: fadeIn 0.3s ease forwards;
 }
 
 @keyframes fadeIn {

@@ -398,7 +398,8 @@ body {
     height: 100%;
     background: rgba(61, 40, 23, 0.75);
     backdrop-filter: blur(8px);
-    animation: fadeInModal 0.3s ease;
+    opacity: 0;
+    animation: fadeInModal 0.3s ease forwards;
 }
 
 .modal.active {
@@ -427,7 +428,9 @@ body {
         0 20px 60px rgba(61, 40, 23, 0.4),
         inset 0 1px 0 rgba(255, 255, 255, 0.5);
     position: relative;
-    animation: slideInModal 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 0;
+    transform: translateY(-30px) scale(0.95);
+    animation: slideInModal 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
 @keyframes slideInModal {

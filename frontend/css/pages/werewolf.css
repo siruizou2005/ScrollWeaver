@@ -311,7 +311,9 @@ body {
     margin-bottom: 12px;
     line-height: 1.6;
     font-size: 0.95rem;
-    animation: fadeIn 0.3s ease;
+    opacity: 0;
+    transform: translateY(5px);
+    animation: fadeIn 0.3s ease forwards;
 }
 
 @keyframes fadeIn {
