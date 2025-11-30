@@ -121,8 +121,7 @@ class Database:
         # 读取预设文件目录
         presets_dir = './experiment_presets'
         if os.path.exists(presets_dir):
-            preset_files = [f for f in os.listdir(presets_dir) if f.endswith('.json')]
-            
+            # 只加载系统预设文件，忽略用户创建的本地文件（以user_开头的文件）
             preset_names = {
                 'example_free.json': '自由模式示例',
                 'example_script.json': '剧本模式示例',
@@ -133,9 +132,14 @@ class Database:
                 'experiment_three_kindoms.json': '三国演义'
             }
             
-            for preset_file in preset_files:
-                preset_name = preset_names.get(preset_file, preset_file.replace('.json', '').replace('experiment_', '').replace('_', ' '))
+            # 只处理系统预设文件，忽略用户创建的本地文件
+            for preset_file in preset_names.keys():
                 preset_path = os.path.join(presets_dir, preset_file)
+                # 只加载存在的系统预设文件
+                if not os.path.exists(preset_path):
+                    continue
+                    
+                preset_name = preset_names[preset_file]
                 
                 cursor.execute('''
                     INSERT INTO scrolls (user_id, title, description, scroll_type, preset_path, created_at, updated_at)
