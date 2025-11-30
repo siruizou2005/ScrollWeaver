@@ -143,37 +143,9 @@ class ConnectionManager:
         self.pending_user_inputs: dict[str, asyncio.Future] = {}  # client_id -> Future
         self.client_users: dict[str, dict] = {}  # client_id -> user_info
         
-        if True:
-            if "preset_path" in config and config["preset_path"]:
-                if os.path.exists(config["preset_path"]):
-                    preset_path = config["preset_path"]
-                else:
-                    raise ValueError(f"The preset path {config['preset_path']} does not exist.")
-            elif "genre" in config and config["genre"]:
-                genre = config["genre"]
-                preset_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),f"./config/experiment_{genre}.json")
-            else:
-                raise ValueError("Please set the preset_path in `config.json`.")
-            
-            # Get shared embedding instance
-            embedding = self.get_or_create_embedding(
-                config["embedding_model_name"],
-                language='zh'
-            )
-            
-            self.scrollweaver = ScrollWeaver(preset_path = preset_path,
-                    world_llm_name = config["world_llm_name"],
-                    role_llm_name = config["role_llm_name"],
-                    embedding_name = config["embedding_model_name"],
-                    embedding = embedding)
-            self.scrollweaver.set_generator(rounds = config["rounds"], 
-                        save_dir = config["save_dir"], 
-                        if_save = config["if_save"],
-                        mode = config["mode"],
-                        scene_mode = config["scene_mode"],)
-        else:
-            from ScrollWeaver_test import ScrollWeaver_test
-            self.scrollweaver = ScrollWeaver_test()
+        # 延迟初始化scrollweaver，只在需要时创建（根据scroll_id）
+        # 这样可以避免在ConnectionManager初始化时就加载所有模型
+        self.scrollweaver = None
           
     async def connect(self, websocket: WebSocket, client_id: str):
         await websocket.accept()
@@ -385,13 +357,35 @@ class ConnectionManager:
 
     async def get_initial_data(self):
         """获取初始化数据"""
-        return {
-            'characters': self.scrollweaver.get_characters_info(use_selected=False),
-            'map': self.scrollweaver.get_map_info(),
-            'settings': self.scrollweaver.get_settings_info(),
-            'status': self.scrollweaver.get_current_status(),
-            'history_messages':self.scrollweaver.get_history_messages(save_dir = config["save_dir"]),
-        }
+        try:
+            if not hasattr(self, 'scrollweaver') or self.scrollweaver is None:
+                print("Warning: scrollweaver not initialized in get_initial_data")
+                return {
+                    'characters': [],
+                    'map': {'places': [], 'distances': []},
+                    'settings': {},
+                    'status': {},
+                    'history_messages': []
+                }
+            return {
+                'characters': self.scrollweaver.get_characters_info(use_selected=False),
+                'map': self.scrollweaver.get_map_info(),
+                'settings': self.scrollweaver.get_settings_info(),
+                'status': self.scrollweaver.get_current_status(),
+                'history_messages':self.scrollweaver.get_history_messages(save_dir = config["save_dir"]),
+            }
+        except Exception as e:
+            print(f"Error in get_initial_data: {e}")
+            import traceback
+            traceback.print_exc()
+            # 返回空数据而不是抛出异常
+            return {
+                'characters': [],
+                'map': {'places': [], 'distances': []},
+                'settings': {},
+                'status': {},
+                'history_messages': []
+            }
     
     async def reset_session(self, client_id: str):
         """
@@ -798,8 +792,14 @@ async def load_preset(request: Request):
 @app.websocket("/ws/{client_id}")
 async def websocket_endpoint(websocket: WebSocket, client_id: str):
     print(f"WebSocket connection attempt for client {client_id}")
-    await manager.connect(websocket, client_id)
-    print(f"WebSocket connected for client {client_id}")
+    try:
+        await manager.connect(websocket, client_id)
+        print(f"WebSocket connected for client {client_id}")
+    except Exception as e:
+        print(f"Error connecting WebSocket for client {client_id}: {e}")
+        import traceback
+        traceback.print_exc()
+        return
     
     # 存储客户端的scroll_id
     client_scroll_id = None
@@ -809,6 +809,7 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
         # 等待第一个消息，可能是初始化消息包含scroll_id和token
         try:
             first_data = await websocket.receive_text()
+            print(f"Received first message from client {client_id}: {first_data[:200]}")  # 只打印前200字符
             first_message = json.loads(first_data)
             
             # 处理用户认证
@@ -823,57 +824,108 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                 client_scroll_id = first_message.get('scroll_id')
                 # 加载对应的书卷
                 if client_scroll_id:
-                    scroll = db.get_scroll(client_scroll_id)
-                    print(f"Loading scroll {client_scroll_id}: {scroll}")
-                    if scroll:
-                        preset_path = scroll.get('preset_path')
-                        if preset_path and os.path.exists(preset_path):
-                            # Get shared embedding instance
-                            embedding = ConnectionManager.get_or_create_embedding(
-                                config["embedding_model_name"],
-                                language='zh'
-                            )
-                            
-                            # 为这个客户端创建新的ScrollWeaver实例
-                            manager.scrollweaver = ScrollWeaver(
-                                preset_path=preset_path,
-                                world_llm_name=config["world_llm_name"],
-                                role_llm_name=config["role_llm_name"],
-                                embedding_name=config["embedding_model_name"],
-                                embedding=embedding
-                            )
-                            manager.scrollweaver.set_generator(
-                                rounds=config["rounds"],
-                                save_dir=config["save_dir"],
-                                if_save=config["if_save"],
-                                mode=config["mode"],
-                                scene_mode=config["scene_mode"]
-                            )
-                            print(f"Loaded scroll {client_scroll_id} for client {client_id}, preset_path: {preset_path}")
+                    try:
+                        scroll = db.get_scroll(client_scroll_id)
+                        print(f"Loading scroll {client_scroll_id}: {scroll}")
+                        if scroll:
+                            preset_path = scroll.get('preset_path')
+                            if preset_path and os.path.exists(preset_path):
+                                # Get shared embedding instance
+                                embedding = ConnectionManager.get_or_create_embedding(
+                                    config["embedding_model_name"],
+                                    language='zh'
+                                )
+                                
+                                print(f"Initializing ScrollWeaver for scroll {client_scroll_id}...")
+                                # 为这个客户端创建新的ScrollWeaver实例
+                                manager.scrollweaver = ScrollWeaver(
+                                    preset_path=preset_path,
+                                    world_llm_name=config["world_llm_name"],
+                                    role_llm_name=config["role_llm_name"],
+                                    embedding_name=config["embedding_model_name"],
+                                    embedding=embedding
+                                )
+                                manager.scrollweaver.set_generator(
+                                    rounds=config["rounds"],
+                                    save_dir=config["save_dir"],
+                                    if_save=config["if_save"],
+                                    mode=config["mode"],
+                                    scene_mode=config["scene_mode"]
+                                )
+                                print(f"Loaded scroll {client_scroll_id} for client {client_id}, preset_path: {preset_path}")
+                            else:
+                                print(f"Warning: Scroll {client_scroll_id} preset_path not found or invalid: {preset_path}")
+                                await websocket.send_json({
+                                    'type': 'error',
+                                    'data': {'message': f'书卷预设文件不存在: {preset_path}'}
+                                })
                         else:
-                            print(f"Warning: Scroll {client_scroll_id} preset_path not found or invalid: {preset_path}")
+                            print(f"Warning: Scroll {client_scroll_id} not found in database")
                             await websocket.send_json({
                                 'type': 'error',
-                                'data': {'message': f'书卷预设文件不存在: {preset_path}'}
+                                'data': {'message': f'书卷不存在: {client_scroll_id}'}
                             })
-                    else:
-                        print(f"Warning: Scroll {client_scroll_id} not found in database")
+                    except Exception as e:
+                        print(f"Error loading scroll {client_scroll_id}: {e}")
+                        import traceback
+                        traceback.print_exc()
                         await websocket.send_json({
                             'type': 'error',
-                            'data': {'message': f'书卷不存在: {client_scroll_id}'}
+                            'data': {'message': f'加载书卷失败: {str(e)}'}
                         })
                 first_message = None  # init消息已处理，清除
         except Exception as e:
             # 如果没有初始化消息，使用默认预设
             print(f"No init message or error: {e}")
+            import traceback
+            traceback.print_exc()
         
         print(f"Getting initial data for client {client_id}")
-        initial_data = await manager.get_initial_data()
-        await websocket.send_json({
-            'type': 'initial_data',
-            'data': initial_data
-        })
-        print(f"Initial data sent to client {client_id}")
+        try:
+            # 检查scrollweaver是否已初始化
+            if not hasattr(manager, 'scrollweaver') or manager.scrollweaver is None:
+                print(f"Warning: scrollweaver not initialized for client {client_id}")
+                await websocket.send_json({
+                    'type': 'error',
+                    'data': {'message': '书卷未初始化，请刷新页面重试'}
+                })
+                # 发送空的初始数据，让前端知道连接已建立
+                await websocket.send_json({
+                    'type': 'initial_data',
+                    'data': {
+                        'characters': [],
+                        'map': {'places': [], 'distances': []},
+                        'settings': {},
+                        'status': {},
+                        'history_messages': []
+                    }
+                })
+            else:
+                initial_data = await manager.get_initial_data()
+                await websocket.send_json({
+                    'type': 'initial_data',
+                    'data': initial_data
+                })
+                print(f"Initial data sent to client {client_id}")
+        except Exception as e:
+            print(f"Error getting initial data for client {client_id}: {e}")
+            import traceback
+            traceback.print_exc()
+            await websocket.send_json({
+                'type': 'error',
+                'data': {'message': f'获取初始数据失败: {str(e)}'}
+            })
+            # 即使出错也发送空的初始数据，让前端知道连接已建立
+            await websocket.send_json({
+                'type': 'initial_data',
+                'data': {
+                    'characters': [],
+                    'map': {'places': [], 'distances': []},
+                    'settings': {},
+                    'status': {},
+                    'history_messages': []
+                }
+            })
         
         # 处理消息循环
         while True:
