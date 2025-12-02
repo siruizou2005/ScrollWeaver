@@ -8,6 +8,9 @@ const urlParams = new URLSearchParams(window.location.search);
 const scrollId = urlParams.get('scroll_id');
 const token = localStorage.getItem('token');
 
+// 模态框打开时间戳，防止点击穿透
+let lastCharacterModalOpenTime = 0;
+
 // 页面加载时初始化
 document.addEventListener('DOMContentLoaded', async () => {
     if (!scrollId) {
@@ -18,7 +21,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 加载书卷信息
     await loadScrollInfo();
-    
+
     // 绑定事件监听器
     bindEventListeners();
 });
@@ -29,28 +32,28 @@ document.addEventListener('DOMContentLoaded', async () => {
 async function loadScrollInfo() {
     try {
         showLoading(true);
-        
+
         // 获取书卷详情
         const response = await fetch(`/api/scroll/${scrollId}`, {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
         });
-        
+
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({ detail: '未知错误' }));
             console.error('API 错误:', errorData);
             throw new Error(errorData.detail || '获取书卷信息失败');
         }
-        
+
         const scroll = await response.json();
-        
+
         // 如果返回的是包装格式，提取实际数据
         const scrollData = scroll.scroll || scroll;
-        
+
         // 更新页面信息
         document.getElementById('scrollTitle').textContent = scrollData.title || '未知书卷';
-        
+
         // 更新共享按钮状态
         const shareBtn = document.getElementById('shareBtn');
         if (shareBtn && scrollData.is_public) {
@@ -60,7 +63,7 @@ async function loadScrollInfo() {
             shareBtn.classList.remove('shared');
             shareBtn.title = '分享';
         }
-        
+
         // 显示世界观描述（过滤掉文件名等无关信息）
         let description = scrollData.description || '暂无描述';
         // 如果描述包含"从文档自动生成"等字样，尝试提取更有意义的内容
@@ -85,10 +88,10 @@ async function loadScrollInfo() {
             }
         }
         document.getElementById('worldSummary').innerHTML = `<p>${description}</p>`;
-        
+
         // 加载角色列表（仅用于私语模式的下拉选择）
         await loadCharacters(scrollId);
-        
+
     } catch (error) {
         console.error('加载书卷信息失败:', error);
         const errorMessage = error.message || '加载书卷信息失败，请重试';
@@ -114,7 +117,7 @@ async function loadCharacters(scrollId) {
                 'Authorization': `Bearer ${token}`
             }
         });
-        
+
         let characters = [];
         if (response.ok) {
             const data = await response.json();
@@ -125,18 +128,18 @@ async function loadCharacters(scrollId) {
             console.error('获取角色列表失败:', errorData);
             console.warn('使用空列表');
         }
-        
+
         const chatSelect = document.getElementById('chatRoleSelect');
-        
+
         chatSelect.innerHTML = '<option value="">选择角色...</option>';
-        
+
         if (characters.length === 0) {
             chatSelect.innerHTML = '<option value="">暂无角色可选</option>';
             document.getElementById('enterChatBtn').disabled = true;
             console.warn('角色列表为空');
             return;
         }
-        
+
         // 添加到下拉选择
         characters.forEach(char => {
             const option = document.createElement('option');
@@ -145,17 +148,17 @@ async function loadCharacters(scrollId) {
             option.textContent = displayName;
             chatSelect.appendChild(option);
         });
-        
+
         // 显示角色卡
         displayCharacterCards(characters);
-        
+
         console.log(`成功加载 ${characters.length} 个角色`);
-        
+
         // 监听下拉选择变化
         chatSelect.addEventListener('change', (e) => {
             document.getElementById('enterChatBtn').disabled = !e.target.value;
         });
-        
+
     } catch (error) {
         console.error('加载角色列表失败:', error);
         document.getElementById('chatRoleSelect').innerHTML = '<option value="">加载失败</option>';
@@ -168,12 +171,12 @@ async function loadCharacters(scrollId) {
  */
 function displayCharacterCards(characters) {
     const charactersGrid = document.getElementById('charactersGrid');
-    
+
     if (!charactersGrid) {
         console.warn('角色卡容器不存在');
         return;
     }
-    
+
     if (characters.length === 0) {
         charactersGrid.innerHTML = `
             <div class="characters-empty">
@@ -183,13 +186,13 @@ function displayCharacterCards(characters) {
         `;
         return;
     }
-    
+
     charactersGrid.innerHTML = characters.map(char => {
         // 优先显示名字，如果没有名字则显示昵称，最后显示code
         const displayName = char.name || char.nickname || char.code;
         const description = char.description || char.persona || '暂无描述';
         const avatar = char.avatar || '';
-        
+
         return `
             <div class="character-card" data-role-code="${char.code}">
                 ${avatar ? `<div class="character-avatar"><img src="${avatar}" alt="${displayName}" onerror="this.style.display='none'"></div>` : ''}
@@ -200,7 +203,7 @@ function displayCharacterCards(characters) {
             </div>
         `;
     }).join('');
-    
+
     // 为每个角色卡添加点击事件
     const characterCards = charactersGrid.querySelectorAll('.character-card');
     characterCards.forEach(card => {
@@ -218,29 +221,30 @@ async function showCharacterDetail(roleCode) {
     try {
         const modal = document.getElementById('characterModal');
         const modalContent = modal.querySelector('.modal-content');
-        
+
         // 显示模态框
         modal.style.display = 'flex';
+        lastCharacterModalOpenTime = Date.now(); // 记录打开时间
         document.body.style.overflow = 'hidden';
-        
+
         // 显示加载状态
         document.getElementById('detailName').textContent = '加载中...';
         document.getElementById('detailProfile').textContent = '正在加载角色信息...';
-        
+
         // 获取角色详细信息
         const response = await fetch(`/api/scroll/${scrollId}/character/${roleCode}`, {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
         });
-        
+
         if (!response.ok) {
             throw new Error('获取角色信息失败');
         }
-        
+
         const data = await response.json();
         const character = data.character;
-        
+
         // 更新头像
         const avatarContainer = document.getElementById('detailAvatar');
         if (character.avatar) {
@@ -248,7 +252,7 @@ async function showCharacterDetail(roleCode) {
         } else {
             avatarContainer.innerHTML = '<i class="fas fa-user"></i>';
         }
-        
+
         // 更新名称和昵称
         document.getElementById('detailName').textContent = character.name || character.code;
         const nicknameEl = document.getElementById('detailNickname');
@@ -258,10 +262,10 @@ async function showCharacterDetail(roleCode) {
         } else {
             nicknameEl.style.display = 'none';
         }
-        
+
         // 更新简介
         document.getElementById('detailProfile').textContent = character.profile || '暂无简介';
-        
+
         // 更新性格设定
         const personaSection = document.getElementById('personaSection');
         const detailPersona = document.getElementById('detailPersona');
@@ -271,7 +275,7 @@ async function showCharacterDetail(roleCode) {
         } else {
             personaSection.style.display = 'none';
         }
-        
+
         // 更新场景设定
         const scenarioSection = document.getElementById('scenarioSection');
         const detailScenario = document.getElementById('detailScenario');
@@ -281,7 +285,7 @@ async function showCharacterDetail(roleCode) {
         } else {
             scenarioSection.style.display = 'none';
         }
-        
+
         // 更新人物关系
         const relationSection = document.getElementById('relationSection');
         const detailRelation = document.getElementById('detailRelation');
@@ -301,7 +305,7 @@ async function showCharacterDetail(roleCode) {
         } else {
             relationSection.style.display = 'none';
         }
-        
+
     } catch (error) {
         console.error('加载角色详情失败:', error);
         document.getElementById('detailProfile').textContent = '加载失败，请稍后重试';
@@ -322,14 +326,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const modal = document.getElementById('characterModal');
     const overlay = document.getElementById('modalOverlay');
     const closeBtn = document.getElementById('modalClose');
-    
+
     if (overlay) {
-        overlay.addEventListener('click', closeCharacterModal);
+        overlay.addEventListener('click', () => {
+            const timeSinceOpen = Date.now() - lastCharacterModalOpenTime;
+            if (timeSinceOpen < 200) {
+                console.log('忽略点击 - 模态框刚打开');
+                return;
+            }
+            closeCharacterModal();
+        });
     }
     if (closeBtn) {
         closeBtn.addEventListener('click', closeCharacterModal);
     }
-    
+
     // ESC键关闭
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && modal.style.display === 'flex') {
@@ -346,7 +357,7 @@ function bindEventListeners() {
     document.getElementById('backBtn').addEventListener('click', () => {
         window.location.href = '/frontend/pages/plaza.html';
     });
-    
+
     // 共享按钮
     const shareBtn = document.getElementById('shareBtn');
     if (shareBtn) {
@@ -364,7 +375,7 @@ function bindEventListeners() {
     } else {
         console.warn('共享按钮未找到');
     }
-    
+
     // 私语模式
     document.getElementById('enterChatBtn').addEventListener('click', () => {
         const roleCode = document.getElementById('chatRoleSelect').value;
@@ -372,7 +383,7 @@ function bindEventListeners() {
             enterChatMode(roleCode);
         }
     });
-    
+
     // 入卷模式
     document.getElementById('enterStoryBtn').addEventListener('click', async () => {
         const actSelect = document.getElementById('actSelect');
@@ -380,7 +391,7 @@ function bindEventListeners() {
         const multiplayer = document.getElementById('enableMultiplayerStory').checked;
         const eventChain = document.getElementById('enableEventChain').checked;
         const actCount = eventChain ? parseInt(document.getElementById('actCountSelect').value) : null;
-        
+
         // 如果启用了事件链，先生成并预览
         if (eventChain && actCount) {
             await generateAndPreviewEventChain(actCount, act, multiplayer);
@@ -388,12 +399,12 @@ function bindEventListeners() {
             enterStoryMode(act, multiplayer, eventChain, actCount);
         }
     });
-    
+
     // 事件链开关
     document.getElementById('enableEventChain').addEventListener('change', (e) => {
         document.getElementById('actCountSelect').disabled = !e.target.checked;
     });
-    
+
     // 组局模式（如果元素存在）
     const createRoomBtn = document.getElementById('createRoomBtn');
     if (createRoomBtn) {
@@ -401,7 +412,7 @@ function bindEventListeners() {
             createGameRoom();
         });
     }
-    
+
     const joinRoomBtn = document.getElementById('joinRoomBtn');
     if (joinRoomBtn) {
         joinRoomBtn.addEventListener('click', () => {
@@ -429,9 +440,9 @@ function enterChatMode(roleCode) {
         alert('请先选择角色');
         return;
     }
-    
+
     console.log('进入私语模式，角色:', roleCode, 'scroll_id:', scrollId);
-    
+
     // 跳转到聊天页面
     const params = new URLSearchParams({
         scroll_id: scrollId,
@@ -452,7 +463,7 @@ function generateAndPreviewEventChain(actCount, act, multiplayer) {
     });
     if (act) params.set('act', act);
     if (multiplayer) params.set('multiplayer', 'true');
-    
+
     // 跳转到预览页面（预览页面会处理生成逻辑）
     window.location.href = `/frontend/pages/event-chain-preview.html?${params.toString()}`;
 }
@@ -464,21 +475,21 @@ function generateAndPreviewEventChain(actCount, act, multiplayer) {
  */
 function enterStoryMode(act = null, multiplayer = false, eventChain = false, actCount = null) {
     console.log('进入入卷模式，参数:', { act, multiplayer, eventChain, actCount, scrollId });
-    
+
     // TODO: Phase 2 创建 story.html 页面
     // 暂时跳转到游戏页面，并传递参数
     const params = new URLSearchParams({
         scroll_id: scrollId,
         mode: 'story'
     });
-    
+
     if (act) params.set('act', act);
     if (multiplayer) params.set('multiplayer', 'true');
     if (eventChain && actCount) {
         params.set('event_chain', 'true');
         params.set('act_count', actCount);
     }
-    
+
     // 跳转到现有的游戏页面
     window.location.href = `/game?${params.toString()}`;
 }
@@ -489,7 +500,7 @@ function enterStoryMode(act = null, multiplayer = false, eventChain = false, act
 async function createGameRoom() {
     try {
         const gameType = document.getElementById('gameTypeSelect').value;
-        
+
         const response = await fetch('/api/game/create-room', {
             method: 'POST',
             headers: {
@@ -501,20 +512,20 @@ async function createGameRoom() {
                 game_type: gameType
             })
         });
-        
+
         if (!response.ok) {
             throw new Error('创建房间失败');
         }
-        
+
         const data = await response.json();
         alert(`房间创建成功！房间代码：${data.room_code}`);
-        
+
         // 进入游戏房间
         // TODO: Phase 3 创建 game.html 页面
         // 暂时跳转到游戏页面
         console.log('房间创建成功，跳转到游戏页面');
         window.location.href = `/game?room_id=${data.room_id}&mode=game&scroll_id=${scrollId}`;
-        
+
     } catch (error) {
         console.error('创建房间失败:', error);
         alert('创建房间失败，请重试');
@@ -531,17 +542,17 @@ async function joinGameRoom(roomCode) {
                 'Authorization': `Bearer ${token}`
             }
         });
-        
+
         if (!response.ok) {
             throw new Error('加入房间失败');
         }
-        
+
         const data = await response.json();
         // TODO: Phase 3 创建 game.html 页面
         // 暂时跳转到游戏页面
         console.log('加入房间成功，跳转到游戏页面');
         window.location.href = `/game?room_id=${data.room_id}&mode=game&scroll_id=${scrollId}`;
-        
+
     } catch (error) {
         console.error('加入房间失败:', error);
         alert('加入房间失败，请检查房间代码');
@@ -579,25 +590,25 @@ async function handleShareScroll() {
                 'Authorization': `Bearer ${token}`
             }
         });
-        
+
         if (!response.ok) {
             throw new Error('获取书卷信息失败');
         }
-        
+
         const scroll = await response.json();
         const scrollData = scroll.scroll || scroll;
         const isCurrentlyShared = scrollData.is_public || false;
-        
+
         // 显示确认对话框
-        const message = isCurrentlyShared 
+        const message = isCurrentlyShared
             ? '确定要取消共享此书卷吗？取消后其他用户将无法在"阅卷共享书卷"中看到此书卷。'
             : '确定要共享此书卷吗？共享后其他用户可以在"阅卷共享书卷"中看到此书卷。';
-        
+
         // 修改确认对话框标题
         const confirmModal = document.getElementById('confirmModal');
         const modalHeader = confirmModal?.querySelector('.modal-header h2');
         const originalTitle = modalHeader ? modalHeader.innerHTML : null;
-        
+
         if (modalHeader) {
             // 根据操作类型设置标题
             if (isCurrentlyShared) {
@@ -606,7 +617,7 @@ async function handleShareScroll() {
                 modalHeader.innerHTML = '<i class="fas fa-share-alt"></i> 确认共享';
             }
         }
-        
+
         // 确保 showConfirm 函数可用，如果不可用则使用系统确认对话框
         let confirmed = false;
         if (typeof showConfirm === 'function') {
@@ -615,19 +626,19 @@ async function handleShareScroll() {
             // 回退到系统确认对话框
             confirmed = window.confirm(message);
         }
-        
+
         // 恢复原始标题
         if (modalHeader && originalTitle) {
             modalHeader.innerHTML = originalTitle;
         }
-        
+
         if (!confirmed) {
             return;
         }
-        
+
         // 执行共享/取消共享操作
         showLoading(true);
-        
+
         const shareResponse = await fetch(`/api/scroll/${scrollId}/share`, {
             method: 'POST',
             headers: {
@@ -638,17 +649,17 @@ async function handleShareScroll() {
                 is_public: !isCurrentlyShared
             })
         });
-        
+
         if (!shareResponse.ok) {
             const errorData = await shareResponse.json().catch(() => ({ detail: '操作失败' }));
             throw new Error(errorData.detail || '共享操作失败');
         }
-        
+
         const result = await shareResponse.json();
-        
+
         // 先关闭loading，再显示成功消息（避免同时显示造成显示异常）
         showLoading(false);
-        
+
         // 显示成功消息（使用页面内提示）
         if (typeof showSuccess === 'function') {
             showSuccess(result.message || (isCurrentlyShared ? '已取消共享' : '共享成功'));
@@ -656,7 +667,7 @@ async function handleShareScroll() {
             // 回退到 alert
             alert(result.message || (isCurrentlyShared ? '已取消共享' : '共享成功'));
         }
-        
+
         // 更新按钮状态（可选：改变图标或文字）
         const shareBtn = document.getElementById('shareBtn');
         if (shareBtn) {
@@ -668,7 +679,7 @@ async function handleShareScroll() {
                 shareBtn.title = '分享';
             }
         }
-        
+
     } catch (error) {
         console.error('共享书卷失败:', error);
         showLoading(false);
