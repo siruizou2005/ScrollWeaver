@@ -23,7 +23,7 @@ body::before {
     left: 0;
     right: 0;
     bottom: 0;
-    background-image: 
+    background-image:
         radial-gradient(circle at 20% 30%, rgba(139, 111, 71, 0.03) 0%, transparent 50%),
         radial-gradient(circle at 80% 70%, rgba(107, 85, 55, 0.03) 0%, transparent 50%);
     pointer-events: none;
@@ -64,6 +64,7 @@ body::before {
         opacity: 0;
         transform: translateY(-20px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
@@ -193,6 +194,7 @@ body::before {
     from {
         opacity: 0;
     }
+
     to {
         opacity: 1;
     }
@@ -203,8 +205,8 @@ body::before {
     padding: 24px 28px;
     border-radius: 20px;
     border: 1px solid rgba(212, 196, 176, 0.3);
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08), 
-                0 4px 12px rgba(0, 0, 0, 0.04);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08),
+        0 4px 12px rgba(0, 0, 0, 0.04);
     backdrop-filter: blur(10px);
     transition: all 0.3s ease;
     position: relative;
@@ -224,8 +226,8 @@ body::before {
 
 .world-summary:hover {
     transform: translateY(-4px);
-    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.12), 
-                0 6px 16px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.12),
+        0 6px 16px rgba(0, 0, 0, 0.06);
 }
 
 .world-summary h2 {
@@ -286,8 +288,8 @@ body::before {
     padding: 24px 28px;
     border-radius: 20px;
     border: 1px solid rgba(212, 196, 176, 0.3);
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08), 
-                0 4px 12px rgba(0, 0, 0, 0.04);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08),
+        0 4px 12px rgba(0, 0, 0, 0.04);
     backdrop-filter: blur(10px);
     transition: all 0.3s ease;
     flex: 1;
@@ -441,16 +443,16 @@ body::before {
     padding: 26px 30px;
     border-radius: 20px;
     border: 1px solid rgba(212, 196, 176, 0.3);
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08), 
-                0 4px 12px rgba(0, 0, 0, 0.04);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08),
+        0 4px 12px rgba(0, 0, 0, 0.04);
     backdrop-filter: blur(10px);
     transition: all 0.3s ease;
     flex-shrink: 0;
 }
 
 .mode-selection:hover {
-    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.12), 
-                0 6px 16px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.12),
+        0 6px 16px rgba(0, 0, 0, 0.06);
 }
 
 .mode-selection h2 {
@@ -505,7 +507,7 @@ body::before {
 .mode-card:hover {
     border-color: #8b6f47;
     box-shadow: 0 12px 32px rgba(139, 111, 71, 0.15),
-                0 4px 12px rgba(0, 0, 0, 0.08);
+        0 4px 12px rgba(0, 0, 0, 0.08);
     transform: translateY(-4px);
 }
 
@@ -746,51 +748,100 @@ body::before {
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(4px);
-    display: none; /* 默认隐藏 */
+    background: rgba(250, 248, 243, 0.8);
+    /* 更柔和的背景 */
+    backdrop-filter: blur(8px);
+    display: none;
+    /* 默认隐藏 */
     align-items: center;
     justify-content: center;
-    z-index: 9998; /* 低于 toast 的 z-index */
+    z-index: 99999;
+    /* 最高层级 */
     opacity: 0;
-    animation: fadeIn 0.3s ease forwards;
+    transition: opacity 0.3s ease;
 }
 
 .loading-overlay[style*="flex"] {
     display: flex !important;
+    opacity: 1 !important;
 }
 
 .loading-spinner {
-    background: white;
-    padding: 50px 60px;
-    border-radius: 20px;
+    background: transparent;
+    padding: 0;
+    border-radius: 0;
     text-align: center;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    box-shadow: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
 }
 
+/* 移除旧的图标样式 */
 .loading-spinner i {
-    font-size: 56px;
-    background: linear-gradient(135deg, #8b6f47 0%, #6b5537 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    margin-bottom: 24px;
-    animation: spin 1s linear infinite;
+    display: none;
+}
+
+/* 新的"生花妙笔"加载动画 */
+.loading-spinner::before {
+    content: '';
+    width: 60px;
+    height: 60px;
+    border: 3px solid rgba(212, 175, 55, 0.3);
+    border-top-color: #d4af37;
+    border-radius: 50%;
+    animation: spin 1s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    margin-bottom: 0;
+}
+
+.loading-spinner::after {
+    content: '';
+    position: absolute;
+    width: 40px;
+    height: 40px;
+    background: url('../assets/images/logo.png') no-repeat center center;
+    background-size: contain;
+    opacity: 0.8;
+    animation: pulse 2s ease-in-out infinite;
+    margin-top: 10px;
+    /* 调整位置以居中 */
 }
 
 @keyframes spin {
     from {
         transform: rotate(0deg);
     }
+
     to {
         transform: rotate(360deg);
     }
 }
 
+@keyframes pulse {
+    0% {
+        transform: scale(0.95);
+        opacity: 0.6;
+    }
+
+    50% {
+        transform: scale(1.05);
+        opacity: 0.9;
+    }
+
+    100% {
+        transform: scale(0.95);
+        opacity: 0.6;
+    }
+}
+
 .loading-spinner p {
-    color: #3d2817;
-    font-size: 17px;
+    color: #8b6f47;
+    font-size: 16px;
     font-weight: 500;
+    letter-spacing: 2px;
+    margin-top: 20px;
+    font-family: 'Noto Serif SC', serif;
 }
 
 /* 角色详情模态框 */
@@ -800,11 +851,22 @@ body::before {
     left: 0;
     right: 0;
     bottom: 0;
-    z-index: 1000;
+    z-index: 99999;
+    /* 极大提高层级 */
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 20px;
+    visibility: hidden;
+    /* 默认不可见 */
+    opacity: 0;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+/* 当display为flex时强制可见 */
+.character-modal[style*="flex"] {
+    visibility: visible !important;
+    opacity: 1 !important;
 }
 
 .modal-overlay {
@@ -813,35 +875,31 @@ body::before {
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(4px);
+    background: rgba(61, 40, 23, 0.75);
+    backdrop-filter: blur(8px);
 }
 
 .modal-content {
     position: relative;
-    background: rgba(255, 255, 255, 0.98);
-    border-radius: 24px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    background: linear-gradient(to bottom, #faf8f3 0%, #f5f1e8 100%);
+    border-radius: 16px;
+    box-shadow:
+        0 20px 60px rgba(61, 40, 23, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.5);
+    border: 2px solid rgba(212, 175, 55, 0.3);
     max-width: 700px;
     width: 100%;
     max-height: 90vh;
     overflow-y: auto;
-    z-index: 1001;
-    opacity: 0;
-    transform: translateY(-20px) scale(0.95);
-    animation: modalSlideIn 0.3s ease-out forwards;
+    z-index: 100000;
+    /* 比modal高 */
+    opacity: 1;
+    /* 默认不透明 */
+    transform: none;
+    /* 移除变换动画 */
 }
 
-@keyframes modalSlideIn {
-    from {
-        opacity: 0;
-        transform: translateY(-20px) scale(0.95);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-    }
-}
+/* 移除 keyframes modalSlideIn */
 
 .modal-close {
     position: absolute;
@@ -982,12 +1040,12 @@ body::before {
         flex-direction: column;
         max-width: 100%;
     }
-    
+
     .intro-left,
     .intro-right {
         width: 100%;
     }
-    
+
     .characters-grid {
         grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
     }
@@ -997,49 +1055,49 @@ body::before {
     .intro-container {
         padding: 20px 15px;
     }
-    
+
     .intro-header {
         flex-direction: column;
         gap: 20px;
         padding: 20px;
     }
-    
+
     .scroll-title {
         font-size: 24px;
     }
-    
+
     .intro-content {
         max-width: 100%;
     }
-    
+
     .world-summary,
     .mode-selection {
         padding: 24px;
     }
-    
+
     .mode-card {
         padding: 20px;
     }
-    
+
     .modal-content {
         max-width: 95%;
         max-height: 95vh;
     }
-    
+
     .character-detail-header {
         flex-direction: column;
         text-align: center;
         padding: 24px 20px;
     }
-    
+
     .character-detail-body {
         padding: 20px;
     }
-    
+
     .character-detail-title h2 {
         font-size: 24px;
     }
-    
+
     .mode-icon i {
         font-size: 48px;
     }
@@ -1111,8 +1169,13 @@ body::before {
 }
 
 @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
 }
 
 .modal-footer {
