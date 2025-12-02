@@ -46,22 +46,22 @@ if (logoutBtn) {
     logoutBtn.addEventListener('click', () => {
         showConfirm('确定要退出登录吗？').then((confirmed) => {
             if (confirmed) {
-                fetch(`${API_BASE}/api/logout`, { 
+                fetch(`${API_BASE}/api/logout`, {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${token}`
                     }
                 })
-                .then(() => {
-                    localStorage.removeItem('token');
-                    localStorage.removeItem('user');
-                    window.location.href = '/frontend/pages/home.html';
-                })
-                .catch(() => {
-                    localStorage.removeItem('token');
-                    localStorage.removeItem('user');
-                    window.location.href = '/frontend/pages/home.html';
-                });
+                    .then(() => {
+                        localStorage.removeItem('token');
+                        localStorage.removeItem('user');
+                        window.location.href = '/frontend/pages/home.html';
+                    })
+                    .catch(() => {
+                        localStorage.removeItem('token');
+                        localStorage.removeItem('user');
+                        window.location.href = '/frontend/pages/home.html';
+                    });
             }
         });
     });
@@ -75,15 +75,31 @@ const closeGenerateModal = document.getElementById('closeGenerateModal');
 const closeCreateModal = document.getElementById('closeCreateModal');
 const closePromptModal = document.getElementById('closePromptModal');
 
+// 跟踪模态框打开时间,防止同一个点击事件立即关闭模态框
+let lastGenerateModalOpenTime = 0;
+let lastCreateModalOpenTime = 0;
+let lastPromptModalOpenTime = 0;
+
 // 打开生成书卷模态框
 function openGenerateModal() {
+    console.log('[DEBUG] openGenerateModal called');
     if (generateModal) {
+        console.log('[DEBUG] Adding active class to generateModal');
         generateModal.classList.add('active');
+        generateModal.style.opacity = '1'; // 强制显示，防止动画问题
+        lastGenerateModalOpenTime = Date.now(); // 记录打开时间
+        console.log('[DEBUG] generateModal classes:', generateModal.className);
+        console.log('[DEBUG] generateModal display style:', window.getComputedStyle(generateModal).display);
+        console.log('[DEBUG] Set lastGenerateModalOpenTime:', lastGenerateModalOpenTime);
+    } else {
+        console.log('[DEBUG] generateModal element not found!');
     }
 }
 
 // 关闭生成书卷模态框
 function closeGenerateModalFunc() {
+    console.log('[DEBUG] closeGenerateModalFunc called');
+    console.trace('[DEBUG] Call stack for closeGenerateModalFunc');
     if (generateModal) {
         generateModal.classList.remove('active');
         document.getElementById('generateForm').reset();
@@ -93,16 +109,27 @@ function closeGenerateModalFunc() {
 
 // 打开制作书卷模态框
 function openCreateModal() {
+    console.log('[DEBUG] openCreateModal called');
     if (createModal) {
+        console.log('[DEBUG] Adding active class to createModal');
         createModal.classList.add('active');
+        createModal.style.opacity = '1'; // 强制显示
+        lastCreateModalOpenTime = Date.now(); // 记录打开时间
+        console.log('[DEBUG] createModal classes:', createModal.className);
+        console.log('[DEBUG] createModal display style:', window.getComputedStyle(createModal).display);
+        console.log('[DEBUG] Set lastCreateModalOpenTime:', lastCreateModalOpenTime);
         currentStep = 1;
         updateStepIndicator();
         showStep(1);
+    } else {
+        console.log('[DEBUG] createModal element not found!');
     }
 }
 
 // 关闭制作书卷模态框
 function closeCreateModalFunc() {
+    console.log('[DEBUG] closeCreateModalFunc called');
+    console.trace('[DEBUG] Call stack for closeCreateModalFunc');
     if (createModal) {
         createModal.classList.remove('active');
         document.getElementById('generateForm').reset();
@@ -112,8 +139,12 @@ function closeCreateModalFunc() {
 
 // 打开凭空造物模态框
 function openPromptModal() {
+    console.log('[DEBUG] openPromptModal called');
     if (promptModal) {
+        console.log('[DEBUG] Adding active class to promptModal');
         promptModal.classList.add('active');
+        lastPromptModalOpenTime = Date.now(); // 记录打开时间
+        console.log('[DEBUG] Set lastPromptModalOpenTime:', lastPromptModalOpenTime);
     }
 }
 
@@ -131,7 +162,19 @@ function closePromptModalFunc() {
 // 点击外部关闭模态框
 if (generateModal) {
     generateModal.addEventListener('click', (e) => {
+        const timeSinceOpen = Date.now() - lastGenerateModalOpenTime;
+        console.log('[DEBUG] generateModal clicked, target:', e.target, 'currentTarget:', e.currentTarget);
+        console.log('[DEBUG] Time since modal opened:', timeSinceOpen, 'ms');
+        console.log('[DEBUG] e.target === generateModal:', e.target === generateModal);
+
+        // 忽略打开后200ms内的点击,防止同一个点击事件关闭模态框
+        if (timeSinceOpen < 200) {
+            console.log('[DEBUG] Ignoring click - modal just opened');
+            return;
+        }
+
         if (e.target === generateModal) {
+            console.log('[DEBUG] Closing generateModal because clicked outside');
             closeGenerateModalFunc();
         }
     });
@@ -139,7 +182,19 @@ if (generateModal) {
 
 if (createModal) {
     createModal.addEventListener('click', (e) => {
+        const timeSinceOpen = Date.now() - lastCreateModalOpenTime;
+        console.log('[DEBUG] createModal clicked, target:', e.target, 'currentTarget:', e.currentTarget);
+        console.log('[DEBUG] Time since modal opened:', timeSinceOpen, 'ms');
+        console.log('[DEBUG] e.target === createModal:', e.target === createModal);
+
+        // 忽略打开后200ms内的点击,防止同一个点击事件关闭模态框
+        if (timeSinceOpen < 200) {
+            console.log('[DEBUG] Ignoring click - modal just opened');
+            return;
+        }
+
         if (e.target === createModal) {
+            console.log('[DEBUG] Closing createModal because clicked outside');
             closeCreateModalFunc();
         }
     });
@@ -147,6 +202,15 @@ if (createModal) {
 
 if (promptModal) {
     promptModal.addEventListener('click', (e) => {
+        const timeSinceOpen = Date.now() - lastPromptModalOpenTime;
+        console.log('[DEBUG] promptModal clicked, time since open:', timeSinceOpen, 'ms');
+
+        // 忽略打开后200ms内的点击,防止同一个点击事件关闭模态框
+        if (timeSinceOpen < 200) {
+            console.log('[DEBUG] Ignoring click - modal just opened');
+            return;
+        }
+
         if (e.target === promptModal) {
             closePromptModalFunc();
         }
@@ -181,18 +245,43 @@ document.addEventListener('keydown', (e) => {
 });
 
 // 点石成金（RAG）- 打开上传文档功能
-document.getElementById('ragCard')?.addEventListener('click', () => {
+document.getElementById('ragCard')?.addEventListener('click', (e) => {
+    console.log('[DEBUG] ragCard clicked');
+    // e.stopPropagation(); // 移除stopPropagation，完全依赖时间戳检查
+    console.log('[DEBUG] Calling openGenerateModal');
     openGenerateModal();
+    console.log('[DEBUG] After openGenerateModal call');
+
+    // 延迟检查模态框状态
+    setTimeout(() => {
+        console.log('[DEBUG] 500ms check - generateModal classes:', generateModal?.className);
+        console.log('[DEBUG] 500ms check - generateModal display:', window.getComputedStyle(generateModal).display);
+        console.log('[DEBUG] 500ms check - generateModal opacity:', window.getComputedStyle(generateModal).opacity);
+    }, 500);
 });
 
 // 凭空造物（Prompt）- 打开凭空造物功能
-document.getElementById('promptCard')?.addEventListener('click', () => {
+document.getElementById('promptCard')?.addEventListener('click', (e) => {
+    console.log('[DEBUG] promptCard clicked');
+    // e.stopPropagation(); 
     openPromptModal();
+
+    setTimeout(() => {
+        console.log('[DEBUG] 500ms check - promptModal classes:', promptModal?.className);
+    }, 500);
 });
 
 // 手动编织（Editor）- 打开制作书卷功能
-document.getElementById('editorCard')?.addEventListener('click', () => {
+document.getElementById('editorCard')?.addEventListener('click', (e) => {
+    console.log('[DEBUG] editorCard clicked');
+    // e.stopPropagation();
+    console.log('[DEBUG] Calling openCreateModal');
     openCreateModal();
+    console.log('[DEBUG] After openCreateModal call');
+
+    setTimeout(() => {
+        console.log('[DEBUG] 500ms check - createModal classes:', createModal?.className);
+    }, 500);
 });
 
 // 生成书卷表单提交
@@ -200,32 +289,32 @@ const generateForm = document.getElementById('generateForm');
 if (generateForm) {
     generateForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        
+
         const fileInput = document.getElementById('documentFile');
         const titleInput = document.getElementById('scrollTitle');
         const progressDiv = document.getElementById('uploadProgress');
         const progressFill = document.getElementById('progressFill');
         const progressText = document.getElementById('progressText');
-        
+
         if (!fileInput.files[0]) {
             alert('请选择要上传的文档');
             return;
         }
-        
+
         if (!titleInput.value.trim()) {
             alert('请输入书卷名称');
             return;
         }
-        
+
         const formData = new FormData();
         formData.append('file', fileInput.files[0]);
         formData.append('title', titleInput.value.trim());
-        
+
         // 显示进度条
         progressDiv.style.display = 'block';
         progressFill.style.width = '0%';
         progressText.textContent = '正在上传文档...';
-        
+
         // 模拟上传进度
         let currentProgress = 0;
         let uploadInterval = null;
@@ -244,7 +333,7 @@ if (generateForm) {
                 }
             }, 150); // 每150ms更新一次
         });
-        
+
         try {
             // 同时进行上传和进度条动画
             const [response] = await Promise.all([
@@ -257,23 +346,23 @@ if (generateForm) {
                 }),
                 progressPromise // 等待进度条到达80%
             ]);
-            
+
             // 确保清除进度条动画（防止重复）
             if (uploadInterval) {
                 clearInterval(uploadInterval);
             }
-            
+
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
                 throw new Error(errorData.detail || '上传失败');
             }
-            
+
             // 进度条到100%
             progressFill.style.width = '100%';
             progressText.textContent = '书卷创建成功！';
-            
+
             const result = await response.json();
-            
+
             if (result.success) {
                 setTimeout(() => {
                     closeGenerateModalFunc();
@@ -350,7 +439,7 @@ function showStep(stepNum) {
 }
 
 // 下一步
-window.nextStep = function(stepNum) {
+window.nextStep = function (stepNum) {
     // 验证当前步骤
     if (currentStep === 1) {
         const title = document.getElementById('createScrollTitle').value.trim();
@@ -379,17 +468,17 @@ window.nextStep = function(stepNum) {
         // 预览步骤，生成预览内容
         generatePreview();
     }
-    
+
     showStep(stepNum);
 };
 
 // 上一步
-window.prevStep = function(stepNum) {
+window.prevStep = function (stepNum) {
     showStep(stepNum);
 };
 
 // 添加地点
-window.addLocation = function() {
+window.addLocation = function () {
     const locationId = Date.now();
     const locationItem = {
         id: locationId,
@@ -410,7 +499,7 @@ function removeLocation(id) {
 function renderLocations() {
     const container = document.getElementById('locationsContainer');
     container.innerHTML = '';
-    
+
     locations.forEach((loc, index) => {
         const item = document.createElement('div');
         item.className = 'location-item';
@@ -430,7 +519,7 @@ function renderLocations() {
         `;
         container.appendChild(item);
     });
-    
+
     // 绑定输入事件
     container.querySelectorAll('.location-name').forEach(input => {
         input.addEventListener('input', (e) => {
@@ -439,7 +528,7 @@ function renderLocations() {
             if (loc) loc.name = e.target.value;
         });
     });
-    
+
     container.querySelectorAll('.location-description').forEach(textarea => {
         textarea.addEventListener('input', (e) => {
             const id = parseInt(e.target.dataset.id);
@@ -450,7 +539,7 @@ function renderLocations() {
 }
 
 // 添加角色
-window.addCharacter = function() {
+window.addCharacter = function () {
     const characterId = Date.now();
     const characterItem = {
         id: characterId,
@@ -472,7 +561,7 @@ function removeCharacter(id) {
 function renderCharacters() {
     const container = document.getElementById('charactersContainer');
     container.innerHTML = '';
-    
+
     characters.forEach((char, index) => {
         const item = document.createElement('div');
         item.className = 'character-item';
@@ -496,7 +585,7 @@ function renderCharacters() {
         `;
         container.appendChild(item);
     });
-    
+
     // 绑定输入事件
     container.querySelectorAll('.character-name').forEach(input => {
         input.addEventListener('input', (e) => {
@@ -505,7 +594,7 @@ function renderCharacters() {
             if (char) char.name = e.target.value;
         });
     });
-    
+
     container.querySelectorAll('.character-role').forEach(input => {
         input.addEventListener('input', (e) => {
             const id = parseInt(e.target.dataset.id);
@@ -513,7 +602,7 @@ function renderCharacters() {
             if (char) char.role = e.target.value;
         });
     });
-    
+
     container.querySelectorAll('.character-description').forEach(textarea => {
         textarea.addEventListener('input', (e) => {
             const id = parseInt(e.target.dataset.id);
@@ -531,7 +620,7 @@ function generatePreview() {
     const description = document.getElementById('createDescription').value;
     const worldName = document.getElementById('worldName').value;
     const worldDescription = document.getElementById('worldDescription').value;
-    
+
     previewContent.innerHTML = `
         <div class="preview-section">
             <h4>基本信息</h4>
@@ -564,23 +653,23 @@ const promptForm = document.getElementById('promptForm');
 if (promptForm) {
     promptForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        
+
         const description = document.getElementById('promptDescription').value.trim();
         const title = document.getElementById('promptScrollTitle').value.trim();
         const language = document.getElementById('promptLanguage').value;
         const numCharacters = parseInt(document.getElementById('numCharacters').value);
         const numLocations = parseInt(document.getElementById('numLocations').value);
-        
+
         if (!description) {
             alert('请输入世界描述');
             return;
         }
-        
+
         if (!title) {
             alert('请输入书卷名称');
             return;
         }
-        
+
         // 显示进度条
         const progressDiv = document.getElementById('promptProgress');
         const progressFill = document.getElementById('promptProgressFill');
@@ -588,7 +677,7 @@ if (promptForm) {
         progressDiv.style.display = 'block';
         progressFill.style.width = '0%';
         progressText.textContent = '正在生成书卷配置...';
-        
+
         // 模拟进度
         let currentProgress = 0;
         const progressInterval = setInterval(() => {
@@ -599,7 +688,7 @@ if (promptForm) {
             }
             progressFill.style.width = currentProgress + '%';
         }, 200);
-        
+
         try {
             const response = await fetch(`${API_BASE}/api/generate-scroll-from-prompt`, {
                 method: 'POST',
@@ -615,19 +704,19 @@ if (promptForm) {
                     num_locations: numLocations
                 })
             });
-            
+
             clearInterval(progressInterval);
-            
+
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
                 throw new Error(errorData.detail || '生成失败');
             }
-            
+
             progressFill.style.width = '100%';
             progressText.textContent = '书卷生成成功！';
-            
+
             const result = await response.json();
-            
+
             if (result.success) {
                 setTimeout(() => {
                     closePromptModalFunc();
@@ -651,29 +740,29 @@ if (promptForm) {
 }
 
 // 提交创建书卷
-window.submitCreateScroll = async function() {
+window.submitCreateScroll = async function () {
     const title = document.getElementById('createScrollTitle').value.trim();
     const language = document.getElementById('createLanguage').value;
     const description = document.getElementById('createDescription').value.trim();
     const worldName = document.getElementById('worldName').value.trim();
     const worldDescription = document.getElementById('worldDescription').value.trim();
-    
+
     // 验证
     if (!title || !worldName || !worldDescription) {
         alert('请填写完整的基本信息和世界观');
         return;
     }
-    
+
     if (locations.length === 0) {
         alert('请至少添加一个地点');
         return;
     }
-    
+
     if (characters.length === 0) {
         alert('请至少添加一个角色');
         return;
     }
-    
+
     // 验证地点和角色数据
     for (const loc of locations) {
         if (!loc.name.trim() || !loc.description.trim()) {
@@ -681,14 +770,14 @@ window.submitCreateScroll = async function() {
             return;
         }
     }
-    
+
     for (const char of characters) {
         if (!char.name.trim() || !char.description.trim()) {
             alert('请填写完整的角色信息');
             return;
         }
     }
-    
+
     // 显示进度条
     const progressDiv = document.getElementById('createProgress');
     const progressFill = document.getElementById('createProgressFill');
@@ -696,7 +785,7 @@ window.submitCreateScroll = async function() {
     progressDiv.style.display = 'block';
     progressFill.style.width = '0%';
     progressText.textContent = '正在创建书卷...';
-    
+
     // 构建请求数据
     const requestData = {
         title: title,
@@ -714,11 +803,11 @@ window.submitCreateScroll = async function() {
             description: char.description.trim()
         }))
     };
-    
+
     try {
         progressFill.style.width = '50%';
         progressText.textContent = '正在保存配置...';
-        
+
         const response = await fetch(`${API_BASE}/api/create-scroll`, {
             method: 'POST',
             headers: {
@@ -727,17 +816,17 @@ window.submitCreateScroll = async function() {
             },
             body: JSON.stringify(requestData)
         });
-        
+
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
             throw new Error(errorData.detail || '创建失败');
         }
-        
+
         progressFill.style.width = '100%';
         progressText.textContent = '书卷创建成功！';
-        
+
         const result = await response.json();
-        
+
         if (result.success) {
             setTimeout(() => {
                 closeCreateModalFunc();
