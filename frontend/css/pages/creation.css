@@ -41,7 +41,7 @@ body {
     border: none;
     border-radius: 8px;
     position: relative;
-    box-shadow: 
+    box-shadow:
         0 4px 12px rgba(107, 68, 35, 0.2),
         0 0 0 2px rgba(212, 175, 55, 0.1);
     transform: rotate(-1deg);
@@ -75,7 +75,7 @@ body {
 
 .logo.seal-logo:hover {
     transform: rotate(0deg) scale(1.05);
-    box-shadow: 
+    box-shadow:
         0 6px 20px rgba(107, 68, 35, 0.3),
         0 0 0 3px rgba(212, 175, 55, 0.2);
 }
@@ -215,7 +215,7 @@ body {
 
 .creation-card:hover:not(.disabled) {
     transform: translateY(-8px) scale(1.02);
-    box-shadow: 
+    box-shadow:
         0 8px 30px rgba(107, 68, 35, 0.2),
         0 0 20px rgba(197, 160, 89, 0.6);
     border-color: rgba(197, 160, 89, 0.8);
@@ -267,7 +267,8 @@ body {
 .modal {
     display: none;
     position: fixed;
-    z-index: 1000;
+    z-index: 99999;
+    /* 极大提高层级，防止被遮挡 */
     left: 0;
     top: 0;
     width: 100%;
@@ -275,22 +276,21 @@ body {
     background: rgba(61, 40, 23, 0.75);
     backdrop-filter: blur(8px);
     opacity: 0;
-    animation: fadeInModal 0.3s ease forwards;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    /* 使用transition代替animation */
 }
 
-@keyframes fadeInModal {
-    from {
-        opacity: 0;
-    }
-    to {
-        opacity: 1;
-    }
-}
+/* 移除 keyframes fadeInModal */
 
 .modal.active {
     display: flex;
     align-items: center;
     justify-content: center;
+    opacity: 1 !important;
+    /* 强制不透明 */
+    visibility: visible !important;
+    /* 强制可见 */
 }
 
 .modal-content {
@@ -304,35 +304,25 @@ body {
     overflow-x: hidden;
     border: 3px solid rgba(212, 175, 55, 0.4);
     position: relative;
-    box-shadow: 
+    box-shadow:
         0 20px 60px rgba(61, 40, 23, 0.4),
         inset 0 1px 0 rgba(255, 255, 255, 0.5);
-    opacity: 0;
-    transform: translateY(-30px) scale(0.95);
-    animation: slideInModal 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-    background-image: 
-        repeating-linear-gradient(
-            0deg,
+    opacity: 1;
+    /* 默认不透明 */
+    transform: none;
+    /* 移除变换 */
+    background-image:
+        repeating-linear-gradient(0deg,
             transparent,
             transparent 2px,
             rgba(107, 68, 35, 0.02) 2px,
-            rgba(107, 68, 35, 0.02) 4px
-        ),
+            rgba(107, 68, 35, 0.02) 4px),
         linear-gradient(to bottom, #faf8f3 0%, #f5f1e8 100%);
     display: flex;
     flex-direction: column;
 }
 
-@keyframes slideInModal {
-    from {
-        opacity: 0;
-        transform: translateY(-30px) scale(0.95);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-    }
-}
+/* 移除 keyframes slideInModal */
 
 .modal-content::before {
     content: '';
@@ -341,12 +331,10 @@ body {
     left: 0;
     right: 0;
     height: 4px;
-    background: linear-gradient(
-        to right,
-        rgba(212, 175, 55, 0.6),
-        rgba(212, 175, 55, 0.8),
-        rgba(212, 175, 55, 0.6)
-    );
+    background: linear-gradient(to right,
+            rgba(212, 175, 55, 0.6),
+            rgba(212, 175, 55, 0.8),
+            rgba(212, 175, 55, 0.6));
 }
 
 .close {
@@ -386,7 +374,7 @@ body {
     flex-shrink: 0;
 }
 
-.modal-content > p {
+.modal-content>p {
     margin: 0;
     padding: 1rem 2rem 1.5rem 2rem;
     color: #6b4423;
@@ -428,7 +416,7 @@ body {
     font-family: inherit;
     font-size: 1rem;
     transition: all 0.3s ease;
-    box-shadow: 
+    box-shadow:
         inset 0 2px 4px rgba(107, 68, 35, 0.05),
         0 1px 2px rgba(107, 68, 35, 0.05);
 }
@@ -446,7 +434,7 @@ body {
     outline: none;
     border-color: rgba(212, 175, 55, 0.7);
     background: rgba(255, 255, 255, 1);
-    box-shadow: 
+    box-shadow:
         inset 0 2px 4px rgba(107, 68, 35, 0.08),
         0 0 0 3px rgba(212, 175, 55, 0.15),
         0 2px 4px rgba(107, 68, 35, 0.1);
@@ -504,7 +492,7 @@ body {
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 
+    box-shadow:
         0 4px 15px rgba(107, 68, 35, 0.3),
         inset 0 1px 0 rgba(255, 255, 255, 0.2);
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
@@ -525,7 +513,7 @@ body {
 
 .submit-btn:hover {
     transform: translateY(-2px);
-    box-shadow: 
+    box-shadow:
         0 8px 25px rgba(107, 68, 35, 0.4),
         inset 0 1px 0 rgba(255, 255, 255, 0.3);
     background: linear-gradient(135deg, #a0522d 0%, #b87333 50%, #a0522d 100%);
@@ -559,12 +547,10 @@ body {
     left: 0;
     right: 0;
     bottom: 0;
-    background: linear-gradient(
-        90deg,
-        transparent,
-        rgba(255, 255, 255, 0.3),
-        transparent
-    );
+    background: linear-gradient(90deg,
+            transparent,
+            rgba(255, 255, 255, 0.3),
+            transparent);
     animation: shimmer 2s infinite;
 }
 
@@ -572,6 +558,7 @@ body {
     0% {
         transform: translateX(-100%);
     }
+
     100% {
         transform: translateX(100%);
     }
@@ -582,7 +569,7 @@ body {
     background: linear-gradient(90deg, #d4af37 0%, #f4d03f 50%, #d4af37 100%);
     width: 0%;
     transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 
+    box-shadow:
         0 0 10px rgba(212, 175, 55, 0.5),
         inset 0 1px 0 rgba(255, 255, 255, 0.3);
     position: relative;
@@ -698,7 +685,8 @@ body {
     overflow-y: auto;
     overflow-x: hidden;
     min-height: 0;
-    max-height: calc(90vh - 200px); /* 减去标题和步骤指示器的高度 */
+    max-height: calc(90vh - 200px);
+    /* 减去标题和步骤指示器的高度 */
 }
 
 .create-step.active {
@@ -711,6 +699,7 @@ body {
         opacity: 0;
         transform: translateY(15px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
@@ -792,7 +781,7 @@ body {
     background: linear-gradient(135deg, #8b4513 0%, #a0522d 50%, #8b4513 100%);
     color: #fff;
     margin-left: auto;
-    box-shadow: 
+    box-shadow:
         0 4px 15px rgba(107, 68, 35, 0.3),
         inset 0 1px 0 rgba(255, 255, 255, 0.2);
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
@@ -813,7 +802,7 @@ body {
 .btn-next:hover,
 .btn-submit:hover {
     transform: translateY(-2px);
-    box-shadow: 
+    box-shadow:
         0 8px 25px rgba(107, 68, 35, 0.4),
         inset 0 1px 0 rgba(255, 255, 255, 0.3);
     background: linear-gradient(135deg, #a0522d 0%, #b87333 50%, #a0522d 100%);
@@ -858,7 +847,7 @@ body {
     padding: 1.5rem;
     margin-bottom: 1rem;
     position: relative;
-    box-shadow: 
+    box-shadow:
         0 2px 8px rgba(107, 68, 35, 0.08),
         inset 0 1px 0 rgba(255, 255, 255, 0.5);
     transition: all 0.3s ease;
@@ -867,7 +856,7 @@ body {
 .location-item:hover,
 .character-item:hover {
     border-color: rgba(212, 175, 55, 0.5);
-    box-shadow: 
+    box-shadow:
         0 4px 12px rgba(107, 68, 35, 0.12),
         inset 0 1px 0 rgba(255, 255, 255, 0.6);
     transform: translateY(-2px);
@@ -898,7 +887,7 @@ body {
     border-radius: 10px;
     padding: 1.5rem;
     margin-bottom: 1rem;
-    box-shadow: 
+    box-shadow:
         0 2px 8px rgba(107, 68, 35, 0.08),
         inset 0 1px 0 rgba(255, 255, 255, 0.5);
 }
@@ -947,42 +936,42 @@ body {
         grid-template-columns: 1fr;
         gap: 1.5rem;
     }
-    
+
     .creation-card {
         min-height: 250px;
         padding: 2rem 1.5rem;
     }
-    
+
     .page-title {
         font-size: 2rem;
     }
-    
+
     .modal-content {
         width: 95%;
         max-width: none;
     }
-    
+
     .step-indicator {
         font-size: 0.7rem;
         padding: 1rem;
         flex-wrap: wrap;
     }
-    
+
     .step {
         padding: 0.5rem 0.25rem;
         font-size: 0.75rem;
         min-width: 60px;
     }
-    
+
     .create-step {
         padding: 1.5rem;
     }
-    
+
     .step-buttons {
         flex-direction: column;
         gap: 0.75rem;
     }
-    
+
     .btn-prev,
     .btn-next,
     .btn-submit {
@@ -990,4 +979,3 @@ body {
         margin: 0;
     }
 }
-
