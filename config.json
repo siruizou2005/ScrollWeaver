@@ -11,8 +11,8 @@
 
     "OPENAI_API_KEY":"sk-WumUMG1dMrQXMhidtYuWHq5Mv6DVtrN72LQfwQGMdzJIwErq",
     "OPENAI_API_BASE":"https://www.chataiapi.com/v1",
-    "GEMINI_API_KEY":"AIzaSyAlumoIbI9x2uU11pEpfYF0_guZUx2BVPI",
-    "GOOGLE_API_KEY":"AIzaSyAlumoIbI9x2uU11pEpfYF0_guZUx2BVPI",
+    "GEMINI_API_KEY":"AIzaSyDcy9hhWyFs6p-HUNcwH0KwbMir8svMbNM",
+    "GOOGLE_API_KEY":"AIzaSyDcy9hhWyFs6p-HUNcwH0KwbMir8svMbNM",
     "ANTHROPIC_API_KEY":"",
     "OPENROUTER_API_KEY":"",
     "DASHSCOPE_API_KEY":"",
