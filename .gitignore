@@ -34,3 +34,4 @@ data/locations/user_*.json
 data/maps/user_*.csv
 data/roles/user_*/
 data/worlds/user_*/
+user_uploads/
