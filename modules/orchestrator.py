@@ -134,11 +134,23 @@ class Orchestrator:
                           history_text: str, 
                           roles_info_text: str,
                           script: str = "",
-                          event:str = ""):
+                          event:str = "",
+                          recent_speakers: List[str] = None):
         prompt = self._DECIDE_NEXT_ACTOR_PROMPT.format(**{
             "roles_info":roles_info_text,
             "history_text":history_text,
         })
+        
+        # 如果有最近发言的角色，添加到提示中
+        if recent_speakers and len(recent_speakers) > 0:
+            avoid_instruction = (
+                f"\n请注意，以下角色最近刚刚发言过：{', '.join(recent_speakers)}。"
+                "为了保持对话流畅，请尽量选择其他角色发言，除非当前情境必须由该角色回应。"
+                if self.language == "zh" else
+                f"\nNote that the following characters have just spoken: {', '.join(recent_speakers)}."
+                "To keep the conversation flowing, please try to choose other characters to speak, unless the current situation requires a response from that character."
+            )
+            prompt += avoid_instruction
         
         max_tries = 3
         response = None  # 初始化response
