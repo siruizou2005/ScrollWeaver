@@ -304,20 +304,61 @@ body {
 }
 
 .join-room-btn {
-    padding: 0.5rem 1.5rem;
-    background: rgba(212, 175, 55, 0.2);
-    border: 2px solid rgba(212, 175, 55, 0.4);
-    border-radius: 6px;
-    color: #8b4513;
+    padding: 0.75rem 1.75rem;
+    background: linear-gradient(135deg, #8b4513 0%, #a0522d 50%, #8b4513 100%);
+    border: none;
+    border-radius: 8px;
+    color: #fff;
     cursor: pointer;
     font-weight: 600;
-    transition: all 0.3s ease;
+    font-size: 0.95rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     font-family: 'Noto Serif SC', serif;
+    box-shadow: 
+        0 4px 15px rgba(107, 68, 35, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    position: relative;
+    overflow: hidden;
+}
+
+.join-room-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    transition: left 0.5s ease;
 }
 
 .join-room-btn:hover {
-    background: rgba(212, 175, 55, 0.3);
-    border-color: rgba(212, 175, 55, 0.6);
+    transform: translateY(-2px);
+    background: linear-gradient(135deg, #a0522d 0%, #b87333 50%, #a0522d 100%);
+    box-shadow: 
+        0 8px 25px rgba(107, 68, 35, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.join-room-btn:hover::before {
+    left: 100%;
+}
+
+.join-room-btn:active {
+    transform: translateY(0);
+    box-shadow: 
+        0 2px 8px rgba(107, 68, 35, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.join-room-btn i {
+    margin-right: 0.5rem;
+    transition: transform 0.3s ease;
+}
+
+.join-room-btn:hover i {
+    transform: translateX(2px);
 }
 
 /* 博弈样式 */
@@ -520,6 +561,17 @@ body {
         0 2px 4px rgba(107, 68, 35, 0.1);
 }
 
+/* 密码输入模态框中的输入框特殊样式 */
+.password-modal .form-group input {
+    font-size: 1rem;
+    padding: 1rem 1.25rem;
+}
+
+.password-modal .form-group input::placeholder {
+    color: rgba(107, 68, 35, 0.5);
+    font-style: italic;
+}
+
 .submit-btn {
     width: 100%;
     padding: 1rem 2rem;
@@ -544,6 +596,157 @@ body {
         0 8px 25px rgba(107, 68, 35, 0.4),
         inset 0 1px 0 rgba(255, 255, 255, 0.3);
     background: linear-gradient(135deg, #a0522d 0%, #b87333 50%, #a0522d 100%);
+}
+
+/* 密码输入模态框样式 */
+.password-modal {
+    max-width: 480px;
+    width: 90%;
+    position: relative;
+}
+
+.password-modal-header {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.25rem;
+    border-bottom: 2px solid rgba(212, 175, 55, 0.3);
+    position: relative;
+}
+
+.password-modal-header::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(
+        to right,
+        transparent,
+        rgba(212, 175, 55, 0.2),
+        rgba(212, 175, 55, 0.4),
+        rgba(212, 175, 55, 0.2),
+        transparent
+    );
+}
+
+.password-modal-header i {
+    font-size: 1.8rem;
+    color: rgba(212, 175, 55, 0.9);
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.2), rgba(212, 175, 55, 0.3));
+    width: 56px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 14px;
+    box-shadow: 
+        0 4px 12px rgba(107, 68, 35, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    flex-shrink: 0;
+}
+
+.password-modal-header h2 {
+    margin: 0;
+    flex: 1;
+    font-size: 1.7rem;
+    color: #3d2817;
+    font-weight: 700;
+    font-family: 'Noto Serif SC', serif;
+    text-shadow: 1px 1px 2px rgba(107, 68, 35, 0.1);
+}
+
+.password-modal-body {
+    margin-bottom: 1.5rem;
+}
+
+.password-hint {
+    color: #6b4423;
+    font-size: 0.95rem;
+    margin-bottom: 1.5rem;
+    line-height: 1.6;
+    text-align: center;
+    padding: 1rem 1.25rem;
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.1), rgba(212, 175, 55, 0.05));
+    border-radius: 10px;
+    border: 1px solid rgba(212, 175, 55, 0.2);
+    box-shadow: inset 0 1px 2px rgba(107, 68, 35, 0.05);
+    font-family: 'Noto Serif SC', serif;
+}
+
+.password-modal-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 2px solid rgba(212, 175, 55, 0.2);
+    position: relative;
+}
+
+.password-modal-actions::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(
+        to right,
+        transparent,
+        rgba(212, 175, 55, 0.2),
+        rgba(212, 175, 55, 0.3),
+        rgba(212, 175, 55, 0.2),
+        transparent
+    );
+}
+
+.btn-cancel-password,
+.btn-confirm-password {
+    padding: 0.75rem 1.75rem;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    font-family: 'Noto Serif SC', serif;
+}
+
+.btn-cancel-password {
+    background: rgba(212, 175, 55, 0.15);
+    border: 2px solid rgba(212, 175, 55, 0.3);
+    color: #8b4513;
+}
+
+.btn-cancel-password:hover {
+    background: rgba(212, 175, 55, 0.25);
+    border-color: rgba(212, 175, 55, 0.5);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(107, 68, 35, 0.2);
+}
+
+.btn-confirm-password {
+    background: linear-gradient(135deg, #8b4513 0%, #a0522d 50%, #8b4513 100%);
+    color: #fff;
+    box-shadow: 
+        0 4px 15px rgba(107, 68, 35, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.btn-confirm-password:hover {
+    transform: translateY(-2px);
+    box-shadow: 
+        0 8px 25px rgba(107, 68, 35, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    background: linear-gradient(135deg, #a0522d 0%, #b87333 50%, #a0522d 100%);
+}
+
+.btn-confirm-password:active {
+    transform: translateY(0);
 }
 
 /* 响应式设计 */
@@ -580,6 +783,19 @@ body {
     }
     
     .join-room-btn {
+        width: 100%;
+    }
+    
+    .password-modal {
+        max-width: 95%;
+    }
+    
+    .password-modal-actions {
+        flex-direction: column;
+    }
+    
+    .btn-cancel-password,
+    .btn-confirm-password {
         width: 100%;
     }
 }

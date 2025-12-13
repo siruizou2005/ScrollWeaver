@@ -355,7 +355,49 @@ document.addEventListener('DOMContentLoaded', () => {
 function bindEventListeners() {
     // 返回按钮
     document.getElementById('backBtn').addEventListener('click', () => {
-        window.location.href = '/frontend/pages/plaza.html';
+        // 保存当前URL用于检测是否成功返回
+        const currentUrl = window.location.href;
+        
+        // 检查是否有来源页面（referrer）
+        const referrer = document.referrer;
+        const currentOrigin = window.location.origin;
+        
+        // 如果有来源页面且来源页面在当前域名下，且不是当前页面本身
+        if (referrer && referrer.startsWith(currentOrigin)) {
+            try {
+                const referrerUrl = new URL(referrer);
+                const referrerPath = referrerUrl.pathname;
+                const currentPath = window.location.pathname;
+                
+                // 如果来源页面不是当前页面，直接返回上一页
+                if (referrerPath !== currentPath) {
+                    window.history.back();
+                    return;
+                }
+            } catch (e) {
+                console.warn('解析referrer失败:', e);
+            }
+        }
+        
+        // 如果没有有效的来源页面，尝试返回历史记录
+        // 监听popstate事件来检测是否成功返回
+        let hasReturned = false;
+        const handlePopState = () => {
+            hasReturned = true;
+            window.removeEventListener('popstate', handlePopState);
+        };
+        window.addEventListener('popstate', handlePopState);
+        
+        // 尝试返回
+        window.history.back();
+        
+        // 如果200ms后还在当前页面，说明没有历史记录，跳转到广场页
+        setTimeout(() => {
+            if (!hasReturned && window.location.href === currentUrl) {
+                window.removeEventListener('popstate', handlePopState);
+                window.location.href = '/frontend/pages/plaza.html';
+            }
+        }, 200);
     });
 
     // 共享按钮
@@ -384,11 +426,49 @@ function bindEventListeners() {
         }
     });
 
+    // 启用联机模式按钮
+    document.getElementById('enableMultiplayerBtn').addEventListener('click', () => {
+        const modal = document.getElementById('multiplayerPasswordModal');
+        modal.classList.add('active');
+        document.getElementById('roomPasswordInput').value = '';
+        setTimeout(() => {
+            document.getElementById('roomPasswordInput').focus();
+        }, 100);
+    });
+
+    // 联机模式暗号输入对话框事件
+    document.getElementById('multiplayerPasswordCancelBtn').addEventListener('click', () => {
+        document.getElementById('multiplayerPasswordModal').classList.remove('active');
+    });
+
+    document.getElementById('multiplayerPasswordModalBackdrop').addEventListener('click', () => {
+        document.getElementById('multiplayerPasswordModal').classList.remove('active');
+    });
+
+    document.getElementById('multiplayerPasswordConfirmBtn').addEventListener('click', async () => {
+        const password = document.getElementById('roomPasswordInput').value.trim();
+        if (!password) {
+            alert('请输入房间暗号');
+            return;
+        }
+        await createMultiplayerRoom(password);
+    });
+
+    // 按Enter键确认
+    document.getElementById('roomPasswordInput').addEventListener('keypress', async (e) => {
+        if (e.key === 'Enter') {
+            const password = e.target.value.trim();
+            if (password) {
+                await createMultiplayerRoom(password);
+            }
+        }
+    });
+
     // 入卷模式
     document.getElementById('enterStoryBtn').addEventListener('click', async () => {
         const actSelect = document.getElementById('actSelect');
         const act = actSelect.value === 'new' ? null : parseInt(actSelect.value);
-        const multiplayer = document.getElementById('enableMultiplayerStory').checked;
+        const multiplayer = false; // 联机模式已改为独立按钮
         const eventChain = document.getElementById('enableEventChain').checked;
         const actCount = eventChain ? parseInt(document.getElementById('actCountSelect').value) : null;
 
@@ -469,6 +549,45 @@ function generateAndPreviewEventChain(actCount, act, multiplayer) {
 }
 
 // 事件链预览功能已移至新页面 event-chain-preview.html
+
+/**
+ * 创建联机房间
+ */
+async function createMultiplayerRoom(password) {
+    try {
+        showLoading(true);
+        
+        const response = await fetch('/api/multiplayer/create-room', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                scroll_id: scrollId,
+                password: password
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ detail: '创建房间失败' }));
+            throw new Error(errorData.detail || '创建房间失败');
+        }
+
+        const data = await response.json();
+        
+        // 关闭对话框
+        document.getElementById('multiplayerPasswordModal').classList.remove('active');
+        showLoading(false);
+        
+        // 跳转到匹配页
+        window.location.href = `/frontend/pages/matching.html?room_id=${data.room_id}&scroll_id=${scrollId}&is_host=true`;
+    } catch (error) {
+        console.error('创建联机房间失败:', error);
+        showLoading(false);
+        alert(error.message || '创建房间失败，请重试');
+    }
+}
 
 /**
  * 进入入卷模式

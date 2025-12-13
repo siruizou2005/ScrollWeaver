@@ -40,11 +40,6 @@
                 <div class="gathering-card left-card">
                     <h2 class="card-title">入卷同游</h2>
                     
-                    <!-- 创建房间按钮 -->
-                    <button class="create-room-btn" id="createRoomBtn">
-                        <i class="fas fa-plus"></i> 创建房间
-                    </button>
-                    
                     <!-- 房间列表 -->
                     <div class="room-list" id="roomList">
                         <!-- 房间卡片将在这里动态生成 -->
@@ -118,6 +113,28 @@
             <div class="modal-actions">
                 <button class="btn-cancel" id="confirmCancelBtn">取消</button>
                 <button class="btn-confirm" id="confirmOkBtn">确定</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 输入暗号模态框 -->
+    <div class="modal" id="passwordModal">
+        <div class="modal-content password-modal">
+            <span class="close" id="closePasswordModal">&times;</span>
+            <div class="password-modal-header">
+                <i class="fas fa-key"></i>
+                <h2>输入房间暗号</h2>
+            </div>
+            <div class="password-modal-body">
+                <p class="password-hint">请输入房间暗号以加入房间</p>
+                <div class="form-group">
+                    <label for="roomPasswordInput">暗号</label>
+                    <input type="text" id="roomPasswordInput" placeholder="请输入房间暗号" autofocus>
+                </div>
+            </div>
+            <div class="password-modal-actions">
+                <button class="btn-cancel-password" id="cancelPasswordBtn">取消</button>
+                <button class="btn-confirm-password" id="confirmPasswordBtn">确定</button>
             </div>
         </div>
     </div>

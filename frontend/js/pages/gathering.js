@@ -155,7 +155,7 @@ if (createRoomForm) {
 // 加载房间列表
 async function loadRooms() {
     try {
-        const response = await fetch(`${API_BASE}/api/rooms`, {
+        const response = await fetch(`${API_BASE}/api/multiplayer/rooms`, {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
@@ -186,7 +186,6 @@ function renderRooms(rooms) {
         roomList.innerHTML = `
             <div style="text-align: center; padding: 2rem; color: #6b4423;">
                 <p>暂无房间</p>
-                <p style="font-size: 0.9rem; margin-top: 0.5rem; opacity: 0.7;">点击上方按钮创建房间</p>
             </div>
         `;
         return;
@@ -205,38 +204,77 @@ function createRoomCard(room) {
     const currentPlayers = room.currentPlayers || room.current_players || 0;
     const maxPlayers = room.maxPlayers || room.max_players || 3;
     const roomId = room.id || room.room_id;
+    const scrollId = room.scroll_id || '';
+    const roomName = room.name || room.scroll_title || '未命名房间';
     
     card.innerHTML = `
-        <div class="room-name">${room.name || '未命名房间'}</div>
+        <div class="room-name">${roomName}</div>
         <div class="room-info">
             <span>当前人数：${currentPlayers}/${maxPlayers}</span>
-            <div class="room-actions">
-                <input type="text" class="room-password-input" 
-                       placeholder="输入暗号" 
-                       id="password-${roomId}">
-                <button class="join-room-btn" onclick="joinRoom('${roomId}')">
-                    进入
-                </button>
-            </div>
+            <button class="join-room-btn" onclick="showPasswordModal('${roomId}', '${scrollId}')">
+                <i class="fas fa-door-open"></i> 加入房间
+            </button>
         </div>
     `;
     
     return card;
 }
 
-// 加入房间（全局函数，供HTML调用）
-window.joinRoom = async function(roomId) {
-    const passwordInput = document.getElementById(`password-${roomId}`);
-    const password = passwordInput ? passwordInput.value : '';
+// 存储当前要加入的房间信息
+let currentRoomInfo = { roomId: null, scrollId: null };
+
+// 显示密码输入对话框
+window.showPasswordModal = function(roomId, scrollId) {
+    currentRoomInfo.roomId = roomId;
+    currentRoomInfo.scrollId = scrollId;
     
+    const passwordModal = document.getElementById('passwordModal');
+    const passwordInput = document.getElementById('roomPasswordInput');
+    
+    if (passwordModal && passwordInput) {
+        passwordInput.value = '';
+        passwordModal.classList.add('active');
+        // 聚焦到输入框
+        setTimeout(() => {
+            passwordInput.focus();
+        }, 100);
+    }
+};
+
+// 关闭密码输入模态框
+function closePasswordModal() {
+    const passwordModal = document.getElementById('passwordModal');
+    if (passwordModal) {
+        passwordModal.classList.remove('active');
+        currentRoomInfo = { roomId: null, scrollId: null };
+    }
+}
+
+// 确认输入密码
+function confirmPassword() {
+    const passwordInput = document.getElementById('roomPasswordInput');
+    if (!passwordInput) return;
+    
+    const password = passwordInput.value.trim();
+    // 允许空密码（房间可能没有密码）
+    joinRoom(currentRoomInfo.roomId, currentRoomInfo.scrollId, password);
+    closePasswordModal();
+}
+
+
+// 加入房间（全局函数，供HTML调用）
+window.joinRoom = async function(roomId, scrollId, password) {
     try {
-        const response = await fetch(`${API_BASE}/api/rooms/${roomId}/join`, {
+        const response = await fetch(`${API_BASE}/api/multiplayer/join-room`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
             },
-            body: JSON.stringify({ password: password.trim() || null })
+            body: JSON.stringify({ 
+                room_id: roomId,
+                password: password
+            })
         });
         
         if (!response.ok) {
@@ -246,10 +284,8 @@ window.joinRoom = async function(roomId) {
         
         const data = await response.json();
         
-        // 跳转到房间页面
-        // 如果房间页面不存在，可以跳转到其他页面或显示提示
-        const roomUrl = `/frontend/pages/room.html?id=${roomId}`;
-        window.location.href = roomUrl;
+        // 跳转到匹配页
+        window.location.href = `/frontend/pages/matching.html?room_id=${roomId}&scroll_id=${scrollId}&is_host=false`;
     } catch (error) {
         console.error('进入房间失败:', error);
         alert(error.message || '进入房间失败，请重试');
@@ -303,8 +339,59 @@ function startGame(gameType) {
     }
 }
 
-// 页面加载时获取房间列表
+// 页面加载时获取房间列表和初始化密码模态框
 document.addEventListener('DOMContentLoaded', () => {
     loadRooms();
+    
+    // 密码输入模态框事件绑定
+    const passwordModal = document.getElementById('passwordModal');
+    const closePasswordModalBtn = document.getElementById('closePasswordModal');
+    const cancelPasswordBtn = document.getElementById('cancelPasswordBtn');
+    const confirmPasswordBtn = document.getElementById('confirmPasswordBtn');
+    const passwordInput = document.getElementById('roomPasswordInput');
+    
+    // 关闭按钮
+    if (closePasswordModalBtn) {
+        closePasswordModalBtn.addEventListener('click', closePasswordModal);
+    }
+    
+    // 取消按钮
+    if (cancelPasswordBtn) {
+        cancelPasswordBtn.addEventListener('click', closePasswordModal);
+    }
+    
+    // 确认按钮
+    if (confirmPasswordBtn) {
+        confirmPasswordBtn.addEventListener('click', confirmPassword);
+    }
+    
+    // 点击模态框外部关闭
+    if (passwordModal) {
+        passwordModal.addEventListener('click', (e) => {
+            if (e.target === passwordModal) {
+                closePasswordModal();
+            }
+        });
+    }
+    
+    // 按Enter键确认
+    if (passwordInput) {
+        passwordInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                confirmPassword();
+            }
+        });
+    }
+    
+    // 按ESC键关闭
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            const passwordModal = document.getElementById('passwordModal');
+            if (passwordModal && passwordModal.classList.contains('active')) {
+                closePasswordModal();
+            }
+        }
+    });
 });
 

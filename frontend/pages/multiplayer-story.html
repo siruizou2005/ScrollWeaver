@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>入卷同游 - ScrollWeaver</title>
+    <link rel="stylesheet" href="../css/pages/multiplayer-story.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="multiplayer-story-container">
+        <header class="story-header">
+            <h1><i class="fas fa-scroll"></i> 入卷同游</h1>
+            <div class="header-info">
+                <span id="scrollTitle">书卷名称</span>
+                <span class="player-count" id="playerCount">玩家数：0</span>
+            </div>
+        </header>
+
+        <div class="story-content">
+            <div class="left-panel">
+                <div class="players-panel">
+                    <h2><i class="fas fa-users"></i> 玩家列表</h2>
+                    <div class="players-list" id="playersList">
+                        <!-- 玩家列表将在这里动态生成 -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="main-panel">
+                <div class="characters-section">
+                    <h2><i class="fas fa-user-friends"></i> 选择角色</h2>
+                    <p class="hint">点击角色卡片选择或取消选择角色，每个角色只能被一个玩家选择</p>
+                    <div class="characters-grid" id="charactersGrid">
+                        <!-- 角色列表将在这里动态生成 -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="right-panel">
+                <div class="selected-role-panel">
+                    <h2><i class="fas fa-user-check"></i> 我的角色</h2>
+                    <div class="selected-role-card" id="selectedRoleCard">
+                        <div class="no-role">
+                            <i class="fas fa-user-slash"></i>
+                            <p>暂未选择角色</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script src="../js/pages/multiplayer-story.js"></script>
+</body>
+</html>

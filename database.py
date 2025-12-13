@@ -93,12 +93,55 @@ class Database:
             )
         ''')
         
+        # 联机房间表
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS multiplayer_rooms (
+                id TEXT PRIMARY KEY,
+                scroll_id INTEGER NOT NULL,
+                host_id INTEGER NOT NULL,
+                password TEXT,
+                status TEXT NOT NULL DEFAULT 'matching',  -- 'matching', 'playing', 'finished'
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY (scroll_id) REFERENCES scrolls(id),
+                FOREIGN KEY (host_id) REFERENCES users(id)
+            )
+        ''')
+        
+        # 联机房间玩家表
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS multiplayer_room_players (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                room_id TEXT NOT NULL,
+                user_id INTEGER NOT NULL,
+                username TEXT NOT NULL,
+                confirmed INTEGER DEFAULT 0,
+                selected_role TEXT,
+                joined_at TEXT NOT NULL,
+                FOREIGN KEY (room_id) REFERENCES multiplayer_rooms(id) ON DELETE CASCADE,
+                FOREIGN KEY (user_id) REFERENCES users(id),
+                UNIQUE(room_id, user_id)
+            )
+        ''')
+        
         # 创建索引以提高查询性能
         cursor.execute('''
             CREATE INDEX IF NOT EXISTS idx_business_games_user_id ON business_games(user_id)
         ''')
         cursor.execute('''
             CREATE INDEX IF NOT EXISTS idx_business_games_total_profit ON business_games(total_profit DESC)
+        ''')
+        cursor.execute('''
+            CREATE INDEX IF NOT EXISTS idx_multiplayer_rooms_scroll_id ON multiplayer_rooms(scroll_id)
+        ''')
+        cursor.execute('''
+            CREATE INDEX IF NOT EXISTS idx_multiplayer_rooms_host_id ON multiplayer_rooms(host_id)
+        ''')
+        cursor.execute('''
+            CREATE INDEX IF NOT EXISTS idx_multiplayer_room_players_room_id ON multiplayer_room_players(room_id)
+        ''')
+        cursor.execute('''
+            CREATE INDEX IF NOT EXISTS idx_multiplayer_room_players_user_id ON multiplayer_room_players(user_id)
         ''')
         
         conn.commit()

@@ -7,9 +7,10 @@ import uvicorn
 import json
 import asyncio
 import os
+import sqlite3
 from pathlib import Path
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Dict
 from sw_utils import is_image, load_json_file
 from ScrollWeaver import ScrollWeaver
 from modules.utils.text_utils import remove_markdown
@@ -2650,6 +2651,368 @@ async def join_game_room(room_code: str, current_user: dict = Depends(get_curren
     except HTTPException:
         raise
     except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ==================== 联机模式 API 端点 ====================
+
+# 存储联机房间信息（内存中，实际应该用数据库）
+multiplayer_rooms: Dict[str, dict] = {}
+
+@app.post("/api/multiplayer/create-room")
+async def create_multiplayer_room(request: Request, current_user: dict = Depends(get_current_user)):
+    """创建联机房间"""
+    try:
+        data = await request.json()
+        scroll_id = data.get('scroll_id')
+        password = data.get('password', '').strip()
+        
+        if not scroll_id:
+            raise HTTPException(status_code=400, detail="缺少scroll_id")
+        
+        # 验证书卷存在
+        scroll = db.get_scroll(scroll_id)
+        if not scroll:
+            raise HTTPException(status_code=404, detail="书卷不存在")
+        
+        # 生成房间ID
+        import uuid
+        room_id = str(uuid.uuid4())
+        
+        # 保存到数据库
+        conn = sqlite3.connect(db.db_path)
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT INTO multiplayer_rooms (id, scroll_id, host_id, password, status, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ''', (
+            room_id,
+            scroll_id,
+            current_user['id'],
+            password,
+            'matching',
+            datetime.now().isoformat(),
+            datetime.now().isoformat()
+        ))
+        
+        # 添加房主到玩家列表
+        cursor.execute('''
+            INSERT INTO multiplayer_room_players (room_id, user_id, username, confirmed, joined_at)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (
+            room_id,
+            current_user['id'],
+            current_user['username'],
+            0,  # 房主也需要确认
+            datetime.now().isoformat()
+        ))
+        
+        conn.commit()
+        conn.close()
+        
+        return {
+            "success": True,
+            "room_id": room_id,
+            "scroll_id": scroll_id
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/multiplayer/join-room")
+async def join_multiplayer_room(request: Request, current_user: dict = Depends(get_current_user)):
+    """加入联机房间"""
+    try:
+        data = await request.json()
+        room_id = data.get('room_id')
+        password = data.get('password', '').strip()
+        
+        if not room_id:
+            raise HTTPException(status_code=400, detail="缺少room_id")
+        
+        # 从数据库获取房间信息
+        conn = sqlite3.connect(db.db_path)
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM multiplayer_rooms WHERE id = ?', (room_id,))
+        room = cursor.fetchone()
+        
+        if not room:
+            conn.close()
+            raise HTTPException(status_code=404, detail="房间不存在")
+        
+        # 验证密码
+        if room[3] and room[3] != password:  # password字段
+            conn.close()
+            raise HTTPException(status_code=403, detail="房间暗号错误")
+        
+        # 检查是否已经在房间中
+        cursor.execute('SELECT * FROM multiplayer_room_players WHERE room_id = ? AND user_id = ?', (room_id, current_user['id']))
+        existing_player = cursor.fetchone()
+        
+        if not existing_player:
+            # 添加玩家到房间
+            cursor.execute('''
+                INSERT INTO multiplayer_room_players (room_id, user_id, username, confirmed, joined_at)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (
+                room_id,
+                current_user['id'],
+                current_user['username'],
+                0,
+                datetime.now().isoformat()
+            ))
+            conn.commit()
+        
+        conn.close()
+        
+        return {
+            "success": True,
+            "room_id": room_id
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/multiplayer/room/{room_id}")
+async def get_multiplayer_room(room_id: str, current_user: dict = Depends(get_current_user)):
+    """获取联机房间信息"""
+    try:
+        conn = sqlite3.connect(db.db_path)
+        cursor = conn.cursor()
+        
+        # 获取房间信息
+        cursor.execute('SELECT * FROM multiplayer_rooms WHERE id = ?', (room_id,))
+        room = cursor.fetchone()
+        
+        if not room:
+            conn.close()
+            raise HTTPException(status_code=404, detail="房间不存在")
+        
+        # 获取书卷信息
+        scroll = db.get_scroll(room[1])  # scroll_id
+        scroll_title = scroll['title'] if scroll else '未知书卷'
+        
+        # 获取玩家列表
+        cursor.execute('''
+            SELECT user_id, username, confirmed, selected_role
+            FROM multiplayer_room_players
+            WHERE room_id = ?
+            ORDER BY joined_at
+        ''', (room_id,))
+        players_data = cursor.fetchall()
+        
+        players = []
+        for player_data in players_data:
+            players.append({
+                'user_id': player_data[0],
+                'username': player_data[1],
+                'confirmed': bool(player_data[2]),
+                'selected_role': player_data[3],
+                'is_host': player_data[0] == room[2]  # host_id
+            })
+        
+        conn.close()
+        
+        return {
+            "room_id": room_id,
+            "scroll_id": room[1],
+            "scroll_title": scroll_title,
+            "host_id": room[2],
+            "status": room[4],
+            "players": players
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/multiplayer/confirm")
+async def confirm_multiplayer(request: Request, current_user: dict = Depends(get_current_user)):
+    """确认准备"""
+    try:
+        data = await request.json()
+        room_id = data.get('room_id')
+        
+        if not room_id:
+            raise HTTPException(status_code=400, detail="缺少room_id")
+        
+        conn = sqlite3.connect(db.db_path)
+        cursor = conn.cursor()
+        
+        # 更新确认状态
+        cursor.execute('''
+            UPDATE multiplayer_room_players
+            SET confirmed = 1
+            WHERE room_id = ? AND user_id = ?
+        ''', (room_id, current_user['id']))
+        
+        conn.commit()
+        conn.close()
+        
+        return {"success": True}
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/multiplayer/select-role")
+async def select_role_multiplayer(request: Request, current_user: dict = Depends(get_current_user)):
+    """选择角色"""
+    try:
+        data = await request.json()
+        room_id = data.get('room_id')
+        role_code = data.get('role_code')  # 可以为None，表示取消选择
+        
+        if not room_id:
+            raise HTTPException(status_code=400, detail="缺少room_id")
+        
+        conn = sqlite3.connect(db.db_path)
+        cursor = conn.cursor()
+        
+        # 如果选择了角色，检查是否已被其他玩家选择
+        if role_code:
+            cursor.execute('''
+                SELECT user_id FROM multiplayer_room_players
+                WHERE room_id = ? AND selected_role = ? AND user_id != ?
+            ''', (room_id, role_code, current_user['id']))
+            if cursor.fetchone():
+                conn.close()
+                raise HTTPException(status_code=400, detail="该角色已被其他玩家选择")
+        
+        # 更新角色选择
+        cursor.execute('''
+            UPDATE multiplayer_room_players
+            SET selected_role = ?
+            WHERE room_id = ? AND user_id = ?
+        ''', (role_code, room_id, current_user['id']))
+        
+        conn.commit()
+        conn.close()
+        
+        return {"success": True}
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/multiplayer/start-room")
+async def start_multiplayer_room(request: Request, current_user: dict = Depends(get_current_user)):
+    """开始游戏（房主）"""
+    try:
+        data = await request.json()
+        room_id = data.get('room_id')
+        
+        if not room_id:
+            raise HTTPException(status_code=400, detail="缺少room_id")
+        
+        conn = sqlite3.connect(db.db_path)
+        cursor = conn.cursor()
+        
+        # 验证是否为房主
+        cursor.execute('SELECT host_id FROM multiplayer_rooms WHERE id = ?', (room_id,))
+        room = cursor.fetchone()
+        if not room or room[0] != current_user['id']:
+            conn.close()
+            raise HTTPException(status_code=403, detail="只有房主可以开始游戏")
+        
+        # 更新房间状态
+        cursor.execute('''
+            UPDATE multiplayer_rooms
+            SET status = 'playing', updated_at = ?
+            WHERE id = ?
+        ''', (datetime.now().isoformat(), room_id))
+        
+        conn.commit()
+        conn.close()
+        
+        return {"success": True}
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/multiplayer/leave-room")
+async def leave_multiplayer_room(request: Request, current_user: dict = Depends(get_current_user)):
+    """离开房间"""
+    try:
+        data = await request.json()
+        room_id = data.get('room_id')
+        
+        if not room_id:
+            raise HTTPException(status_code=400, detail="缺少room_id")
+        
+        conn = sqlite3.connect(db.db_path)
+        cursor = conn.cursor()
+        
+        # 删除玩家记录
+        cursor.execute('DELETE FROM multiplayer_room_players WHERE room_id = ? AND user_id = ?', (room_id, current_user['id']))
+        
+        # 如果房间没有玩家了，删除房间
+        cursor.execute('SELECT COUNT(*) FROM multiplayer_room_players WHERE room_id = ?', (room_id,))
+        if cursor.fetchone()[0] == 0:
+            cursor.execute('DELETE FROM multiplayer_rooms WHERE id = ?', (room_id,))
+        
+        conn.commit()
+        conn.close()
+        
+        return {"success": True}
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/multiplayer/rooms")
+async def list_multiplayer_rooms(current_user: dict = Depends(get_current_user)):
+    """获取联机房间列表"""
+    try:
+        conn = sqlite3.connect(db.db_path)
+        cursor = conn.cursor()
+        
+        # 获取所有匹配中的房间
+        cursor.execute('''
+            SELECT r.id, r.scroll_id, r.host_id, r.password, s.title,
+                   (SELECT COUNT(*) FROM multiplayer_room_players WHERE room_id = r.id) as player_count
+            FROM multiplayer_rooms r
+            LEFT JOIN scrolls s ON r.scroll_id = s.id
+            WHERE r.status = 'matching'
+            ORDER BY r.created_at DESC
+        ''')
+        
+        rooms_data = cursor.fetchall()
+        rooms = []
+        for room_data in rooms_data:
+            rooms.append({
+                'id': room_data[0],
+                'room_id': room_data[0],
+                'scroll_id': room_data[1],
+                'scroll_title': room_data[4] or '未知书卷',
+                'currentPlayers': room_data[5] or 0,
+                'current_players': room_data[5] or 0,
+                'maxPlayers': 10,
+                'max_players': 10
+            })
+        
+        conn.close()
+        
+        return {"rooms": rooms}
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 # ==================== 聊天 API 端点 ====================
