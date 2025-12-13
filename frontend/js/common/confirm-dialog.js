@@ -5,6 +5,7 @@
 
 // 全局确认对话框函数
 let globalConfirmResolve = null;
+let lastConfirmOpenTime = 0; // 防止点击穿透
 
 function showConfirm(message) {
     return new Promise((resolve) => {
@@ -15,6 +16,7 @@ function showConfirm(message) {
             confirmMessage.textContent = message;
             // 确保模态框显示
             confirmModal.style.display = 'flex';
+            lastConfirmOpenTime = Date.now(); // 记录打开时间
             confirmModal.style.alignItems = 'center';
             confirmModal.style.justifyContent = 'center';
             confirmModal.classList.add('active');
@@ -30,7 +32,12 @@ function closeConfirm(result) {
     const confirmModal = document.getElementById('confirmModal');
     if (confirmModal) {
         confirmModal.classList.remove('active');
-        confirmModal.style.display = 'none';
+        // 延迟隐藏以允许过渡动画完成
+        setTimeout(() => {
+            if (!confirmModal.classList.contains('active')) {
+                confirmModal.style.display = 'none';
+            }
+        }, 300);
     }
     if (globalConfirmResolve) {
         globalConfirmResolve(result);
@@ -61,6 +68,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const backdrop = confirmModal.querySelector('.modal-backdrop');
         if (backdrop) {
             backdrop.addEventListener('click', () => {
+                const timeSinceOpen = Date.now() - lastConfirmOpenTime;
+                if (timeSinceOpen < 200) {
+                    console.log('忽略点击 - 确认框刚打开');
+                    return;
+                }
                 closeConfirm(false);
             });
         }
