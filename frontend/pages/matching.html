@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>匹配中 - ScrollWeaver</title>
+    <link rel="stylesheet" href="../css/pages/matching.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="matching-container">
+        <header class="matching-header">
+            <h1><i class="fas fa-users"></i> 匹配中</h1>
+            <p class="room-info" id="roomInfo">房间信息加载中...</p>
+        </header>
+
+        <div class="matching-content">
+            <div class="players-section">
+                <h2>等待玩家确认</h2>
+                <div class="players-list" id="playersList">
+                    <!-- 玩家列表将在这里动态生成 -->
+                </div>
+            </div>
+
+            <div class="matching-status">
+                <div class="status-indicator" id="statusIndicator">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <span>等待所有玩家确认...</span>
+                </div>
+            </div>
+
+            <div class="matching-actions">
+                <button class="btn-confirm" id="confirmBtn">
+                    <i class="fas fa-check"></i> 确认
+                </button>
+                <button class="btn-cancel" id="cancelBtn">
+                    <i class="fas fa-times"></i> 取消
+                </button>
+                <button class="btn-start" id="startBtn" style="display: none;">
+                    <i class="fas fa-play"></i> 进入入卷同游
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script src="../js/pages/matching.js"></script>
+</body>
+</html>

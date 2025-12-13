@@ -1,0 +1,169 @@
+.matching-container {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #f5f1e8 0%, #e8ddd4 100%);
+    padding: 2rem;
+    font-family: 'Noto Serif SC', serif;
+}
+
+.matching-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.matching-header h1 {
+    font-size: 2.5rem;
+    color: #6b4423;
+    margin-bottom: 0.5rem;
+}
+
+.room-info {
+    color: #8b7355;
+    font-size: 1rem;
+}
+
+.matching-content {
+    max-width: 800px;
+    margin: 0 auto;
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.players-section {
+    margin-bottom: 2rem;
+}
+
+.players-section h2 {
+    color: #6b4423;
+    margin-bottom: 1rem;
+    font-size: 1.5rem;
+}
+
+.players-list {
+    display: grid;
+    gap: 1rem;
+}
+
+.player-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem;
+    background: #f9f7f4;
+    border-radius: 8px;
+    border: 2px solid #e8ddd4;
+    transition: all 0.3s;
+}
+
+.player-card.confirmed {
+    border-color: #4caf50;
+    background: #f1f8f4;
+}
+
+.player-card .player-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.player-card .player-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #6b4423;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+}
+
+.player-card .player-name {
+    font-weight: 600;
+    color: #6b4423;
+}
+
+.player-card .player-status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #8b7355;
+}
+
+.player-card.confirmed .player-status {
+    color: #4caf50;
+}
+
+.matching-status {
+    text-align: center;
+    margin: 2rem 0;
+    padding: 1.5rem;
+    background: #f9f7f4;
+    border-radius: 8px;
+}
+
+.status-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    color: #6b4423;
+    font-size: 1.1rem;
+}
+
+.status-indicator i {
+    font-size: 1.5rem;
+}
+
+.matching-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin-top: 2rem;
+}
+
+.btn-confirm,
+.btn-cancel,
+.btn-start {
+    padding: 0.75rem 2rem;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-family: 'Noto Serif SC', serif;
+}
+
+.btn-confirm {
+    background: #4caf50;
+    color: white;
+}
+
+.btn-confirm:hover {
+    background: #45a049;
+}
+
+.btn-confirm:disabled {
+    background: #cccccc;
+    cursor: not-allowed;
+}
+
+.btn-cancel {
+    background: #f44336;
+    color: white;
+}
+
+.btn-cancel:hover {
+    background: #da190b;
+}
+
+.btn-start {
+    background: #6b4423;
+    color: white;
+}
+
+.btn-start:hover {
+    background: #5a3820;
+}

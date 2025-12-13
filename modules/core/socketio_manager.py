@@ -41,8 +41,21 @@ class SocketIOManager:
             """客户端连接"""
             print(f"[SocketIO] Client connected: {sid}")
             # 从 auth 中获取用户信息
-            if auth and 'user_id' in auth:
+            if auth and 'token' in auth:
+                # 验证token并获取用户信息
+                from database import db
+                user = db.verify_token(auth['token'])
+                if user:
+                    self.socket_to_user[sid] = user['id']
+                    print(f"[SocketIO] User authenticated: {user['username']} (ID: {user['id']})")
+                else:
+                    print(f"[SocketIO] Invalid token for sid: {sid}")
+                    return False
+            elif auth and 'user_id' in auth:
                 self.socket_to_user[sid] = auth['user_id']
+            else:
+                print(f"[SocketIO] No authentication provided for sid: {sid}")
+                return False
             return True
         
         @self.sio.event
@@ -201,6 +214,85 @@ class SocketIOManager:
                 'session': session.to_dict(),
                 'participants': session.participants
             }
+        
+        @self.sio.event
+        async def join_matching_room(sid, data):
+            """加入匹配房间"""
+            room_id = data.get('room_id')
+            if not room_id:
+                return {'error': 'Missing room_id'}
+            
+            await self.sio.enter_room(sid, f'matching_{room_id}')
+            
+            # 通知房间内其他用户
+            await self.sio.emit('player_joined', {
+                'room_id': room_id
+            }, room=f'matching_{room_id}', skip_sid=sid)
+            
+            return {'status': 'joined'}
+        
+        @self.sio.event
+        async def player_confirm(sid, data):
+            """玩家确认"""
+            room_id = data.get('room_id')
+            if not room_id:
+                return {'error': 'Missing room_id'}
+            
+            # 通知房间内其他用户
+            await self.sio.emit('player_confirmed', {
+                'room_id': room_id
+            }, room=f'matching_{room_id}')
+            
+            return {'status': 'confirmed'}
+        
+        @self.sio.event
+        async def start_game(sid, data):
+            """开始游戏"""
+            room_id = data.get('room_id')
+            if not room_id:
+                return {'error': 'Missing room_id'}
+            
+            # 通知房间内所有用户
+            await self.sio.emit('room_started', {
+                'room_id': room_id
+            }, room=f'matching_{room_id}')
+            
+            return {'status': 'started'}
+        
+        @self.sio.event
+        async def join_multiplayer_room(sid, data):
+            """加入联机游戏房间"""
+            room_id = data.get('room_id')
+            if not room_id:
+                return {'error': 'Missing room_id'}
+            
+            await self.sio.enter_room(sid, f'multiplayer_{room_id}')
+            
+            # 通知房间内其他用户
+            await self.sio.emit('players_updated', {
+                'room_id': room_id
+            }, room=f'multiplayer_{room_id}', skip_sid=sid)
+            
+            return {'status': 'joined'}
+        
+        @self.sio.event
+        async def role_selected(sid, data):
+            """角色选择"""
+            room_id = data.get('room_id')
+            role_code = data.get('role_code')
+            if not room_id:
+                return {'error': 'Missing room_id'}
+            
+            user_id = self.socket_to_user.get(sid, 0)
+            
+            # 通知房间内其他用户
+            await self.sio.emit('role_selected', {
+                'room_id': room_id,
+                'user_id': user_id,
+                'role_code': role_code
+            }, room=f'multiplayer_{room_id}', skip_sid=sid)
+            
+            return {'status': 'selected'}
     
     async def broadcast_to_room(self, room_id: str, event: str, data: Any):
         """向房间广播消息"""
