@@ -329,6 +329,9 @@ class Simulator:
             start_idx = len(self.history_manager)
             
             sub_round = sub_start_round
+            # 记录最近发言的角色名称
+            recent_speakers = []
+            
             for sub_round in range(sub_start_round, 3):
                 if self.mode == "script":
                     instruction = self.event_manager.script_instruct(self.event_manager.progress)
@@ -353,7 +356,8 @@ class Simulator:
                         next_actor = self.orchestrator.decide_next_actor(
                             "\n".join(self.history_manager.get_recent_history(3)),
                             self.state_manager.get_group_members_info_text(group, status=True),
-                            self.event_manager.script
+                            self.event_manager.script,
+                            recent_speakers=recent_speakers[-2:] if recent_speakers else [] # 只传递最近2个发言者
                         )
                         # 如果decide_next_actor返回None或空值，使用当前role_code
                         if next_actor and next_actor.strip():
@@ -370,6 +374,10 @@ class Simulator:
                         else:
                             print(f"[Simulator] decide_next_actor返回None或空值，使用当前角色: {role_code}")
                             current_role_code = role_code
+                    
+                    # 记录当前发言者
+                    if current_role_code in self.performers:
+                        recent_speakers.append(self.performers[current_role_code].role_name)
                     
                     yield from self.interaction_handler.implement_next_plan(role_code=current_role_code, group=group)
                     if hasattr(self, '_server_instance'):

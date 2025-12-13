@@ -343,6 +343,9 @@ class InteractionHandler:
         start_idx = len(self.history_manager)
         other_roles_info = self.state_manager.get_group_members_info_dict(group)
         
+        # 记录最近发言的角色名称
+        recent_speakers = []
+        
         for round_num in range(max_rounds):
             acting_role_code = name2code(
                 self.orchestrator.decide_next_actor(
@@ -350,12 +353,17 @@ class InteractionHandler:
                     roles_info_text=self.state_manager.get_group_members_info_text(
                         remove_list_elements(group, acted_role_code),
                         status=True
-                    )
+                    ),
+                    recent_speakers=recent_speakers[-2:] if recent_speakers else [] # 只传递最近2个发言者
                 ),
                 self.performers,
                 self.role_codes,
                 self.language
             )
+            
+            # 记录当前发言者
+            if acting_role_code in self.performers:
+                recent_speakers.append(self.performers[acting_role_code].role_name)
             
             interaction = self.performers[acting_role_code].multi_role_interact(
                 action_maker_code=acted_role_code,
