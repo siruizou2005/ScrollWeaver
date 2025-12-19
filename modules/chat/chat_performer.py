@@ -24,7 +24,7 @@ class ChatPerformer:
     4. 调用 Gemini API 生成回复
     """
     
-    def __init__(self, role_code: str, scroll_id: int, llm_name: str = "gemini-2.5-flash-lite", 
+    def __init__(self, role_code: str, scroll_id: int, llm_name: str = "gemini-3-flash-preview", 
                  user_name: str = "用户", base_dir: Optional[str] = None):
         """
         初始化 ChatPerformer
@@ -32,7 +32,7 @@ class ChatPerformer:
         Args:
             role_code: 角色代码
             scroll_id: 书卷ID
-            llm_name: LLM模型名称，默认 gemini-2.5-flash-lite
+            llm_name: LLM模型名称，默认 gemini-3-flash-preview
             user_name: 用户名，默认"用户"
             base_dir: 项目根目录，如果为None则自动检测
         """
@@ -330,7 +330,14 @@ class ChatPerformer:
                 "identifier": "authorsNote"
             })
         
-        # 10. 示例对话（参考 SillyTavern）- 这些会单独处理
+        # 10. 输出格式要求 - 限制回复长度
+        system_messages.append({
+            "role": "system",
+            "content": "[Output Format Requirements]\n请控制你的回复长度，每次回复尽量控制在150字以内。保持回复简洁、自然，符合角色性格和对话情境。",
+            "identifier": "outputFormat"
+        })
+        
+        # 11. 示例对话（参考 SillyTavern）- 这些会单独处理
         if self.example_dialogue:
             example_messages = self._parse_example_dialogue(self.example_dialogue)
             system_messages.extend(example_messages)
