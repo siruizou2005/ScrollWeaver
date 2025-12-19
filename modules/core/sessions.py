@@ -143,7 +143,7 @@ class ChatSession(BaseSession):
             raise ValueError("scroll_id 不能为空")
         
         # 创建 ChatPerformer 实例
-        llm_name = config.get("llm_name", "gemini-2.5-flash-lite")
+        llm_name = config.get("llm_name", "gemini-3-flash-preview")
         user_name = config.get("user_name", self.user_name)
         
         self.chat_performer = ChatPerformer(

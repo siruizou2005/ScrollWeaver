@@ -1765,7 +1765,7 @@ async def generate_scroll_from_prompt(request: Request, current_user: dict = Dep
         from modules.utils.fast_scroll_generator import FastScrollGenerator
         
         # 初始化生成器（使用支持结构化输出的模型）
-        generator = FastScrollGenerator(llm_name="gemini-2.5-flash")
+        generator = FastScrollGenerator(llm_name="gemini-3-pro-preview")
         
         # 生成书卷配置
         config = generator.generate_scroll_config(
@@ -2012,7 +2012,7 @@ async def upload_document(
                 
                 print(f"[上传文档] 使用 Gemini API 处理 TXT 文件: {file.filename}")
                 response = client.models.generate_content(
-                    model="gemini-2.5-pro",
+                    model="gemini-3-pro-preview",
                     contents=[extraction_prompt, file_text]
                 )
             else:
@@ -2026,7 +2026,7 @@ async def upload_document(
                 
                 # 使用新API的方式：直接使用 Part.from_bytes
                 response = client.models.generate_content(
-                    model="gemini-2.5-pro",
+                    model="gemini-3-pro-preview",
                     contents=[
                         types.Part.from_bytes(
                             data=file_data,
@@ -3047,7 +3047,7 @@ async def create_chat_session(request: Request, current_user: dict = Depends(get
         
         # 初始化会话
         config = {
-            'llm_name': 'gemini-2.5-flash-lite',
+            'llm_name': 'gemini-3-flash-preview',
             'user_name': user_name
         }
         init_result = await session.initialize(config)

@@ -24,7 +24,7 @@ COST = 10
 MAX_ROUNDS = 20  # 设置为20局
 DISCOUNT_FACTOR = 0.95
 
-MODEL_NAME = "gemini-2.5-flash"
+MODEL_NAME = "gemini-3-flash-preview"
 
 
 def compute_profits(p1: float, p2: float) -> Tuple[float, float, float]:
