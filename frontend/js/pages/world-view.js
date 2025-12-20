@@ -1126,22 +1126,13 @@ function setupSessionMode() {
             header.style.display = 'none';
         }
         
-        // 显示顶部交互叠加层 (包含World Intro和时间)
+        // 先隐藏所有游戏内 UI，等待点击“开启我的世界”后再显示
         const topOverlay = document.getElementById('sessionTopOverlay');
-        if (topOverlay) {
-            topOverlay.style.display = 'flex';
-            // startWorldIntro(); // 停用硬编码的 intro，改用 WebSocket 消息
-        }
+        if (topOverlay) topOverlay.style.display = 'none';
 
-        // 显示玩家状态栏
         const playerStatusBar = document.getElementById('playerStatusBar');
-        if (playerStatusBar) {
-            console.log('找到玩家状态栏元素，准备初始化');
-            playerStatusBar.style.display = 'flex';
-            // 不阻塞主流程
-            setTimeout(() => loadPlayerStatus(), 0);
-        }
-        
+        if (playerStatusBar) playerStatusBar.style.display = 'none';
+
         // 设置全屏样式
         const container = document.getElementById('worldViewContainer');
         if (container) {
@@ -1150,8 +1141,17 @@ function setupSessionMode() {
             container.classList.add('intro-mode');
         }
         
+        // 加载玩家数据备用
+        loadPlayerStatus();
+        
         // 连接 WebSocket 以获取实时世界动态
         connectWebSocket();
+        
+        // 初始化通知栏点击事件（查看历史）
+        const introBar = document.getElementById('worldIntroBar');
+        if (introBar) {
+            introBar.addEventListener('click', showWorldHistory);
+        }
         
         console.log('会话模式 UI 设置完成');
     } catch (err) {
@@ -1239,8 +1239,8 @@ function handleStoryMessage(data) {
     console.log('处理故事消息:', data.type, text.substring(0, 30) + '...');
 
     const introEl = document.getElementById('introText');
-    if (!introEl) return;
-
+    const introBar = document.getElementById('worldIntroBar');
+    
     // 记录到历史
     const now = new Date();
     const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
@@ -1264,11 +1264,32 @@ function handleStoryMessage(data) {
     eventHistory.unshift(historyItem);
     if (eventHistory.length > 100) eventHistory.pop();
 
-    // 更新顶部滚动条
-    introEl.style.animation = 'none';
-    introEl.offsetHeight; // 触发重绘
-    introEl.textContent = text;
-    introEl.style.animation = 'slideInOut 8s infinite';
+    // 更新顶部通知栏（如果是世界动态消息）
+    if (introEl && (data.type === 'world' || data.type === 'system')) {
+        // 停止当前动画并强制重绘以立即显示新消息
+        introEl.style.animation = 'none';
+        void introEl.offsetWidth; 
+        
+        // 如果是长文本（如序章），通知栏只显示第一句或摘要
+        let summary = text;
+        if (text.length > 60) {
+            summary = text.split(/[。！？\n]/)[0] + '...';
+        }
+        introEl.textContent = summary;
+        
+        // 重新启动动画
+        introEl.style.animation = 'slideInOut 8s infinite';
+        
+        // 增加一个高亮闪烁提示有新动态
+        if (introBar) {
+            introBar.style.borderColor = '#8b6f47';
+            introBar.style.boxShadow = '0 0 15px rgba(139, 111, 71, 0.4)';
+            setTimeout(() => {
+                introBar.style.borderColor = '';
+                introBar.style.boxShadow = '';
+            }, 2000);
+        }
+    }
 
     // 如果是序章或重要剧情（type 为 world 且比较长，或者包含序章关键字），弹出模态框显示
     const isPrologue = data.type === 'world' && (text.length > 50 || text.includes('序章') || text.includes('睁开眼'));
@@ -1323,6 +1344,13 @@ function showStoryFocusModal(item) {
                 container.classList.remove('intro-mode');
                 container.style.opacity = '1';
             }
+            
+            // 显示游戏内 UI
+            const topOverlay = document.getElementById('sessionTopOverlay');
+            if (topOverlay) topOverlay.style.display = 'flex';
+            
+            const playerStatusBar = document.getElementById('playerStatusBar');
+            if (playerStatusBar) playerStatusBar.style.display = 'flex';
         };
 
         closeBtn.onclick = closeModal;
@@ -1481,6 +1509,7 @@ async function loadPlayerStatus() {
         if (savedRole && savedRole !== 'undefined' && savedRole !== 'null') {
             try {
                 const role = JSON.parse(savedRole);
+                console.log('已从本地缓存加载角色数据:', role);
                 if (playerNameEl) playerNameEl.textContent = role.name || role.nickname || '穿越者';
                 if (playerIdentityEl) playerIdentityEl.textContent = role.identity || '已魂穿';
                 if (playerAvatarEl && role.avatar) {
@@ -1491,15 +1520,17 @@ async function loadPlayerStatus() {
                 if (playerNameEl) playerNameEl.textContent = '测试玩家';
             }
         } else {
+            console.log('未找到本地角色缓存，使用默认状态');
             if (playerNameEl) playerNameEl.textContent = '测试玩家';
             if (playerIdentityEl) playerIdentityEl.textContent = '临时访客';
         }
 
-        // 模拟养成数值（实际可从后端获取）
-        updateStat('talent', Math.floor(Math.random() * 40) + 40); // 40-80
-        updateStat('bond', Math.floor(Math.random() * 30) + 20);   // 20-50
+        // 模拟养成数值：根据角色类型生成比较美观的初始值
+        // 这些数值会在点击“开启我的世界”显示状态栏时平滑滑入
+        updateStat('talent', 65); 
+        updateStat('bond', 45);   
         updateStat('energy', 100);
-        console.log('玩家状态加载完成');
+        console.log('玩家状态加载完成（等待 UI 开启时显示）');
     } catch (e) {
         console.error('加载玩家状态发生严重错误:', e);
     }
