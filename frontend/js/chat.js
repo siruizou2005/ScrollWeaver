@@ -6,6 +6,7 @@
 let sessionId = null;
 let scrollId = null;
 let roleCode = null;
+let userName = '用户';
 let characterName = '';
 let characterNickname = '';
 let characterAvatar = '';
@@ -17,6 +18,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const urlParams = new URLSearchParams(window.location.search);
     scrollId = urlParams.get('scroll_id');
     roleCode = urlParams.get('role_code');
+    userName = urlParams.get('user_name') || '用户';
     
     if (!scrollId || !roleCode) {
         alert('缺少必要参数：scroll_id 或 role_code');
@@ -200,7 +202,7 @@ async function createOrGetSession() {
             body: JSON.stringify({
                 scroll_id: parseInt(scrollId),
                 role_code: roleCode,
-                user_name: '用户' // 可以从用户信息获取
+                user_name: userName
             })
         });
         
