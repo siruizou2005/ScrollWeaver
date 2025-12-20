@@ -67,6 +67,7 @@ body::before {
         opacity: 0;
         transform: translateY(-20px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
@@ -110,7 +111,8 @@ body::before {
 }
 
 .header-actions {
-    width: 120px; /* 与返回按钮宽度保持一致，保持居中 */
+    width: 120px;
+    /* 与返回按钮宽度保持一致，保持居中 */
 }
 
 /* 地图区域 */
@@ -131,11 +133,11 @@ body::before {
     background: #fdfaf5;
     border-radius: 12px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1),
-                0 4px 16px rgba(0, 0, 0, 0.05);
+        0 4px 16px rgba(0, 0, 0, 0.05);
     border: 2px solid rgba(139, 69, 19, 0.15);
     overflow: hidden;
     position: relative;
-    background-image: 
+    background-image:
         radial-gradient(circle at 30% 40%, rgba(139, 111, 71, 0.05) 0%, transparent 50%),
         radial-gradient(circle at 70% 60%, rgba(107, 85, 55, 0.05) 0%, transparent 50%);
     background-size: cover;
@@ -202,8 +204,10 @@ body::before {
     fill: transparent !important;
     stroke: transparent !important;
     opacity: 0;
-    pointer-events: all !important; /* 确保可以接收鼠标事件 */
-    z-index: 10; /* 确保在上层 */
+    pointer-events: all !important;
+    /* 确保可以接收鼠标事件 */
+    z-index: 10;
+    /* 确保在上层 */
 }
 
 .building-polygon:hover {
@@ -232,12 +236,13 @@ body::before {
     border-radius: 12px;
     padding: 16px 20px;
     box-shadow: 0 12px 30px rgba(107, 68, 35, 0.2),
-                0 4px 10px rgba(0, 0, 0, 0.1);
+        0 4px 10px rgba(0, 0, 0, 0.1);
     font-family: 'Noto Serif SC', serif;
     color: #3e2723;
     min-width: 200px;
     max-width: 300px;
-    z-index: 10005; /* 确保在所有UI元素之上 */
+    z-index: 10005;
+    /* 确保在所有UI元素之上 */
     pointer-events: none;
     animation: fadeInTooltip 0.2s ease-out;
 }
@@ -246,6 +251,7 @@ body::before {
     from {
         opacity: 0;
     }
+
     to {
         opacity: 1;
     }
@@ -313,17 +319,20 @@ body::before {
     position: fixed;
     top: 20px;
     right: 20px;
-    left: 300px; /* 为左侧玩家状态栏留出空间 */
+    left: 300px;
+    /* 为左侧玩家状态栏留出空间 */
     z-index: 1000;
     display: flex;
     justify-content: flex-end;
     align-items: center;
     gap: 15px;
-    pointer-events: none; /* 允许点击下方的地图 */
+    pointer-events: none;
+    /* 允许点击下方的地图 */
 }
 
-.session-top-overlay > * {
-    pointer-events: all; /* 恢复子元素的点击 */
+.session-top-overlay>* {
+    pointer-events: all;
+    /* 恢复子元素的点击 */
 }
 
 /* 世界动态消息栏 */
@@ -384,8 +393,15 @@ body::before {
 }
 
 @keyframes modalPopIn {
-    from { opacity: 0; transform: scale(0.9); }
-    to { opacity: 1; transform: scale(1); }
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
 }
 
 .history-modal-header {
@@ -428,8 +444,15 @@ body::before {
 }
 
 @keyframes fadeInHistory {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .history-item-time {
@@ -506,10 +529,25 @@ body::before {
 }
 
 @keyframes slideInOut {
-    0% { transform: translateY(100%); opacity: 0; }
-    5% { transform: translateY(0); opacity: 1; }
-    90% { transform: translateY(0); opacity: 1; }
-    100% { transform: translateY(-100%); opacity: 0; }
+    0% {
+        transform: translateY(100%);
+        opacity: 0;
+    }
+
+    5% {
+        transform: translateY(0);
+        opacity: 1;
+    }
+
+    90% {
+        transform: translateY(0);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translateY(-100%);
+        opacity: 0;
+    }
 }
 
 /* 时间显示 */
@@ -544,6 +582,7 @@ body::before {
         opacity: 0;
         transform: translateX(-30px);
     }
+
     to {
         opacity: 1;
         transform: translateX(0);
@@ -612,9 +651,17 @@ body::before {
     font-size: 14px;
 }
 
-.stat-item i.fa-magic { color: #7e57c2; }
-.stat-item i.fa-heart { color: #e91e63; }
-.stat-item i.fa-bolt { color: #ffa000; }
+.stat-item i.fa-magic {
+    color: #7e57c2;
+}
+
+.stat-item i.fa-heart {
+    color: #e91e63;
+}
+
+.stat-item i.fa-bolt {
+    color: #ffa000;
+}
 
 .stat-bar-container {
     flex: 1;
@@ -630,9 +677,17 @@ body::before {
     transition: width 1s ease-in-out;
 }
 
-.talent-bar { background: linear-gradient(90deg, #9575cd, #7e57c2); }
-.bond-bar { background: linear-gradient(90deg, #f06292, #e91e63); }
-.energy-bar { background: linear-gradient(90deg, #ffb74d, #ffa000); }
+.talent-bar {
+    background: linear-gradient(90deg, #9575cd, #7e57c2);
+}
+
+.bond-bar {
+    background: linear-gradient(90deg, #f06292, #e91e63);
+}
+
+.energy-bar {
+    background: linear-gradient(90deg, #ffb74d, #ffa000);
+}
 
 .stat-item span {
     font-size: 12px;
@@ -672,12 +727,14 @@ body::before {
 /* 人物标记样式 */
 .character-marker {
     cursor: default;
-    pointer-events: all; /* 允许响应鼠标事件以显示tooltip */
+    pointer-events: all;
+    /* 允许响应鼠标事件以显示tooltip */
 }
 
 .character-circle {
     transition: all 0.2s ease;
-    pointer-events: all; /* 允许响应鼠标事件 */
+    pointer-events: all;
+    /* 允许响应鼠标事件 */
 }
 
 .character-circle:hover {
@@ -687,7 +744,8 @@ body::before {
 }
 
 .character-avatar {
-    pointer-events: all; /* 允许响应鼠标事件 */
+    pointer-events: all;
+    /* 允许响应鼠标事件 */
 }
 
 .character-name-tooltip {
@@ -779,7 +837,8 @@ body::before {
 .building-modal-header {
     margin-bottom: 20px;
     padding-bottom: 12px;
-    padding-right: 40px; /* 为关闭按钮留出空间 */
+    padding-right: 40px;
+    /* 为关闭按钮留出空间 */
     border-bottom: 2px solid rgba(139, 69, 19, 0.2);
     flex-shrink: 0;
 }
@@ -1027,4 +1086,3 @@ body::before {
         padding: 10px;
     }
 }
-

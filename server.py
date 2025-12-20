@@ -4301,6 +4301,11 @@ async def get_persona_models(current_user: dict = Depends(get_current_user)):
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
+# ===== 注册 Self Identity 路由 =====
+from modules.routes.self_identity_routes import router as self_identity_router
+app.include_router(self_identity_router)
+
+
 # ==================== 穿越 API 端点 ====================
 
 @app.post("/api/crossworld/create-session")
