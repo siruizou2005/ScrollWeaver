@@ -120,6 +120,7 @@ class ScrollWeaver():
             chara_info = {
                 "id": i,
                 "name": agent.role_name,
+                "code": code,  # 添加角色代码，方便过滤
                 "icon": agent.icon_path,
                 "description": agent.role_profile,
                 "goal": agent.goal if agent.goal else agent.motivation,

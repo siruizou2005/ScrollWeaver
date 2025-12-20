@@ -187,6 +187,11 @@ body::before {
     transition: fill 0.2s ease;
 }
 
+/* session模式下，grid cells不阻止事件 */
+.session-mode .grid-cell {
+    pointer-events: none;
+}
+
 .grid-cell:hover {
     fill: rgba(139, 111, 71, 0.15);
 }
@@ -197,7 +202,8 @@ body::before {
     fill: transparent !important;
     stroke: transparent !important;
     opacity: 0;
-    pointer-events: all; /* 确保可以接收鼠标事件 */
+    pointer-events: all !important; /* 确保可以接收鼠标事件 */
+    z-index: 10; /* 确保在上层 */
 }
 
 .building-polygon:hover {
@@ -284,6 +290,367 @@ body::before {
 .tooltip-content {
     font-weight: 500;
     color: #5d4037;
+}
+
+/* 进入世界模式样式 */
+.world-view-container.session-mode {
+    padding: 0;
+}
+
+.world-view-container.session-mode .map-section {
+    padding: 0;
+    height: 100vh;
+}
+
+/* 时间显示 */
+.time-display {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+}
+
+.time-card {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 2px solid rgba(139, 69, 19, 0.3);
+    border-radius: 12px;
+    padding: 12px 20px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: 'Noto Serif SC', serif;
+}
+
+.time-card i {
+    color: #8b6f47;
+    font-size: 18px;
+}
+
+.time-card span {
+    font-size: 18px;
+    font-weight: 600;
+    color: #3d2817;
+}
+
+/* 人物标记样式 */
+.character-marker {
+    cursor: default;
+    pointer-events: all; /* 允许响应鼠标事件以显示tooltip */
+}
+
+.character-circle {
+    transition: all 0.2s ease;
+    pointer-events: all; /* 允许响应鼠标事件 */
+}
+
+.character-circle:hover {
+    stroke-width: 3;
+    stroke: #d84315;
+    /* 不缩放，只改变颜色 */
+}
+
+.character-avatar {
+    pointer-events: all; /* 允许响应鼠标事件 */
+}
+
+.character-name-tooltip {
+    position: fixed;
+    background: rgba(255, 252, 245, 0.95);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(139, 69, 19, 0.3);
+    border-radius: 6px;
+    padding: 6px 10px;
+    box-shadow: 0 2px 8px rgba(107, 68, 35, 0.15);
+    font-family: 'Noto Serif SC', serif;
+    color: #3e2723;
+    font-size: 12px;
+    font-weight: 500;
+    z-index: 10001;
+    pointer-events: none;
+    white-space: nowrap;
+}
+
+/* 建筑物模态框 */
+.building-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+}
+
+.building-modal .modal-content.building-modal-content {
+    position: relative !important;
+    background: rgba(255, 252, 245, 0.98) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    border: 2px solid rgba(139, 69, 19, 0.3) !important;
+    border-radius: 16px !important;
+    padding: 24px !important;
+    max-width: 500px !important;
+    width: 90% !important;
+    max-height: 80vh !important;
+    overflow-y: auto !important;
+    box-shadow: 0 12px 40px rgba(107, 68, 35, 0.2) !important;
+    z-index: 10001 !important;
+    margin: 0 auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    opacity: 1 !important;
+    transform: none !important;
+}
+
+.modal-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: rgba(139, 69, 19, 0.1);
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #5d4037;
+    font-size: 18px;
+    transition: all 0.2s ease;
+}
+
+.modal-close:hover {
+    background: rgba(139, 69, 19, 0.2);
+    transform: scale(1.1);
+}
+
+.building-modal-header {
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    padding-right: 40px; /* 为关闭按钮留出空间 */
+    border-bottom: 2px solid rgba(139, 69, 19, 0.2);
+    flex-shrink: 0;
+}
+
+.building-modal-header h2 {
+    font-size: 24px;
+    font-weight: 700;
+    color: #3d2817;
+    margin: 0;
+    line-height: 1.4;
+}
+
+.building-modal-body {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+.characters-list-section h3 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #5d4037;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.characters-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.character-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.6);
+    border-radius: 8px;
+    border: 1px solid rgba(139, 69, 19, 0.1);
+}
+
+.character-item .character-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid rgba(139, 69, 19, 0.2);
+    flex-shrink: 0;
+}
+
+.character-item .character-avatar img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.character-item .character-name {
+    font-size: 16px;
+    font-weight: 500;
+    color: #3d2817;
+    flex: 1;
+    line-height: 1.4;
+}
+
+.no-characters {
+    text-align: center;
+    padding: 20px;
+    color: #6b5537;
+    font-style: italic;
+}
+
+.actions-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex-shrink: 0;
+    margin-top: auto;
+}
+
+.action-btn {
+    width: 100%;
+    padding: 14px 20px;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-family: 'Noto Serif SC', serif;
+}
+
+.chat-btn {
+    background: linear-gradient(135deg, #8b6f47 0%, #6b5537 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(139, 111, 71, 0.3);
+}
+
+.chat-btn:hover {
+    background: linear-gradient(135deg, #6b5537 0%, #5a4630 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(139, 111, 71, 0.4);
+}
+
+.group-btn {
+    background: linear-gradient(135deg, #c94c4c 0%, #b83d3d 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(201, 76, 76, 0.3);
+}
+
+.group-btn:hover {
+    background: linear-gradient(135deg, #b83d3d 0%, #a82d2d 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(201, 76, 76, 0.4);
+}
+
+/* 角色选择模态框 */
+.character-select-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 10002;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.character-select-content {
+    position: relative;
+    background: rgba(255, 252, 245, 0.98);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 2px solid rgba(139, 69, 19, 0.3);
+    border-radius: 16px;
+    padding: 24px;
+    max-width: 400px;
+    width: 90%;
+    max-height: 70vh;
+    overflow-y: auto;
+    box-shadow: 0 12px 40px rgba(107, 68, 35, 0.2);
+    z-index: 10003;
+}
+
+.character-select-header {
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid rgba(139, 69, 19, 0.2);
+}
+
+.character-select-header h2 {
+    font-size: 20px;
+    font-weight: 700;
+    color: #3d2817;
+    margin: 0;
+}
+
+.character-select-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.character-select-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.6);
+    border-radius: 8px;
+    border: 1px solid rgba(139, 69, 19, 0.1);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.character-select-item:hover {
+    background: rgba(139, 111, 71, 0.1);
+    border-color: rgba(139, 69, 19, 0.3);
+    transform: translateX(4px);
+}
+
+.character-select-item .character-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid rgba(139, 69, 19, 0.2);
+}
+
+.character-select-item .character-name {
+    font-size: 15px;
+    font-weight: 500;
+    color: #3d2817;
+    flex: 1;
 }
 
 /* 响应式设计 */

@@ -9,6 +9,11 @@ const TOTAL_CELLS = GRID_COLS * GRID_ROWS; // 288个格子
 let cellWidth = 0;
 let cellHeight = 0;
 let buildingsData = [];
+let isSessionMode = false; // 是否为进入世界模式
+let sessionId = null;
+let scrollId = null;
+let worldSource = ''; // 世界source（用于判断时间格式）
+let buildingCharactersMap = {}; // 建筑物代码 -> 角色列表的映射
 
 // 初始化地图
 async function initWorldMap() {
@@ -33,41 +38,294 @@ async function initWorldMap() {
     cellWidth = containerWidth / GRID_COLS;
     cellHeight = containerHeight / GRID_ROWS;
 
-    // 加载背景图片
-    await loadBackgroundImage(svg, containerWidth, containerHeight);
-    
     // 先加载建筑物数据（需要在绘制网格前加载，以便网格能检测建筑物）
     await loadAndDrawBuildings(svg);
+    
+    // 加载背景图片（需要在获取scroll_id后）
+    await loadBackgroundImage(svg, containerWidth, containerHeight);
+    
+    // 如果是session模式，加载时间显示（需要在获取worldSource后）
+    if (isSessionMode) {
+        loadTimeDisplay();
+    }
     
     // 绘制网格线（隐藏但保留用于调试）
     drawGridLines(svg, containerWidth, containerHeight, cellWidth, cellHeight);
     
     // 绘制网格单元格（保留交互功能，会根据建筑物数据显示对应信息）
+    // 注意：在session模式下，grid cells不应该阻止建筑物的点击事件
     drawGridCells(svg, containerWidth, containerHeight, cellWidth, cellHeight);
     
     // 绘制建筑物（透明多边形，仅用于交互）
+    // 必须在grid cells之后绘制，这样建筑物在上层，可以接收点击事件
     drawBuildings(svg);
+    
+    // 如果是session模式，等待角色数据加载完成后绘制人物
+    if (isSessionMode) {
+        // 确保角色数据已加载
+        await loadBuildingCharacters();
+        drawCharacters(svg);
+    }
+}
+
+// 加载时间显示（随机模拟）
+function loadTimeDisplay() {
+    const timeText = document.getElementById('timeText');
+    if (!timeText) return;
+    
+    let timeString = '';
+    if (worldSource === 'A_Dream_in_Red_Mansions') {
+        // 红楼梦：古代时辰格式
+        const shichen = ['子时', '丑时', '寅时', '卯时', '辰时', '巳时', 
+                        '午时', '未时', '申时', '酉时', '戌时', '亥时'];
+        const randomShichen = shichen[Math.floor(Math.random() * shichen.length)];
+        timeString = randomShichen;
+    } else {
+        // 其他世界：24小时格式
+        const hour = Math.floor(Math.random() * 24);
+        const minute = Math.floor(Math.random() * 60);
+        timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+    }
+    
+    timeText.textContent = timeString;
+}
+
+// 加载建筑物位置的角色数据
+async function loadBuildingCharacters() {
+    if (!sessionId) {
+        console.warn('未找到session_id，无法加载角色数据');
+        return;
+    }
+    
+    try {
+        // 为每个建筑物获取角色列表
+        for (const building of buildingsData) {
+            try {
+                const response = await fetch(`/api/world/${sessionId}/location/${building.building_code}/characters`);
+                if (response.ok) {
+                    const data = await response.json();
+                    buildingCharactersMap[building.building_code] = data.characters || [];
+                } else {
+                    // 如果API不存在，使用模拟数据
+                    buildingCharactersMap[building.building_code] = getMockCharactersForBuilding(building.building_code);
+                }
+            } catch (error) {
+                console.warn(`获取建筑物 ${building.building_code} 的角色数据失败:`, error);
+                // 使用模拟数据
+                buildingCharactersMap[building.building_code] = getMockCharactersForBuilding(building.building_code);
+            }
+        }
+    } catch (error) {
+        console.error('加载建筑物角色数据时出错:', error);
+    }
+}
+
+// 获取建筑物的模拟角色数据（根据红楼梦刘姥姥进大观园路线）
+function getMockCharactersForBuilding(buildingCode) {
+    // 红楼梦角色分配（按照刘姥姥进大观园路线）
+    const redMansionsCharacters = {
+        'QinfangTing': [
+            { role_code: 'JiaMu-zh', role_name: '贾母' },
+            { role_code: 'liulaolao-zh', role_name: '刘姥姥' },
+            { role_code: 'WangXifeng-zh', role_name: '王熙凤' }
+        ],
+        'XiaoxiangGuan': [
+            { role_code: 'LinDaiyu-zh', role_name: '林黛玉' }
+        ],
+        'QiushuangZhai': [
+            { role_code: 'LiWan-zh', role_name: '李纨' },
+            { role_code: 'JiaMu-zh', role_name: '贾母' },
+            { role_code: 'liulaolao-zh', role_name: '刘姥姥' }
+        ],
+        'HengwuYuan': [
+            { role_code: 'XueBaochai-zh', role_name: '薛宝钗' }
+        ],
+        'OuxiangXie': [
+            { role_code: 'JiaMu-zh', role_name: '贾母' },
+            { role_code: 'liulaolao-zh', role_name: '刘姥姥' }
+        ],
+        'LongcuiAn': [
+            { role_code: 'Miaoyu-zh', role_name: '妙玉' }
+        ],
+        'YihongYuan': [
+            { role_code: 'JiaBaoyu-zh', role_name: '贾宝玉' }
+        ]
+    };
+    
+    if (worldSource === 'A_Dream_in_Red_Mansions' && redMansionsCharacters[buildingCode]) {
+        return redMansionsCharacters[buildingCode];
+    }
+    
+    // 其他世界：随机分配角色（这里需要根据实际角色列表来分配）
+    // 暂时返回空数组，等后端API实现后再填充
+    return [];
+}
+
+// 绘制人物（建筑物旁边圆形排列）
+function drawCharacters(svg) {
+    const charactersGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    charactersGroup.setAttribute('class', 'characters-group');
+    
+    buildingsData.forEach(building => {
+        const characters = buildingCharactersMap[building.building_code] || [];
+        if (characters.length === 0) return;
+        
+        // 计算建筑物中心位置
+        const coords = building.coordinates;
+        const convertCoords = (userX, userY) => {
+            const svgX = (userX - 1) * cellWidth;
+            const svgY = (GRID_ROWS - userY) * cellHeight;
+            return { x: svgX, y: svgY };
+        };
+        
+        const sw = convertCoords(coords.sw[0], coords.sw[1]);
+        const se = convertCoords(coords.se[0], coords.se[1]);
+        const ne = convertCoords(coords.ne[0], coords.ne[1]);
+        const nw = convertCoords(coords.nw[0], coords.nw[1]);
+        
+        const centerX = (sw.x + se.x + ne.x + nw.x) / 4;
+        const centerY = (sw.y + se.y + ne.y + nw.y) / 4;
+        
+        // 计算偏移位置（建筑物旁边）
+        const offsetX = (se.x - sw.x) / 2 + 20; // 向右偏移
+        const offsetY = 0;
+        
+        // 圆形排列人物
+        const radius = Math.max(30, characters.length * 8); // 根据人数调整半径
+        const angleStep = (2 * Math.PI) / characters.length;
+        
+        characters.forEach((char, index) => {
+            const angle = index * angleStep;
+            const x = centerX + offsetX + Math.cos(angle) * radius;
+            const y = centerY + offsetY + Math.sin(angle) * radius;
+            
+            // 创建人物组
+            const charGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            charGroup.setAttribute('class', 'character-marker');
+            charGroup.setAttribute('data-role-code', char.role_code);
+            charGroup.setAttribute('data-role-name', char.role_name);
+            
+            // 创建头像圆圈
+            const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            circle.setAttribute('cx', x);
+            circle.setAttribute('cy', y);
+            circle.setAttribute('r', 15);
+            circle.setAttribute('fill', '#fff');
+            circle.setAttribute('stroke', '#8b4513');
+            circle.setAttribute('stroke-width', '2');
+            circle.setAttribute('class', 'character-circle');
+            
+            // 创建头像图片
+            const image = document.createElementNS('http://www.w3.org/2000/svg', 'image');
+            image.setAttributeNS('http://www.w3.org/1999/xlink', 'href', '/frontend/assets/images/default-icon.jpg');
+            image.setAttribute('href', '/frontend/assets/images/default-icon.jpg');
+            image.setAttribute('x', x - 12);
+            image.setAttribute('y', y - 12);
+            image.setAttribute('width', 24);
+            image.setAttribute('height', 24);
+            image.setAttribute('clip-path', `circle(12px at ${x}px ${y}px)`);
+            image.setAttribute('class', 'character-avatar');
+            
+            // 添加悬停事件显示人名（但不响应点击）
+            let nameTooltip = null;
+            const showName = (e) => {
+                if (nameTooltip) {
+                    nameTooltip.remove();
+                }
+                nameTooltip = document.createElement('div');
+                nameTooltip.className = 'character-name-tooltip';
+                nameTooltip.textContent = char.role_name;
+                document.body.appendChild(nameTooltip);
+                
+                const rect = e.target.getBoundingClientRect();
+                nameTooltip.style.left = `${rect.left + rect.width / 2}px`;
+                nameTooltip.style.top = `${rect.top - 10}px`;
+                nameTooltip.style.transform = 'translate(-50%, -100%)';
+            };
+            
+            const hideName = () => {
+                if (nameTooltip) {
+                    nameTooltip.remove();
+                    nameTooltip = null;
+                }
+            };
+            
+            // 只添加悬停事件，不添加点击事件
+            circle.addEventListener('mouseenter', showName);
+            circle.addEventListener('mouseleave', hideName);
+            image.addEventListener('mouseenter', showName);
+            image.addEventListener('mouseleave', hideName);
+            
+            // 确保点击时不会有任何反应
+            circle.addEventListener('click', (e) => {
+                e.stopPropagation();
+                // 不执行任何操作
+            });
+            image.addEventListener('click', (e) => {
+                e.stopPropagation();
+                // 不执行任何操作
+            });
+            
+            charGroup.appendChild(circle);
+            charGroup.appendChild(image);
+            charactersGroup.appendChild(charGroup);
+        });
+    });
+    
+    svg.appendChild(charactersGroup);
 }
 
 // 加载背景图片
 async function loadBackgroundImage(svg, width, height) {
     try {
-        // 从URL获取scroll_id
-        const urlParams = new URLSearchParams(window.location.search);
-        const scrollId = urlParams.get('scroll_id');
+        // 获取scroll_id（可能是从session_id获取）
+        let currentScrollId = scrollId;
         
-        if (!scrollId) {
-            console.warn('未找到scroll_id参数');
+        if (!currentScrollId && sessionId) {
+            // 如果是session模式，尝试从session获取scroll_id
+            // 测试模式：sessionId格式为 test_${scrollId}
+            if (sessionId.startsWith('test_')) {
+                currentScrollId = sessionId.replace('test_', '');
+                console.log('从测试sessionId提取scrollId:', currentScrollId);
+            } else {
+                // 真实session模式：尝试从API获取
+                try {
+                    const sessionResponse = await fetch(`/api/world/${sessionId}/info`);
+                    if (sessionResponse.ok) {
+                        const sessionData = await sessionResponse.json();
+                        currentScrollId = sessionData.scroll_id;
+                        console.log('从session API获取scrollId:', currentScrollId);
+                    }
+                } catch (e) {
+                    console.warn('获取session信息失败:', e);
+                    // 如果API不存在，尝试从crossworld session获取
+                    try {
+                        const crossworldResponse = await fetch(`/api/crossworld/session/${sessionId}`);
+                        if (crossworldResponse.ok) {
+                            const crossworldData = await crossworldResponse.json();
+                            currentScrollId = crossworldData.scroll_id;
+                            console.log('从crossworld session获取scrollId:', currentScrollId);
+                        }
+                    } catch (e2) {
+                        console.warn('获取crossworld session信息失败:', e2);
+                    }
+                }
+            }
+        }
+        
+        if (!currentScrollId) {
+            console.warn('未找到scroll_id参数，无法加载背景图片');
             return;
         }
 
         // 获取书卷信息以确定背景图片
         let source = '';
         try {
-            const response = await fetch(`/api/scroll/${scrollId}`);
+            const response = await fetch(`/api/scroll/${currentScrollId}`);
             if (response.ok) {
                 const scrollData = await response.json();
                 source = scrollData.source || '';
+                worldSource = source; // 保存source用于时间格式判断
                 console.log('获取到的source:', source);
             } else {
                 console.warn('获取书卷信息失败:', response.status);
@@ -140,17 +398,51 @@ function addSVGBackgroundImage(svg, url, width, height) {
 // 加载建筑物数据并绘制
 async function loadAndDrawBuildings(svg) {
     try {
-        // 从URL获取scroll_id
-        const urlParams = new URLSearchParams(window.location.search);
-        const scrollId = urlParams.get('scroll_id');
+        // 获取scroll_id（可能是从session_id获取）
+        let currentScrollId = scrollId;
         
-        if (!scrollId) {
+        if (!currentScrollId && sessionId) {
+            // 如果是session模式，尝试从session获取scroll_id
+            // 测试模式：sessionId格式为 test_${scrollId}
+            if (sessionId.startsWith('test_')) {
+                currentScrollId = sessionId.replace('test_', '');
+                scrollId = currentScrollId; // 保存到全局变量
+                console.log('从测试sessionId提取scrollId:', currentScrollId);
+            } else {
+                // 真实session模式：尝试从API获取
+                try {
+                    const sessionResponse = await fetch(`/api/world/${sessionId}/info`);
+                    if (sessionResponse.ok) {
+                        const sessionData = await sessionResponse.json();
+                        currentScrollId = sessionData.scroll_id;
+                        scrollId = currentScrollId; // 保存到全局变量
+                        console.log('从session API获取scrollId:', currentScrollId);
+                    }
+                } catch (e) {
+                    console.warn('获取session信息失败:', e);
+                    // 如果API不存在，尝试从crossworld session获取
+                    try {
+                        const crossworldResponse = await fetch(`/api/crossworld/session/${sessionId}`);
+                        if (crossworldResponse.ok) {
+                            const crossworldData = await crossworldResponse.json();
+                            currentScrollId = crossworldData.scroll_id;
+                            scrollId = currentScrollId; // 保存到全局变量
+                            console.log('从crossworld session获取scrollId:', currentScrollId);
+                        }
+                    } catch (e2) {
+                        console.warn('获取crossworld session信息失败:', e2);
+                    }
+                }
+            }
+        }
+        
+        if (!currentScrollId) {
             console.warn('未找到scroll_id参数');
             return;
         }
 
         // 从API获取建筑物数据
-        const response = await fetch(`/api/scrolls/${scrollId}/map-buildings`);
+        const response = await fetch(`/api/scrolls/${currentScrollId}/map-buildings`);
         if (!response.ok) {
             console.warn('获取建筑物数据失败:', response.statusText);
             return;
@@ -158,6 +450,8 @@ async function loadAndDrawBuildings(svg) {
 
         const data = await response.json();
         buildingsData = data.buildings || [];
+        
+        // 如果是session模式，加载建筑物位置的角色数据（在setupSessionMode中已经调用，这里不需要重复调用）
         
         // 不在这里绘制建筑物，让initWorldMap统一处理
     } catch (error) {
@@ -229,7 +523,9 @@ function createBuildingElement(building) {
     });
 
     // 添加点击事件
-    polygon.addEventListener('click', () => {
+    polygon.addEventListener('click', (e) => {
+        e.stopPropagation(); // 阻止事件冒泡
+        console.log('建筑物polygon被点击:', building.building_name, 'isSessionMode:', isSessionMode);
         handleBuildingClick(building);
     });
 
@@ -242,8 +538,181 @@ function createBuildingElement(building) {
 
 // 处理建筑物点击
 function handleBuildingClick(building) {
-    console.log('点击了建筑物:', building.building_name);
-    // 这里可以添加点击后的逻辑，比如显示建筑物详情等
+    console.log('handleBuildingClick被调用:', building.building_name, 'isSessionMode:', isSessionMode);
+    
+    if (isSessionMode) {
+        // 进入世界模式：显示建筑物卡片（人物列表和操作按钮）
+        console.log('准备显示建筑物模态框');
+        showBuildingModal(building);
+    } else {
+        // 查看模式：显示建筑物介绍（已有功能）
+        // 这个功能已经在showBuildingTooltip中实现了
+        console.log('查看模式，不显示模态框');
+    }
+}
+
+// 显示建筑物模态框
+function showBuildingModal(building) {
+    console.log('showBuildingModal被调用:', building.building_name);
+    const modal = document.getElementById('buildingModal');
+    const title = document.getElementById('buildingModalTitle');
+    const charactersList = document.getElementById('buildingCharactersList');
+    const actionsSection = document.getElementById('actionsSection');
+    
+    if (!modal || !title || !charactersList || !actionsSection) {
+        console.error('建筑物模态框元素未找到', {
+            modal: !!modal,
+            title: !!title,
+            charactersList: !!charactersList,
+            actionsSection: !!actionsSection
+        });
+        return;
+    }
+    
+    console.log('模态框元素找到，准备显示');
+    
+    // 设置标题
+    title.textContent = building.building_name || '建筑物';
+    
+    // 获取该建筑物位置的角色列表
+    const characters = buildingCharactersMap[building.building_code] || [];
+    console.log('建筑物角色列表:', building.building_code, characters);
+    
+    // 清空并填充人物列表
+    charactersList.innerHTML = '';
+    if (characters.length === 0) {
+        charactersList.innerHTML = '<div class="no-characters">此处暂无人物</div>';
+    } else {
+        characters.forEach(char => {
+            const charItem = document.createElement('div');
+            charItem.className = 'character-item';
+            charItem.innerHTML = `
+                <div class="character-avatar">
+                    <img src="/frontend/assets/images/default-icon.jpg" alt="${char.role_name || char.name || ''}" 
+                         onerror="this.src='/frontend/assets/images/default-icon.jpg'">
+                </div>
+                <div class="character-name">${char.role_name || char.name || '未知角色'}</div>
+            `;
+            charactersList.appendChild(charItem);
+        });
+    }
+    
+    // 清空并填充操作按钮
+    actionsSection.innerHTML = '';
+    if (characters.length === 0) {
+        // 没有人物，不显示操作按钮
+    } else if (characters.length === 1) {
+        // 只有一个人，显示私语按钮
+        const chatBtn = document.createElement('button');
+        chatBtn.className = 'action-btn chat-btn';
+        chatBtn.innerHTML = '<i class="fas fa-comments"></i> 私语';
+        chatBtn.addEventListener('click', () => {
+            startChat(characters[0].role_code);
+        });
+        actionsSection.appendChild(chatBtn);
+    } else {
+        // 多个人，显示私语和群聊按钮
+        const chatBtn = document.createElement('button');
+        chatBtn.className = 'action-btn chat-btn';
+        chatBtn.innerHTML = '<i class="fas fa-comments"></i> 私语';
+        chatBtn.addEventListener('click', () => {
+            showCharacterSelectModal(characters);
+        });
+        actionsSection.appendChild(chatBtn);
+        
+        const groupBtn = document.createElement('button');
+        groupBtn.className = 'action-btn group-btn';
+        groupBtn.innerHTML = '<i class="fas fa-users"></i> 群聊';
+        groupBtn.addEventListener('click', () => {
+            startGroupChat(characters, building.building_code);
+        });
+        actionsSection.appendChild(groupBtn);
+    }
+    
+    // 显示模态框
+    modal.style.display = 'flex';
+}
+
+// 隐藏建筑物模态框
+function hideBuildingModal() {
+    const modal = document.getElementById('buildingModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+// 显示角色选择模态框
+function showCharacterSelectModal(characters) {
+    const modal = document.getElementById('characterSelectModal');
+    const list = document.getElementById('characterSelectList');
+    
+    if (!modal || !list) {
+        console.error('角色选择模态框元素未找到');
+        return;
+    }
+    
+    // 清空并填充角色列表
+    list.innerHTML = '';
+    characters.forEach(char => {
+        const charItem = document.createElement('div');
+        charItem.className = 'character-select-item';
+        charItem.innerHTML = `
+            <div class="character-avatar">
+                <img src="/frontend/assets/images/default-icon.jpg" alt="${char.role_name}">
+            </div>
+            <div class="character-name">${char.role_name}</div>
+        `;
+        charItem.addEventListener('click', () => {
+            startChat(char.role_code);
+            hideCharacterSelectModal();
+        });
+        list.appendChild(charItem);
+    });
+    
+    // 显示模态框
+    modal.style.display = 'flex';
+}
+
+// 隐藏角色选择模态框
+function hideCharacterSelectModal() {
+    const modal = document.getElementById('characterSelectModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+// 开始私语
+function startChat(roleCode) {
+    if (!sessionId || !scrollId) {
+        console.error('缺少必要参数');
+        return;
+    }
+    
+    // 跳转到私语页面
+    window.location.href = `/frontend/pages/chat.html?scroll_id=${scrollId}&role_code=${roleCode}`;
+}
+
+// 开始群聊
+function startGroupChat(characters, buildingCode) {
+    if (!sessionId || !scrollId) {
+        console.error('缺少必要参数');
+        return;
+    }
+    
+    // 获取角色代码列表
+    const roleCodes = characters.map(char => char.role_code || char.code).join(',');
+    
+    // 跳转到群聊页面（入卷玩法）
+    // 直接进入游戏页面，传递建筑物代码和角色列表
+    // URL格式：/game?scroll_id=xxx&mode=story&location=xxx&roles=xxx,xxx,xxx
+    const params = new URLSearchParams({
+        scroll_id: scrollId,
+        mode: 'story',
+        location: buildingCode || '',
+        roles: roleCodes
+    });
+    
+    window.location.href = `/game?${params.toString()}`;
 }
 
 // 显示建筑物提示
@@ -332,19 +801,28 @@ function drawGridCells(svg, width, height, cellWidth, cellHeight) {
             // 检查这个单元格是否属于某个建筑物
             const building = findBuildingAtCell(row, col);
             if (building) {
-                // 如果属于建筑物，显示建筑物信息
-                cell.addEventListener('mouseenter', (e) => {
-                    showBuildingTooltip(e, building.building_name, building.description);
-                });
-                cell.addEventListener('mouseleave', () => {
-                    hideBuildingTooltip();
-                });
-                cell.addEventListener('click', () => {
-                    handleBuildingClick(building);
-                });
+                // 如果属于建筑物，在session模式下不添加事件（让建筑物polygon处理）
+                // 在查看模式下，grid cell可以显示tooltip
+                if (!isSessionMode) {
+                    cell.addEventListener('mouseenter', (e) => {
+                        showBuildingTooltip(e, building.building_name, building.description);
+                    });
+                    cell.addEventListener('mouseleave', () => {
+                        hideBuildingTooltip();
+                    });
+                    cell.addEventListener('click', () => {
+                        handleBuildingClick(building);
+                    });
+                } else {
+                    // session模式下，grid cell不阻止事件，让建筑物polygon处理
+                    cell.style.pointerEvents = 'none';
+                }
             } else {
                 // 普通单元格不显示任何提示
-                // 移除点击和悬停事件，保持静默
+                // 在session模式下，也不响应点击
+                if (isSessionMode) {
+                    cell.style.pointerEvents = 'none';
+                }
             }
 
             cellsGroup.appendChild(cell);
@@ -352,26 +830,6 @@ function drawGridCells(svg, width, height, cellWidth, cellHeight) {
     }
 
     svg.appendChild(cellsGroup);
-}
-
-// 查找指定单元格所属的建筑物
-function findBuildingAtCell(row, col) {
-    // 将SVG坐标转换为用户坐标
-    const userRow = GRID_ROWS - row; // Y轴反转
-    const userCol = col + 1; // X轴从1开始
-    
-    for (const building of buildingsData) {
-        const coords = building.coordinates;
-        const minX = Math.min(coords.sw[0], coords.se[0], coords.ne[0], coords.nw[0]);
-        const maxX = Math.max(coords.sw[0], coords.se[0], coords.ne[0], coords.nw[0]);
-        const minY = Math.min(coords.sw[1], coords.se[1], coords.ne[1], coords.nw[1]);
-        const maxY = Math.max(coords.sw[1], coords.se[1], coords.ne[1], coords.nw[1]);
-        
-        if (userCol >= minX && userCol <= maxX && userRow >= minY && userRow <= maxY) {
-            return building;
-        }
-    }
-    return null;
 }
 
 // 查找指定单元格所属的建筑物
@@ -447,16 +905,32 @@ function bindEventListeners() {
     const backBtn = document.getElementById('backBtn');
     if (backBtn) {
         backBtn.addEventListener('click', () => {
-            // 获取scroll_id参数
-            const urlParams = new URLSearchParams(window.location.search);
-            const scrollId = urlParams.get('scroll_id');
-            
             if (scrollId) {
                 window.location.href = `/frontend/pages/intro.html?scroll_id=${scrollId}`;
             } else {
                 window.history.back();
             }
         });
+    }
+    
+    // 建筑物模态框关闭
+    const modalClose = document.getElementById('modalClose');
+    const modalOverlay = document.getElementById('modalOverlay');
+    if (modalClose) {
+        modalClose.addEventListener('click', hideBuildingModal);
+    }
+    if (modalOverlay) {
+        modalOverlay.addEventListener('click', hideBuildingModal);
+    }
+    
+    // 角色选择模态框关闭
+    const characterSelectClose = document.getElementById('characterSelectClose');
+    const characterSelectOverlay = document.getElementById('characterSelectOverlay');
+    if (characterSelectClose) {
+        characterSelectClose.addEventListener('click', hideCharacterSelectModal);
+    }
+    if (characterSelectOverlay) {
+        characterSelectOverlay.addEventListener('click', hideCharacterSelectModal);
     }
 }
 
@@ -476,8 +950,64 @@ window.addEventListener('resize', () => {
 });
 
 // 页面加载完成后初始化
-document.addEventListener('DOMContentLoaded', () => {
-    initWorldMap();
+document.addEventListener('DOMContentLoaded', async () => {
+    // 检测页面模式
+    const urlParams = new URLSearchParams(window.location.search);
+    sessionId = urlParams.get('session_id');
+    scrollId = urlParams.get('scroll_id');
+    
+    if (sessionId) {
+        // 进入世界模式
+        isSessionMode = true;
+        setupSessionMode();
+    } else if (scrollId) {
+        // 查看模式
+        isSessionMode = false;
+        setupViewMode();
+    } else {
+        console.error('缺少必要参数：scroll_id 或 session_id');
+        return;
+    }
+    
+    await initWorldMap();
     bindEventListeners();
 });
+
+// 设置进入世界模式
+function setupSessionMode() {
+    // 隐藏顶部导航
+    const header = document.getElementById('worldViewHeader');
+    if (header) {
+        header.style.display = 'none';
+    }
+    
+    // 显示时间显示
+    const timeDisplay = document.getElementById('timeDisplay');
+    if (timeDisplay) {
+        timeDisplay.style.display = 'block';
+    }
+    
+    // 设置全屏样式
+    const container = document.getElementById('worldViewContainer');
+    if (container) {
+        container.classList.add('session-mode');
+    }
+    
+    // 注意：时间显示和建筑物位置的角色数据将在initWorldMap中加载
+}
+
+// 设置查看模式
+function setupViewMode() {
+    // 显示顶部导航
+    const header = document.getElementById('worldViewHeader');
+    if (header) {
+        header.style.display = 'flex';
+    }
+    
+    // 隐藏时间显示
+    const timeDisplay = document.getElementById('timeDisplay');
+    if (timeDisplay) {
+        timeDisplay.style.display = 'none';
+    }
+}
 
