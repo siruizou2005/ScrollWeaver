@@ -80,9 +80,10 @@ class Orchestrator:
                         
     def init_prompt(self,):
         if self.language == "zh":
-            from modules.prompt.orchestrator_prompt_zh import ENVIROMENT_INTERACTION_PROMPT,NPC_INTERACTION_PROMPT,SCRIPT_INSTRUCTION_PROMPT,SCRIPT_ATTENTION_PROMPT,DECIDE_NEXT_ACTOR_PROMPT,GENERATE_INTERVENTION_PROMPT,UPDATE_EVENT_PROMPT,LOCATION_PROLOGUE_PROMPT,SELECT_SCREEN_ACTORS_PROMPT,JUDGE_IF_ENDED_PROMPT,LOG2STORY_PROMPT
+            from modules.prompt.orchestrator_prompt_zh import ENVIROMENT_INTERACTION_PROMPT,NPC_INTERACTION_PROMPT,SCRIPT_INSTRUCTION_PROMPT,SCRIPT_ATTENTION_PROMPT,DECIDE_NEXT_ACTOR_PROMPT,GENERATE_INTERVENTION_PROMPT,UPDATE_EVENT_PROMPT,LOCATION_PROLOGUE_PROMPT,SELECT_SCREEN_ACTORS_PROMPT,JUDGE_IF_ENDED_PROMPT,LOG2STORY_PROMPT,SOUL_TRANS_PROLOGUE_PROMPT
         else:
             from modules.prompt.orchestrator_prompt_en import ENVIROMENT_INTERACTION_PROMPT,NPC_INTERACTION_PROMPT,SCRIPT_INSTRUCTION_PROMPT,SCRIPT_ATTENTION_PROMPT,DECIDE_NEXT_ACTOR_PROMPT,GENERATE_INTERVENTION_PROMPT,UPDATE_EVENT_PROMPT,LOCATION_PROLOGUE_PROMPT,SELECT_SCREEN_ACTORS_PROMPT,JUDGE_IF_ENDED_PROMPT,LOG2STORY_PROMPT
+            self._SOUL_TRANS_PROLOGUE_PROMPT = "" # English version not yet implemented
             
         self._ENVIROMENT_INTERACTION_PROMPT = ENVIROMENT_INTERACTION_PROMPT
         self._NPC_INTERACTION_PROMPT = NPC_INTERACTION_PROMPT
@@ -95,6 +96,7 @@ class Orchestrator:
         self._SELECT_SCREEN_ACTORS_PROMPT = SELECT_SCREEN_ACTORS_PROMPT
         self._JUDGE_IF_ENDED_PROMPT = JUDGE_IF_ENDED_PROMPT
         self._LOG2STORY_PROMPT = LOG2STORY_PROMPT
+        self._SOUL_TRANS_PROLOGUE_PROMPT = SOUL_TRANS_PROLOGUE_PROMPT
         
     # Agent
     def update_event(self, 
@@ -255,6 +257,29 @@ class Orchestrator:
         response = self.llm.chat(prompt)
         self.record(detail = response,prompt = prompt)
         return "\n"+response
+    
+    def generate_soul_trans_prologue(self, 
+                                     role_name, 
+                                     role_profile, 
+                                     motivation, 
+                                     location_name, 
+                                     location_description, 
+                                     other_roles_text):
+        if not self._SOUL_TRANS_PROLOGUE_PROMPT:
+            return "意识正在苏醒..." if self.language == "zh" else "Consciousness awakening..."
+            
+        prompt = self._SOUL_TRANS_PROLOGUE_PROMPT.format(**{
+            "world_description": self.description,
+            "location_name": location_name,
+            "location_description": location_description,
+            "role_name": role_name,
+            "role_profile": role_profile,
+            "motivation": motivation,
+            "other_roles": other_roles_text
+        })
+        response = self.llm.chat(prompt)
+        self.record(detail=response, prompt=prompt)
+        return response
     
     def enviroment_interact(self, 
                             action_maker_name: str, 

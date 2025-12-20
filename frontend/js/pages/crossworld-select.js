@@ -345,6 +345,7 @@ async function createWorldSession(crossType, characterCode = null, personaModelI
 
         const data = await response.json();
         const sessionId = data.session_id;
+        const respScrollId = data.scroll_id || scrollId;
 
         // 如果是角色魂穿，保存角色信息到localStorage以便在世界界面显示
         if (crossType === 'character' && selectedCharacterData) {
@@ -368,8 +369,8 @@ async function createWorldSession(crossType, characterCode = null, personaModelI
             }));
         }
 
-        // 跳转到世界界面
-        window.location.href = `/frontend/pages/world-view.html?session_id=${sessionId}`;
+        // 跳转到世界界面，同时带上 session_id 和 scroll_id
+        window.location.href = `/frontend/pages/world-view.html?session_id=${sessionId}&scroll_id=${respScrollId}`;
 
     } catch (error) {
         console.error('创建世界会话失败:', error);
