@@ -16,6 +16,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const scrollId = urlParams.get('scroll_id');
     const gameType = urlParams.get('type');
     const gameMode = urlParams.get('mode');
+    const location = urlParams.get('location');
+    const roles = urlParams.get('roles');
 
     // WebSocket连接
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -307,10 +309,20 @@ document.addEventListener('DOMContentLoaded', function () {
 
             // 注意：加载动画已在页面加载时立即显示，这里不需要再次显示
 
-            sendWebSocketMessage({
+            // 构建init消息
+            const initMessage = {
                 type: 'init',
                 scroll_id: parseInt(scrollIdToLoad)
-            });
+            };
+            
+            // 如果URL中有location和roles参数，添加到init消息中
+            if (location && roles) {
+                initMessage.location = location;
+                initMessage.roles = roles;
+                console.log('添加location和roles参数到init消息:', { location, roles });
+            }
+            
+            sendWebSocketMessage(initMessage);
         }
     };
 

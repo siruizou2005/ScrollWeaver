@@ -148,6 +148,8 @@ class ConnectionManager:
         self.waiting_for_input: dict[str, bool] = {}  # client_id -> bool
         self.pending_user_inputs: dict[str, asyncio.Future] = {}  # client_id -> Future
         self.client_users: dict[str, dict] = {}  # client_id -> user_info
+        self.client_locations: dict[str, str] = {}  # client_id -> location_code (用于群聊模式，只显示该地点的角色)
+        self.client_role_codes: dict[str, list] = {}  # client_id -> [role_codes] (用于群聊模式，只显示指定的角色)
         
         # 延迟初始化scrollweaver，只在需要时创建（根据scroll_id）
         # 这样可以避免在ConnectionManager初始化时就加载所有模型
@@ -173,6 +175,12 @@ class ConnectionManager:
             del self.pending_user_inputs[client_id]
         if client_id in self.client_users:
             del self.client_users[client_id]
+        if client_id in self.client_locations:
+            del self.client_locations[client_id]
+        if client_id in self.client_role_codes:
+            del self.client_role_codes[client_id]
+        if client_id in self.client_locations:
+            del self.client_locations[client_id]
             
     def stop_story(self, client_id: str):
         if client_id in self.story_tasks:
@@ -361,7 +369,7 @@ class ConnectionManager:
             if client_id in self.pending_user_inputs:
                 del self.pending_user_inputs[client_id]
 
-    async def get_initial_data(self):
+    async def get_initial_data(self, client_id: str = None):
         """获取初始化数据"""
         try:
             if not hasattr(self, 'scrollweaver') or self.scrollweaver is None:
@@ -374,8 +382,33 @@ class ConnectionManager:
                     'history_messages': []
                 }
             
+            # 获取所有角色信息
+            all_characters = self.scrollweaver.get_characters_info(use_selected=False)
+            
+            # 如果client_id存在且该客户端有指定的location和roles，只返回指定的角色
+            if client_id and client_id in self.client_locations and client_id in self.client_role_codes:
+                location_code = self.client_locations[client_id]
+                allowed_role_codes = set(self.client_role_codes[client_id])
+                print(f"[get_initial_data] 客户端 {client_id} 有指定位置 {location_code}，只返回角色: {allowed_role_codes}")
+                
+                # 过滤角色：只返回在指定角色列表中的角色
+                filtered_characters = []
+                for char in all_characters:
+                    # 直接使用角色代码（如果存在）或通过名称查找
+                    role_code = char.get('code') or self._get_role_code_by_name(char.get('name', ''))
+                    if role_code and role_code in allowed_role_codes:
+                        # 验证角色是否在指定地点
+                        if hasattr(self.scrollweaver, 'server') and self.scrollweaver.server:
+                            server = self.scrollweaver.server
+                            if role_code in server.performers:
+                                performer = server.performers[role_code]
+                                if performer.location_code == location_code:
+                                    filtered_characters.append(char)
+                print(f"[get_initial_data] 过滤后角色数量: {len(filtered_characters)}/{len(all_characters)}")
+                all_characters = filtered_characters
+            
             return {
-                'characters': self.scrollweaver.get_characters_info(use_selected=False),
+                'characters': all_characters,
                 'map': self.scrollweaver.get_map_info(),
                 'settings': self.scrollweaver.get_settings_info(),
                 'status': self.scrollweaver.get_current_status(),
@@ -863,6 +896,74 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                                     mode=config["mode"],
                                     scene_mode=config["scene_mode"]
                                 )
+                                
+                                # 如果init消息中包含location和roles，直接设置角色位置
+                                if 'location' in first_message and 'roles' in first_message:
+                                    location_code = first_message.get('location')
+                                    role_codes = first_message.get('roles', [])
+                                    if isinstance(role_codes, str):
+                                        role_codes = [r.strip() for r in role_codes.split(',') if r.strip()]
+                                    
+                                    print(f"[Init] 直接设置角色位置: location={location_code}, roles={role_codes}")
+                                    
+                                    # 设置所有指定角色的位置
+                                    if hasattr(manager.scrollweaver, 'server') and manager.scrollweaver.server:
+                                        server = manager.scrollweaver.server
+                                        if hasattr(server, 'performers') and hasattr(server, 'orchestrator'):
+                                            # 如果传入的location_code不在locations_info中，尝试查找匹配的地点代码
+                                            actual_location_code = location_code
+                                            if location_code and location_code not in server.orchestrator.locations_info:
+                                                print(f"[Init] 警告: 地点代码 '{location_code}' 不存在于 orchestrator.locations_info 中")
+                                                print(f"[Init] 可用地点代码: {list(server.orchestrator.locations_info.keys())}")
+                                                
+                                                # 尝试通过名称匹配（不区分大小写）
+                                                location_code_lower = location_code.lower()
+                                                for loc_code in server.orchestrator.locations_info.keys():
+                                                    if loc_code.lower() == location_code_lower:
+                                                        actual_location_code = loc_code
+                                                        print(f"[Init] 找到匹配的地点代码: '{location_code}' -> '{loc_code}'")
+                                                        break
+                                                
+                                                # 如果还是找不到，尝试通过地点名称匹配
+                                                if actual_location_code == location_code and actual_location_code not in server.orchestrator.locations_info:
+                                                    for loc_code, loc_info in server.orchestrator.locations_info.items():
+                                                        loc_name = loc_info.get('location_name', '')
+                                                        if loc_name and location_code.lower() in loc_name.lower():
+                                                            actual_location_code = loc_code
+                                                            print(f"[Init] 通过名称找到匹配的地点代码: '{location_code}' -> '{loc_code}' ({loc_name})")
+                                                            break
+                                                
+                                                # 如果仍然找不到，使用原代码（find_location_name会返回代码本身）
+                                                if actual_location_code == location_code and actual_location_code not in server.orchestrator.locations_info:
+                                                    print(f"[Init] 无法找到匹配的地点代码，将使用 '{location_code}' 作为地点代码")
+                                            
+                                            location_name = server.orchestrator.find_location_name(actual_location_code) if actual_location_code else None
+                                            # 更新location_code为实际的地点代码
+                                            location_code = actual_location_code
+                                            
+                                            # 只设置指定角色的位置
+                                            for role_code in role_codes:
+                                                if role_code in server.performers:
+                                                    performer = server.performers[role_code]
+                                                    if location_code and location_name:
+                                                        performer.set_location(location_code, location_name)
+                                                        print(f"[Init] 设置角色 {performer.role_name} ({role_code}) 位置为 {location_name} ({location_code})")
+                                                    else:
+                                                        print(f"[Init] 警告: 无法设置角色 {role_code} 的位置，location_code={location_code}, location_name={location_name}")
+                                                else:
+                                                    print(f"[Init] 警告: 角色代码 '{role_code}' 不存在于 server.performers 中")
+                                            
+                                            # 设置用户选择的角色（如果有角色列表，选择第一个）
+                                            if role_codes and len(role_codes) > 0:
+                                                manager.user_selected_roles[client_id] = role_codes[0]
+                                                print(f"[Init] 设置用户选择角色: {role_codes[0]}")
+                                            
+                                            # 存储客户端的位置和角色列表（用于群聊模式，只显示该地点的角色）
+                                            if location_code:
+                                                manager.client_locations[client_id] = location_code
+                                                manager.client_role_codes = getattr(manager, 'client_role_codes', {})
+                                                manager.client_role_codes[client_id] = role_codes
+                                                print(f"[Init] 存储客户端位置: {location_code}, 角色列表: {role_codes}")
                                 print(f"Loaded scroll {client_scroll_id} for client {client_id}, preset_path: {preset_path}")
                             else:
                                 print(f"Warning: Scroll {client_scroll_id} preset_path not found or invalid: {preset_path}")
@@ -912,7 +1013,7 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                     }
                 })
             else:
-                initial_data = await manager.get_initial_data()
+                initial_data = await manager.get_initial_data(client_id)
                 await websocket.send_json({
                     'type': 'initial_data',
                     'data': initial_data
@@ -1046,12 +1147,30 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                         })
                         
                         # 返回更新后的角色和地图数据（包含位置信息）
-                        updated_characters = manager.scrollweaver.get_characters_info(use_selected=False)
+                        # 如果客户端有指定location和roles，只返回指定的角色
+                        all_characters = manager.scrollweaver.get_characters_info(use_selected=False)
+                        if client_id in manager.client_locations and client_id in manager.client_role_codes:
+                            location_code = manager.client_locations[client_id]
+                            allowed_role_codes = set(manager.client_role_codes[client_id])
+                            filtered_characters = []
+                            for char in all_characters:
+                                # 直接使用角色代码（如果存在）或通过名称查找
+                                role_code = char.get('code') or manager._get_role_code_by_name(char.get('name', ''))
+                                if role_code and role_code in allowed_role_codes:
+                                    # 验证角色是否在指定地点
+                                    if hasattr(manager.scrollweaver, 'server') and manager.scrollweaver.server:
+                                        server = manager.scrollweaver.server
+                                        if role_code in server.performers:
+                                            performer = server.performers[role_code]
+                                            if performer.location_code == location_code:
+                                                filtered_characters.append(char)
+                            all_characters = filtered_characters
+                        
                         updated_map = manager.scrollweaver.get_map_info()
                         await websocket.send_json({
                             'type': 'initial_data',
                             'data': {
-                                'characters': updated_characters,
+                                'characters': all_characters,
                                 'map': updated_map,
                                 'settings': manager.scrollweaver.get_settings_info(),
                                 'status': manager.scrollweaver.get_current_status(),
@@ -1077,11 +1196,29 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
             
             elif message['type'] == 'request_characters':
                 # 请求角色列表
-                characters = manager.scrollweaver.get_characters_info(use_selected=False)
+                all_characters = manager.scrollweaver.get_characters_info(use_selected=False)
+                # 如果客户端有指定location和roles，只返回指定的角色
+                if client_id in manager.client_locations and client_id in manager.client_role_codes:
+                    location_code = manager.client_locations[client_id]
+                    allowed_role_codes = set(manager.client_role_codes[client_id])
+                    filtered_characters = []
+                    for char in all_characters:
+                        # 直接使用角色代码（如果存在）或通过名称查找
+                        role_code = char.get('code') or manager._get_role_code_by_name(char.get('name', ''))
+                        if role_code and role_code in allowed_role_codes:
+                            # 验证角色是否在指定地点
+                            if hasattr(manager.scrollweaver, 'server') and manager.scrollweaver.server:
+                                server = manager.scrollweaver.server
+                                if role_code in server.performers:
+                                    performer = server.performers[role_code]
+                                    if performer.location_code == location_code:
+                                        filtered_characters.append(char)
+                    all_characters = filtered_characters
+                
                 await websocket.send_json({
                     'type': 'characters_list',
                     'data': {
-                        'characters': characters
+                        'characters': all_characters
                     }
                 })
                 
@@ -1343,7 +1480,7 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                             'data': {}
                         })
                         # 发送更新后的初始数据
-                        initial_data = await manager.get_initial_data()
+                        initial_data = await manager.get_initial_data(client_id)
                         await websocket.send_json({
                             'type': 'initial_data',
                             'data': initial_data
