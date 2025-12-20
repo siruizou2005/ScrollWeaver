@@ -181,7 +181,7 @@ body::before {
     min-width: 0;
 }
 
-/* 右侧：玩法选择 */
+/* 右侧：进入世界和地图 */
 .intro-right {
     flex: 1;
     display: flex;
@@ -437,40 +437,239 @@ body::before {
     font-size: 14px;
 }
 
-/* 模式选择 */
-.mode-selection {
+/* 进入世界卡片 */
+.enter-world-card {
     background: rgba(255, 255, 255, 0.95);
-    padding: 26px 30px;
+    padding: 32px 30px;
     border-radius: 20px;
     border: 1px solid rgba(212, 196, 176, 0.3);
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08),
         0 4px 12px rgba(0, 0, 0, 0.04);
     backdrop-filter: blur(10px);
     transition: all 0.3s ease;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
     flex-shrink: 0;
 }
 
-.mode-selection:hover {
+.enter-world-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #8b6f47 0%, #d4c4b0 50%, #8b6f47 100%);
+}
+
+.enter-world-card:hover {
+    transform: translateY(-4px);
     box-shadow: 0 16px 48px rgba(0, 0, 0, 0.12),
         0 6px 16px rgba(0, 0, 0, 0.06);
 }
 
-.mode-selection h2 {
-    font-size: 20px;
-    margin-bottom: 18px;
-    color: #6b5537;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    font-weight: 600;
-    padding-bottom: 14px;
-    border-bottom: 2px solid rgba(212, 196, 176, 0.3);
-    flex-shrink: 0;
+.enter-world-card .card-icon {
+    margin-bottom: 20px;
+    position: relative;
 }
 
-.mode-selection h2 i {
+.enter-world-card .card-icon i {
+    font-size: 64px;
+    background: linear-gradient(135deg, #8b6f47 0%, #6b5537 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 2px 4px rgba(139, 111, 71, 0.2));
+    transition: all 0.3s ease;
+}
+
+.enter-world-card:hover .card-icon i {
+    transform: scale(1.1);
+    filter: drop-shadow(0 4px 8px rgba(139, 111, 71, 0.3));
+}
+
+.enter-world-card h2 {
     font-size: 24px;
-    color: #8b6f47;
+    color: #3d2817;
+    margin-bottom: 12px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.enter-world-card p {
+    color: #6b5537;
+    font-size: 14px;
+    line-height: 1.6;
+    margin-bottom: 24px;
+}
+
+.enter-world-btn {
+    width: 100%;
+    padding: 16px 24px;
+    background: linear-gradient(135deg, #8b6f47 0%, #6b5537 100%);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    letter-spacing: 0.5px;
+    box-shadow: 0 6px 20px rgba(139, 111, 71, 0.3);
+    position: relative;
+    overflow: hidden;
+}
+
+.enter-world-btn::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+}
+
+.enter-world-btn:hover::before {
+    width: 300px;
+    height: 300px;
+}
+
+.enter-world-btn:hover {
+    background: linear-gradient(135deg, #6b5537 0%, #5a4630 100%);
+    transform: translateY(-3px);
+    box-shadow: 0 10px 30px rgba(139, 111, 71, 0.4);
+}
+
+.enter-world-btn:active {
+    transform: translateY(-1px);
+}
+
+/* 地图卡片 */
+.map-card {
+    background: rgba(255, 255, 255, 0.95);
+    padding: 32px 30px;
+    border-radius: 20px;
+    border: 1px solid rgba(212, 196, 176, 0.3);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08),
+        0 4px 12px rgba(0, 0, 0, 0.04);
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.map-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #8b6f47 0%, #d4c4b0 50%, #8b6f47 100%);
+}
+
+.map-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.12),
+        0 6px 16px rgba(0, 0, 0, 0.06);
+}
+
+.map-card .card-icon {
+    margin-bottom: 20px;
+    position: relative;
+}
+
+.map-card .card-icon i {
+    font-size: 64px;
+    background: linear-gradient(135deg, #8b6f47 0%, #6b5537 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 2px 4px rgba(139, 111, 71, 0.2));
+    transition: all 0.3s ease;
+}
+
+.map-card:hover .card-icon i {
+    transform: scale(1.1);
+    filter: drop-shadow(0 4px 8px rgba(139, 111, 71, 0.3));
+}
+
+.map-card h2 {
+    font-size: 24px;
+    color: #3d2817;
+    margin-bottom: 12px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.map-card p {
+    color: #6b5537;
+    font-size: 14px;
+    line-height: 1.6;
+    margin-bottom: 24px;
+}
+
+.view-map-btn {
+    width: 100%;
+    padding: 16px 24px;
+    background: linear-gradient(135deg, #d4c4b0 0%, #c4b4a0 100%);
+    color: #3d2817;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    letter-spacing: 0.5px;
+    box-shadow: 0 4px 12px rgba(212, 196, 176, 0.3);
+    position: relative;
+    overflow: hidden;
+}
+
+.view-map-btn::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+}
+
+.view-map-btn:hover::before {
+    width: 300px;
+    height: 300px;
+}
+
+.view-map-btn:hover {
+    background: linear-gradient(135deg, #c4b4a0 0%, #b4a490 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(212, 196, 176, 0.4);
+}
+
+.view-map-btn:active {
+    transform: translateY(0);
 }
 
 .mode-card {
@@ -838,7 +1037,7 @@ body::before {
     transform: translateX(-50%);
     width: 40px;
     height: 40px;
-    background: url('../assets/images/logo.png') no-repeat center center;
+    background: url('../../assets/images/logo.png') no-repeat center center;
     background-size: contain;
     opacity: 0.8;
     animation: pulse 2s ease-in-out infinite;
@@ -1112,12 +1311,19 @@ body::before {
     }
 
     .world-summary,
-    .mode-selection {
+    .enter-world-card,
+    .map-card {
         padding: 24px;
     }
 
-    .mode-card {
-        padding: 20px;
+    .enter-world-card .card-icon i,
+    .map-card .card-icon i {
+        font-size: 48px;
+    }
+
+    .enter-world-card h2,
+    .map-card h2 {
+        font-size: 20px;
     }
 
     .modal-content {
@@ -1139,8 +1345,25 @@ body::before {
         font-size: 24px;
     }
 
-    .mode-icon i {
+    .enter-world-card,
+    .map-card {
+        padding: 20px;
+    }
+
+    .enter-world-card .card-icon i,
+    .map-card .card-icon i {
         font-size: 48px;
+    }
+
+    .enter-world-card h2,
+    .map-card h2 {
+        font-size: 20px;
+    }
+
+    .enter-world-btn,
+    .view-map-btn {
+        padding: 14px 20px;
+        font-size: 15px;
     }
 }
 

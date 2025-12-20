@@ -89,7 +89,7 @@ async function loadScrollInfo() {
         }
         document.getElementById('worldSummary').innerHTML = `<p>${description}</p>`;
 
-        // 加载角色列表（仅用于私语模式的下拉选择）
+        // 加载角色列表（用于显示登场人物）
         await loadCharacters(scrollId);
 
     } catch (error) {
@@ -107,7 +107,7 @@ async function loadScrollInfo() {
 }
 
 /**
- * 加载角色列表（仅用于私语模式的下拉选择）
+ * 加载角色列表（用于显示登场人物）
  */
 async function loadCharacters(scrollId) {
     try {
@@ -129,40 +129,23 @@ async function loadCharacters(scrollId) {
             console.warn('使用空列表');
         }
 
-        const chatSelect = document.getElementById('chatRoleSelect');
-
-        chatSelect.innerHTML = '<option value="">选择角色...</option>';
-
-        if (characters.length === 0) {
-            chatSelect.innerHTML = '<option value="">暂无角色可选</option>';
-            document.getElementById('enterChatBtn').disabled = true;
-            console.warn('角色列表为空');
-            return;
-        }
-
-        // 添加到下拉选择
-        characters.forEach(char => {
-            const option = document.createElement('option');
-            option.value = char.code;
-            const displayName = char.nickname || char.name || char.code;
-            option.textContent = displayName;
-            chatSelect.appendChild(option);
-        });
-
         // 显示角色卡
         displayCharacterCards(characters);
 
         console.log(`成功加载 ${characters.length} 个角色`);
 
-        // 监听下拉选择变化
-        chatSelect.addEventListener('change', (e) => {
-            document.getElementById('enterChatBtn').disabled = !e.target.value;
-        });
-
     } catch (error) {
         console.error('加载角色列表失败:', error);
-        document.getElementById('chatRoleSelect').innerHTML = '<option value="">加载失败</option>';
-        document.getElementById('enterChatBtn').disabled = true;
+        // 显示错误状态
+        const charactersGrid = document.getElementById('charactersGrid');
+        if (charactersGrid) {
+            charactersGrid.innerHTML = `
+                <div class="characters-empty">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <p>加载失败，请刷新重试</p>
+                </div>
+            `;
+        }
     }
 }
 
@@ -418,72 +401,23 @@ function bindEventListeners() {
         console.warn('共享按钮未找到');
     }
 
-    // 私语模式
-    document.getElementById('enterChatBtn').addEventListener('click', () => {
-        const roleCode = document.getElementById('chatRoleSelect').value;
-        if (roleCode) {
-            enterChatMode(roleCode);
-        }
-    });
+    // 进入世界按钮
+    const enterWorldBtn = document.getElementById('enterWorldBtn');
+    if (enterWorldBtn) {
+        enterWorldBtn.addEventListener('click', () => {
+            // 跳转到穿越方式选择页面（做自己/魂穿）
+            window.location.href = `/frontend/pages/crossworld-select.html?scroll_id=${scrollId}`;
+        });
+    }
 
-    // 启用联机模式按钮
-    document.getElementById('enableMultiplayerBtn').addEventListener('click', () => {
-        const modal = document.getElementById('multiplayerPasswordModal');
-        modal.classList.add('active');
-        document.getElementById('roomPasswordInput').value = '';
-        setTimeout(() => {
-            document.getElementById('roomPasswordInput').focus();
-        }, 100);
-    });
-
-    // 联机模式暗号输入对话框事件
-    document.getElementById('multiplayerPasswordCancelBtn').addEventListener('click', () => {
-        document.getElementById('multiplayerPasswordModal').classList.remove('active');
-    });
-
-    document.getElementById('multiplayerPasswordModalBackdrop').addEventListener('click', () => {
-        document.getElementById('multiplayerPasswordModal').classList.remove('active');
-    });
-
-    document.getElementById('multiplayerPasswordConfirmBtn').addEventListener('click', async () => {
-        const password = document.getElementById('roomPasswordInput').value.trim();
-        if (!password) {
-            alert('请输入房间暗号');
-            return;
-        }
-        await createMultiplayerRoom(password);
-    });
-
-    // 按Enter键确认
-    document.getElementById('roomPasswordInput').addEventListener('keypress', async (e) => {
-        if (e.key === 'Enter') {
-            const password = e.target.value.trim();
-            if (password) {
-                await createMultiplayerRoom(password);
-            }
-        }
-    });
-
-    // 入卷模式
-    document.getElementById('enterStoryBtn').addEventListener('click', async () => {
-        const actSelect = document.getElementById('actSelect');
-        const act = actSelect.value === 'new' ? null : parseInt(actSelect.value);
-        const multiplayer = false; // 联机模式已改为独立按钮
-        const eventChain = document.getElementById('enableEventChain').checked;
-        const actCount = eventChain ? parseInt(document.getElementById('actCountSelect').value) : null;
-
-        // 如果启用了事件链，先生成并预览
-        if (eventChain && actCount) {
-            await generateAndPreviewEventChain(actCount, act, multiplayer);
-        } else {
-            enterStoryMode(act, multiplayer, eventChain, actCount);
-        }
-    });
-
-    // 事件链开关
-    document.getElementById('enableEventChain').addEventListener('change', (e) => {
-        document.getElementById('actCountSelect').disabled = !e.target.checked;
-    });
+    // 查看地图按钮
+    const viewMapBtn = document.getElementById('viewMapBtn');
+    if (viewMapBtn) {
+        viewMapBtn.addEventListener('click', () => {
+            // 跳转到世界视图页面（地图）
+            window.location.href = `/frontend/pages/world-view.html?scroll_id=${scrollId}`;
+        });
+    }
 
     // 组局模式（如果元素存在）
     const createRoomBtn = document.getElementById('createRoomBtn');

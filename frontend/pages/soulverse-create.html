@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>创建数字孪生 - ScrollWeaver</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script>
+        // 等待React完全加载后再加载lucide-react
+        (function() {
+            function initLucideReact() {
+                // 确保React完全加载
+                if (typeof React === 'undefined' || typeof React.forwardRef === 'undefined') {
+                    setTimeout(initLucideReact, 50);
+                    return;
+                }
+                
+                // 确保React在全局作用域中
+                if (typeof window !== 'undefined') {
+                    window.React = React;
+                }
+                
+                // 如果lucide-react已经加载，直接返回
+                if (typeof lucideReact !== 'undefined') {
+                    return;
+                }
+                
+                // 动态加载lucide-react
+                const script = document.createElement('script');
+                script.src = 'https://unpkg.com/lucide-react@0.263.1/dist/umd/lucide-react.js';
+                script.onload = function() {
+                    console.log('lucide-react加载完成');
+                    if (typeof window !== 'undefined' && typeof lucideReact !== 'undefined') {
+                        window.lucideReact = lucideReact;
+                    }
+                };
+                script.onerror = function() {
+                    console.error('lucide-react加载失败');
+                };
+                document.head.appendChild(script);
+            }
+            
+            // 等待DOM和React都加载完成
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', function() {
+                    setTimeout(initLucideReact, 100);
+                });
+            } else {
+                setTimeout(initLucideReact, 100);
+            }
+        })();
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #000000;
+            color: #ffffff;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.5);
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(6, 182, 212, 0.5);
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: rgba(6, 182, 212, 0.7);
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .animate-spin {
+            animation: spin 1s linear infinite;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <!-- 加载数据文件 -->
+    <script src="../js/pages/questionnaires.js"></script>
+    <script src="../js/pages/soulverse-api.js"></script>
+    
+    <!-- 将数据变量和API暴露到全局 -->
+    <script>
+        // 将数据变量暴露到window对象
+        if (typeof MBTI_TYPES !== 'undefined') {
+            window.MBTI_TYPES = MBTI_TYPES;
+            window.MBTI_QUESTIONS = MBTI_QUESTIONS;
+            window.CORE_QUESTIONS = CORE_QUESTIONS;
+            window.DEFENSE_QUESTIONS = DEFENSE_QUESTIONS;
+            window.ATTACHMENT_QUESTIONS = ATTACHMENT_QUESTIONS;
+            window.VALUES_LIST = VALUES_LIST;
+        }
+        // 暴露API对象
+        if (typeof scrollWeaverAPI !== 'undefined') {
+            window.scrollWeaverAPI = scrollWeaverAPI;
+        }
+        if (typeof api !== 'undefined') {
+            window.api = api;
+        }
+    </script>
+    
+    <!-- React组件 - 延迟加载，确保所有依赖已加载 -->
+    <script>
+        // 等待所有依赖加载完成后再加载JSX文件（不再需要lucide-react）
+        function loadReactComponent() {
+            if (typeof React === 'undefined' || typeof ReactDOM === 'undefined' || typeof Babel === 'undefined') {
+                setTimeout(loadReactComponent, 100);
+                return;
+            }
+            
+            if (typeof window.MBTI_TYPES === 'undefined') {
+                setTimeout(loadReactComponent, 100);
+                return;
+            }
+            
+            // 动态加载JSX文件
+            const script = document.createElement('script');
+            script.type = 'text/babel';
+            script.src = '../js/pages/soulverse-create-react.jsx';
+            script.id = 'react-component-script';
+            script.onload = function() {
+                console.log('JSX组件脚本已加载');
+                if (typeof window.handleComponentLoad === 'function') {
+                    window.handleComponentLoad();
+                }
+            };
+            script.onerror = function() {
+                console.error('JSX组件脚本加载失败');
+            };
+            document.body.appendChild(script);
+        }
+        
+        // 页面加载完成后开始加载
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', loadReactComponent);
+        } else {
+            loadReactComponent();
+        }
+    </script>
+    
+    <!-- 主应用入口 -->
+    <script type="text/babel">
+        let componentLoaded = false;
+        let initAttempted = false;
+        
+        // 当React组件脚本加载完成时调用
+        window.handleComponentLoad = function() {
+            componentLoaded = true;
+            console.log('React组件脚本已加载');
+            // 如果已经尝试过初始化，再次尝试
+            if (initAttempted) {
+                setTimeout(initApp, 200);
+            }
+        };
+        
+        // 等待所有依赖加载完成
+        function initApp() {
+            initAttempted = true;
+            
+            // 检查必要的全局变量
+            if (typeof React === 'undefined') {
+                console.error('React未加载');
+                document.getElementById('root').innerHTML = '<div style="color: white; padding: 20px; text-align: center;">React未加载，请刷新页面重试</div>';
+                return;
+            }
+            
+            if (typeof ReactDOM === 'undefined') {
+                console.error('ReactDOM未加载');
+                document.getElementById('root').innerHTML = '<div style="color: white; padding: 20px; text-align: center;">ReactDOM未加载，请刷新页面重试</div>';
+                return;
+            }
+            
+            if (typeof CreationWizard === 'undefined') {
+                console.warn('CreationWizard未加载，等待中...');
+                // 如果组件脚本还没加载完成，等待一下
+                if (!componentLoaded) {
+                    setTimeout(initApp, 200);
+                    return;
+                }
+                console.error('CreationWizard组件未加载');
+                document.getElementById('root').innerHTML = '<div style="color: white; padding: 20px; text-align: center;">CreationWizard组件未加载，请检查控制台错误信息</div>';
+                return;
+            }
+            
+            if (typeof window.MBTI_TYPES === 'undefined') {
+                console.error('MBTI_TYPES未加载');
+                document.getElementById('root').innerHTML = '<div style="color: white; padding: 20px; text-align: center;">数据文件未加载，请刷新页面重试</div>';
+                return;
+            }
+            
+            console.log('所有依赖已加载，开始渲染应用');
+            
+            const { useState } = React;
+            
+            function App() {
+                const [showWizard, setShowWizard] = useState(true);
+                
+                const handleClose = () => {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const scrollId = urlParams.get('scroll_id');
+                    if (scrollId) {
+                        window.location.href = `/frontend/pages/crossworld-select.html?scroll_id=${scrollId}`;
+                    } else {
+                        window.location.href = '/frontend/pages/plaza.html';
+                    }
+                };
+                
+                const handleComplete = (result) => {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const scrollId = urlParams.get('scroll_id');
+                    const personaModelId = result.personaModelId;
+                    
+                    if (scrollId && personaModelId) {
+                        window.location.href = `/frontend/pages/crossworld-select.html?scroll_id=${scrollId}&persona_model_id=${personaModelId}`;
+                    } else {
+                        window.location.href = '/frontend/pages/plaza.html';
+                    }
+                };
+                
+                if (!showWizard) return null;
+                
+                return React.createElement(CreationWizard, {
+                    onClose: handleClose,
+                    onComplete: handleComplete
+                });
+            }
+            
+            // 检查登录状态
+            const token = localStorage.getItem('token');
+            if (!token) {
+                alert('请先登录');
+                window.location.href = '/frontend/pages/login.html';
+                return;
+            }
+            
+            try {
+                const rootElement = document.getElementById('root');
+                if (!rootElement) {
+                    console.error('找不到root元素');
+                    return;
+                }
+                
+                const root = ReactDOM.createRoot(rootElement);
+                root.render(React.createElement(App));
+                console.log('应用已成功渲染');
+            } catch (error) {
+                console.error('渲染应用失败:', error);
+                document.getElementById('root').innerHTML = '<div style="color: white; padding: 20px; text-align: center;">渲染失败: ' + error.message + '<br>请查看控制台获取详细信息</div>';
+            }
+        }
+        
+        // 等待页面和脚本加载完成
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                setTimeout(initApp, 300); // 给Babel一些时间处理JSX
+            });
+        } else {
+            setTimeout(initApp, 300);
+        }
+    </script>
+</body>
+</html>

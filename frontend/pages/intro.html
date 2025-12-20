@@ -48,65 +48,30 @@
                 </section>
             </div>
 
-            <!-- 右侧：玩法选择 -->
+            <!-- 右侧：进入世界和地图 -->
             <div class="intro-right">
-                <section class="mode-selection">
-                    <h2><i class="fas fa-compass"></i> 选择模式</h2>
-                    
-                    <!-- 私语模式 (P Mode) -->
-                    <div class="mode-card" data-mode="chat">
-                        <div class="mode-icon">
-                            <i class="fas fa-comments"></i>
-                        </div>
-                        <h3>私语</h3>
-                        <p>与单个角色进行1v1对话</p>
-                        <div class="mode-action">
-                            <select id="chatRoleSelect" class="role-select">
-                                <option value="">选择角色...</option>
-                            </select>
-                            <button class="mode-btn" id="enterChatBtn" disabled>
-                                <i class="fas fa-sign-in-alt"></i> 进入
-                            </button>
-                        </div>
+                <!-- 进入世界卡片 - 右上角 -->
+                <section class="enter-world-card">
+                    <div class="card-icon">
+                        <i class="fas fa-door-open"></i>
                     </div>
+                    <h2>进入世界</h2>
+                    <p>穿越到这个世界，开始你的冒险之旅</p>
+                    <button class="enter-world-btn" id="enterWorldBtn">
+                        <i class="fas fa-sign-in-alt"></i> 进入世界
+                    </button>
+                </section>
 
-                    <!-- 入卷模式 (O-P Mode) -->
-                    <div class="mode-card" data-mode="story">
-                        <div class="mode-icon">
-                            <i class="fas fa-scroll"></i>
-                        </div>
-                        <h3>入卷</h3>
-                        <p>体验多角色故事，AI编导控制剧情</p>
-                        <div class="mode-action">
-                            <div class="act-selector">
-                                <label>选择幕数：</label>
-                                <select id="actSelect" class="act-select">
-                                    <option value="new">新建一幕</option>
-                                </select>
-                            </div>
-                            <div class="act-settings">
-                                <label>
-                                    <input type="checkbox" id="enableEventChain">
-                                    预设事件链（1/3/5/8/10幕）
-                                </label>
-                                <select id="actCountSelect" class="act-count-select" disabled>
-                                    <option value="1">1幕</option>
-                                    <option value="3">3幕</option>
-                                    <option value="5">5幕</option>
-                                    <option value="8">8幕</option>
-                                    <option value="10">10幕</option>
-                                </select>
-                            </div>
-                            <div class="mode-buttons">
-                                <button class="mode-btn secondary" id="enableMultiplayerBtn">
-                                    <i class="fas fa-users"></i> 启用联机模式
-                                </button>
-                                <button class="mode-btn primary" id="enterStoryBtn">
-                                    <i class="fas fa-play"></i> 开始入卷
-                                </button>
-                            </div>
-                        </div>
+                <!-- 地图卡片 - 右下角 -->
+                <section class="map-card">
+                    <div class="card-icon">
+                        <i class="fas fa-map"></i>
                     </div>
+                    <h2>世界地图</h2>
+                    <p>查看这个世界的地理布局和地点信息</p>
+                    <button class="view-map-btn" id="viewMapBtn">
+                        <i class="fas fa-map-marked-alt"></i> 查看地图
+                    </button>
                 </section>
             </div>
         </div>
