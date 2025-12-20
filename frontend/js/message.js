@@ -314,15 +314,49 @@ document.addEventListener('DOMContentLoaded', function () {
                 type: 'init',
                 scroll_id: parseInt(scrollIdToLoad)
             };
-            
+
             // 如果URL中有location和roles参数，添加到init消息中
             if (location && roles) {
                 initMessage.location = location;
                 initMessage.roles = roles;
                 console.log('添加location和roles参数到init消息:', { location, roles });
             }
-            
+
             sendWebSocketMessage(initMessage);
+        }
+
+        // 恢复已选角色从localStorage并显示在右侧栏
+        const savedRole = localStorage.getItem('selected_role');
+        if (savedRole) {
+            try {
+                const role = JSON.parse(savedRole);
+                if (role && (role.name || role.nickname)) {
+                    console.log('从localStorage恢复已选角色:', role.name || role.nickname);
+                    selectedRoleName = role.name || role.nickname;
+
+                    // 更新工具栏按钮
+                    const selectRoleBtn = document.getElementById('selectRoleBtn');
+                    if (selectRoleBtn) {
+                        selectRoleBtn.innerHTML = `<i class="fas fa-user-check"></i><span>${selectedRoleName}</span>`;
+                        selectRoleBtn.style.background = '#1e293b';
+                    }
+
+                    // 延迟显示已选角色（等待DOM完全加载）
+                    setTimeout(() => {
+                        showSelectedCharacter({
+                            name: role.name,
+                            nickname: role.nickname || role.name,
+                            description: role.profile || role.description || '',
+                            location: role.location || '—',
+                            goal: role.goal || '—',
+                            state: role.state || '—',
+                            icon: role.avatar || './frontend/assets/images/default-icon.jpg'
+                        });
+                    }, 500);
+                }
+            } catch (e) {
+                console.warn('解析localStorage中的selected_role失败:', e);
+            }
         }
     };
 
@@ -417,7 +451,7 @@ document.addEventListener('DOMContentLoaded', function () {
         else if (message.type === 'error') {
             // 错误消息
             addSystemMessage(`错误: ${message.data.message}`);
-            
+
             // 如果正在加载书卷，收到错误时隐藏加载覆盖层
             if (isLoadingStory) {
                 isLoadingStory = false;
@@ -427,7 +461,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     controlBtn.disabled = false;
                 }
             }
-            
+
             // 如果是"不是您的回合"的错误，确保输入框被禁用
             if (message.data.message && message.data.message.includes('不是您的回合')) {
                 waitingForInput = false;

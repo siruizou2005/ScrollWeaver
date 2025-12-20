@@ -189,17 +189,23 @@ async function showCharacterDetail(roleCode, characterData) {
  * 绑定事件监听器
  */
 function bindEventListeners() {
+    console.log('bindEventListeners called');
+
     // 返回按钮
     document.getElementById('backBtn').addEventListener('click', () => {
         window.history.back();
     });
 
-    // 真实身份模式 - 显示名字输入弹窗
-    document.getElementById('selfRealMode').addEventListener('click', () => {
-        document.getElementById('realIdentityModal').style.display = 'flex';
-        document.getElementById('realIdentityName').value = '';
-        document.getElementById('realIdentityName').focus();
-    });
+    // 真实身份模式 - 使用浏览器prompt获取名字
+    const selfRealMode = document.getElementById('selfRealMode');
+    if (selfRealMode) {
+        selfRealMode.addEventListener('click', async () => {
+            const name = prompt('请输入你在这个世界中的名字：', '');
+            if (name && name.trim()) {
+                await createRealIdentityAndEnterWorld(name.trim());
+            }
+        });
+    }
 
     // Soulverse模式 - 跳转到创建页面
     document.getElementById('selfSoulverseMode').addEventListener('click', () => {
@@ -253,40 +259,6 @@ function bindEventListeners() {
             alert('请选择一个人格模型');
         }
     });
-
-    // 真实身份模态框
-    document.getElementById('closeRealIdentityModal').addEventListener('click', () => {
-        document.getElementById('realIdentityModal').style.display = 'none';
-    });
-
-    document.getElementById('realIdentityBackdrop').addEventListener('click', () => {
-        document.getElementById('realIdentityModal').style.display = 'none';
-    });
-
-    document.getElementById('realIdentityCancelBtn').addEventListener('click', () => {
-        document.getElementById('realIdentityModal').style.display = 'none';
-    });
-
-    document.getElementById('realIdentityConfirmBtn').addEventListener('click', async () => {
-        const name = document.getElementById('realIdentityName').value.trim();
-        if (!name) {
-            alert('请输入你的名字');
-            return;
-        }
-
-        // 创建简单用户agent并进入世界
-        await createRealIdentityAndEnterWorld(name);
-    });
-
-    // 回车键确认
-    document.getElementById('realIdentityName').addEventListener('keypress', async (e) => {
-        if (e.key === 'Enter') {
-            const name = document.getElementById('realIdentityName').value.trim();
-            if (name) {
-                await createRealIdentityAndEnterWorld(name);
-            }
-        }
-    });
 }
 
 /**
@@ -295,11 +267,9 @@ function bindEventListeners() {
  */
 async function createRealIdentityAndEnterWorld(name) {
     try {
-        // 显示加载状态
-        const confirmBtn = document.getElementById('realIdentityConfirmBtn');
-        const originalText = confirmBtn.textContent;
-        confirmBtn.textContent = '创建中...';
-        confirmBtn.disabled = true;
+        // 显示加载提示
+        const loadingMessage = '正在创建身份并进入世界...';
+        console.log(loadingMessage);
 
         // 1. 创建简单的用户agent（使用默认值）
         const createResponse = await fetch('/api/self-identity/create', {
@@ -364,18 +334,15 @@ async function createRealIdentityAndEnterWorld(name) {
             avatar: '../assets/images/default-icon.jpg'
         }));
 
-        // 4. 隐藏弹窗并跳转
-        document.getElementById('realIdentityModal').style.display = 'none';
+        // 清除所有之前的私语聊天会话
+        clearAllChatSessions();
+
+        // 4. 跳转到世界视图
         window.location.href = `/frontend/pages/world-view.html?session_id=${sessionId}&scroll_id=${scrollId}`;
 
     } catch (error) {
         console.error('创建真实身份失败:', error);
         alert('进入世界失败: ' + error.message);
-
-        // 恢复按钮状态
-        const confirmBtn = document.getElementById('realIdentityConfirmBtn');
-        confirmBtn.textContent = '进入世界';
-        confirmBtn.disabled = false;
     }
 }
 
@@ -479,21 +446,28 @@ async function createWorldSession(crossType, characterCode = null, personaModelI
                 code: selectedCharacterCode,
                 name: selectedCharacterData.name || selectedCharacterData.nickname,
                 nickname: selectedCharacterData.nickname,
-                avatar: selectedCharacterData.avatar
+                avatar: selectedCharacterData.avatar,
+                identity: selectedCharacterData.identity || '',
+                profile: selectedCharacterData.profile || selectedCharacterData.description || ''
             }));
         } else if (crossType === 'self') {
             localStorage.setItem('selected_role', JSON.stringify({
                 name: '真实自我',
                 identity: '本尊降临',
+                profile: '用户以真实身份降临到这个世界，可以自由探索和互动。',
                 avatar: '../assets/images/default-icon.jpg'
             }));
         } else if (crossType === 'soulverse') {
             localStorage.setItem('selected_role', JSON.stringify({
                 name: '数字孪生',
-                identity: 'Soulverse',
+                identity: 'Soulverse数字孪生',
+                profile: '用户的数字孪生体，拥有与用户相似的性格和思维方式。',
                 avatar: '../assets/images/default-icon.jpg'
             }));
         }
+
+        // 清除所有之前的私语聊天会话
+        clearAllChatSessions();
 
         // 跳转到世界界面，同时带上 session_id 和 scroll_id
         window.location.href = `/frontend/pages/world-view.html?session_id=${sessionId}&scroll_id=${respScrollId}`;
@@ -504,3 +478,28 @@ async function createWorldSession(crossType, characterCode = null, personaModelI
     }
 }
 
+/**
+ * 清除所有私语聊天会话
+ * 当用户选择新角色时，清除之前角色的聊天历史
+ */
+function clearAllChatSessions() {
+    try {
+        const keysToRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            // 清除所有以 chat_session_ 开头的项
+            if (key && key.startsWith('chat_session_')) {
+                keysToRemove.push(key);
+            }
+        }
+        keysToRemove.forEach(key => {
+            localStorage.removeItem(key);
+            console.log('清除聊天会话:', key);
+        });
+        if (keysToRemove.length > 0) {
+            console.log(`已清除 ${keysToRemove.length} 个聊天会话`);
+        }
+    } catch (e) {
+        console.warn('清除聊天会话失败:', e);
+    }
+}

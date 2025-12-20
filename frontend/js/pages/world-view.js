@@ -67,6 +67,9 @@ async function initWorldMap() {
         svg.setAttribute('height', containerHeight);
         svg.setAttribute('viewBox', `0 0 ${containerWidth} ${containerHeight}`);
 
+        // 设置 SVG 定义（如裁剪路径）
+        setupSvgDefs(svg);
+
         // 计算每个格子的尺寸
         cellWidth = containerWidth / GRID_COLS;
         cellHeight = containerHeight / GRID_ROWS;
@@ -102,6 +105,30 @@ async function initWorldMap() {
         console.log('地图初始化成功');
     } catch (err) {
         console.error('地图初始化发生错误:', err);
+    }
+}
+
+// 设置 SVG 定义（如裁剪路径）
+function setupSvgDefs(svg) {
+    let defs = svg.querySelector('defs');
+    if (!defs) {
+        defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+        svg.appendChild(defs);
+    }
+
+    // 创建头像裁剪路径
+    if (!defs.querySelector('#avatarClip')) {
+        const clipPath = document.createElementNS('http://www.w3.org/2000/svg', 'clipPath');
+        clipPath.setAttribute('id', 'avatarClip');
+        clipPath.setAttribute('clipPathUnits', 'objectBoundingBox');
+
+        const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        circle.setAttribute('cx', '0.5');
+        circle.setAttribute('cy', '0.5');
+        circle.setAttribute('r', '0.5');
+
+        clipPath.appendChild(circle);
+        defs.appendChild(clipPath);
     }
 }
 
@@ -226,15 +253,15 @@ function drawCharacters(svg) {
         const ne = convertCoords(coords.ne[0], coords.ne[1]);
         const nw = convertCoords(coords.nw[0], coords.nw[1]);
 
-        const centerX = (sw.x + se.x + ne.x + nw.x) / 4;
-        const centerY = (sw.y + se.y + ne.y + nw.y) / 4;
+        const centerX = (sw.x + se.x + ne.x + nw.x) / 4 + cellWidth / 2;
+        const centerY = (sw.y + se.y + ne.y + nw.y) / 4 + cellHeight / 2;
 
-        // 计算偏移位置（建筑物旁边）
-        const offsetX = (se.x - sw.x) / 2 + 20; // 向右偏移
+        // 计算中心位置点（基于建筑物几何中心）
+        const offsetX = 0;
         const offsetY = 0;
 
         // 圆形排列人物
-        const radius = Math.max(30, characters.length * 8); // 根据人数调整半径
+        const radius = Math.max(40, characters.length * 12); // 增加半径以适应更大的头像
         const angleStep = (2 * Math.PI) / characters.length;
 
         characters.forEach((char, index) => {
@@ -252,7 +279,7 @@ function drawCharacters(svg) {
             const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
             circle.setAttribute('cx', x);
             circle.setAttribute('cy', y);
-            circle.setAttribute('r', 15);
+            circle.setAttribute('r', 20);
             circle.setAttribute('fill', '#fff');
             circle.setAttribute('stroke', '#8b4513');
             circle.setAttribute('stroke-width', '2');
@@ -260,13 +287,17 @@ function drawCharacters(svg) {
 
             // 创建头像图片
             const image = document.createElementNS('http://www.w3.org/2000/svg', 'image');
-            image.setAttributeNS('http://www.w3.org/1999/xlink', 'href', '/frontend/assets/images/default-icon.jpg');
-            image.setAttribute('href', '/frontend/assets/images/default-icon.jpg');
-            image.setAttribute('x', x - 12);
-            image.setAttribute('y', y - 12);
-            image.setAttribute('width', 24);
-            image.setAttribute('height', 24);
-            image.setAttribute('clip-path', `circle(12px at ${x}px ${y}px)`);
+            const roleCode = char.role_code || char.code;
+            if (scrollId && roleCode) {
+                const avatarUrl = `/api/scroll/${scrollId}/character/${roleCode}/avatar`;
+                image.setAttributeNS('http://www.w3.org/1999/xlink', 'href', avatarUrl);
+                image.setAttribute('href', avatarUrl);
+            }
+            image.setAttribute('x', x - 20);
+            image.setAttribute('y', y - 20);
+            image.setAttribute('width', 40);
+            image.setAttribute('height', 40);
+            image.setAttribute('clip-path', 'url(#avatarClip)');
             image.setAttribute('class', 'character-avatar');
 
             // 添加悬停事件显示人名（但不响应点击）
@@ -646,11 +677,13 @@ function showBuildingModal(building) {
         charactersList.innerHTML = '<div class="no-characters">此处暂无人物</div>';
     } else {
         characters.forEach(char => {
+            const roleCode = char.role_code || char.code;
+            const avatarUrl = `/api/scroll/${scrollId}/character/${roleCode}/avatar`;
             const charItem = document.createElement('div');
             charItem.className = 'character-item';
             charItem.innerHTML = `
                 <div class="character-avatar">
-                    <img src="/frontend/assets/images/default-icon.jpg" alt="${char.role_name || char.name || ''}" 
+                    <img src="${avatarUrl}" alt="${char.role_name || char.name || ''}" 
                          onerror="this.src='/frontend/assets/images/default-icon.jpg'">
                 </div>
                 <div class="character-name">${char.role_name || char.name || '未知角色'}</div>
@@ -723,9 +756,10 @@ function showCharacterSelectModal(characters) {
         charItem.className = 'character-select-item';
         const roleName = char.role_name || char.name || '未知角色';
         const roleCode = char.role_code || char.code;
+        const avatarUrl = `/api/scroll/${scrollId}/character/${roleCode}/avatar`;
         charItem.innerHTML = `
             <div class="character-avatar">
-                <img src="/frontend/assets/images/default-icon.jpg" alt="${roleName}" 
+                <img src="${avatarUrl}" alt="${roleName}" 
                      onerror="this.src='/frontend/assets/images/default-icon.jpg'">
             </div>
             <div class="character-name">${roleName}</div>
@@ -776,7 +810,8 @@ function startChat(roleCode) {
     const params = new URLSearchParams({
         scroll_id: scrollId,
         role_code: roleCode,
-        user_name: userName
+        user_name: userName,
+        world_session_id: sessionId // 传递当前的 World Session ID
     });
     window.location.href = `/frontend/pages/chat.html?${params.toString()}`;
 }
@@ -789,7 +824,21 @@ function startGroupChat(characters, buildingCode) {
     }
 
     // 获取角色代码列表
-    const roleCodes = characters.map(char => char.role_code || char.code).join(',');
+    const roleCodes = characters.map(char => char.role_code || char.code);
+
+    // 添加用户角色到列表（如果存在且不在列表中）
+    const savedRole = localStorage.getItem('selected_role');
+    if (savedRole) {
+        try {
+            const role = JSON.parse(savedRole);
+            if (role.code && !roleCodes.includes(role.code)) {
+                roleCodes.push(role.code);
+                console.log('添加用户角色到群聊:', role.code);
+            }
+        } catch (e) {
+            console.warn('解析已选角色失败:', e);
+        }
+    }
 
     // 跳转到群聊页面（入卷玩法）
     // 直接进入游戏页面，传递建筑物代码和角色列表
@@ -798,7 +847,7 @@ function startGroupChat(characters, buildingCode) {
         scroll_id: scrollId,
         mode: 'story',
         location: buildingCode || '',
-        roles: roleCodes
+        roles: roleCodes.join(',')
     });
 
     window.location.href = `/game?${params.toString()}`;
@@ -1098,11 +1147,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     const urlParams = new URLSearchParams(window.location.search);
     sessionId = urlParams.get('session_id');
     scrollId = urlParams.get('scroll_id');
+    const fromChat = urlParams.get('from_chat') === '1';
 
     if (sessionId) {
         // 进入世界模式
         isSessionMode = true;
-        setupSessionMode();
+        setupSessionMode(fromChat);
     } else if (scrollId) {
         // 查看模式
         isSessionMode = false;
@@ -1117,8 +1167,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 // 设置进入世界模式
-function setupSessionMode() {
-    console.log('正在设置会话模式 UI...');
+function setupSessionMode(skipIntro = false) {
+    console.log('正在设置会话模式 UI...', skipIntro ? '(跳过序章)' : '');
     try {
         // 隐藏顶部导航
         const header = document.getElementById('worldViewHeader');
@@ -1128,24 +1178,38 @@ function setupSessionMode() {
 
         // 先隐藏所有游戏内 UI，等待点击“开启我的世界”后再显示
         const topOverlay = document.getElementById('sessionTopOverlay');
-        if (topOverlay) topOverlay.style.display = 'none';
-
         const playerStatusBar = document.getElementById('playerStatusBar');
+
+        if (topOverlay) topOverlay.style.display = 'none';
         if (playerStatusBar) playerStatusBar.style.display = 'none';
 
         // 设置全屏样式
         const container = document.getElementById('worldViewContainer');
         if (container) {
             container.classList.add('session-mode');
-            // 默认进入“魂穿加载模式”：模糊背景
+            // 默认进入“魂穿加载模式”：模糊背景，等待序章/摘要或者手动开启
             container.classList.add('intro-mode');
+
+            // 如果是跳过模式且没有chat_session_id（异常情况），则移除模糊
+            const urlParams = new URLSearchParams(window.location.search);
+            if (skipIntro && !urlParams.get('chat_session_id')) {
+                container.classList.remove('intro-mode');
+                container.style.opacity = '1';
+                if (topOverlay) topOverlay.style.display = 'flex';
+                if (playerStatusBar) playerStatusBar.style.display = 'flex';
+            }
         }
 
         // 加载玩家数据备用
         loadPlayerStatus();
 
         // 连接 WebSocket 以获取实时世界动态
-        connectWebSocket();
+        connectWebSocket(skipIntro);
+
+        // 如果是从聊天返回，尝试获取并显示对话摘要
+        if (skipIntro) {
+            fetchChatSummary();
+        }
 
         // 初始化通知栏点击事件（查看历史）
         const introBar = document.getElementById('worldIntroBar');
@@ -1160,7 +1224,7 @@ function setupSessionMode() {
 }
 
 // 连接 WebSocket
-function connectWebSocket() {
+function connectWebSocket(skipStart = false) {
     if (!sessionId || !scrollId) {
         console.warn('缺少 sessionId 或 scrollId，无法连接 WebSocket');
         return;
@@ -1201,11 +1265,15 @@ function connectWebSocket() {
 
         socket.send(JSON.stringify(initMessage));
 
-        // 自动开始故事模拟以触发序章
-        setTimeout(() => {
-            socket.send(JSON.stringify({ type: 'start' }));
-            console.log('已发送 start 消息触发模拟');
-        }, 1000);
+        // 如果不是跳过模式，自动开始故事模拟以触发序章
+        if (!skipStart) {
+            setTimeout(() => {
+                socket.send(JSON.stringify({ type: 'start' }));
+                console.log('已发送 start 消息触发模拟');
+            }, 1000);
+        } else {
+            console.log('跳过 start 消息发送（已从聊天返回）');
+        }
     };
 
     socket.onmessage = function (event) {
@@ -1218,6 +1286,18 @@ function connectWebSocket() {
             // 处理初始数据更新（可能包含角色新位置）
             if (message.data.status && message.data.status.location) {
                 console.log('收到位置更新:', message.data.status.location);
+            }
+
+            // 处理历史消息
+            if (message.data.history_messages && Array.isArray(message.data.history_messages)) {
+                console.log(`收到 ${message.data.history_messages.length} 条历史消息`);
+                // 按顺序处理历史消息，使用 silent 模式避免触发模态框
+                // 注意：history_messages 通常是时间正序的，handleStoryMessage 会 unshift 到 eventHistory
+                // 所以我们反向遍历或者根据 index 处理
+                const history = [...message.data.history_messages];
+                history.forEach(msg => {
+                    handleStoryMessage(msg, true);
+                });
             }
         }
     };
@@ -1232,7 +1312,7 @@ function connectWebSocket() {
 }
 
 // 处理故事/世界消息
-function handleStoryMessage(data) {
+function handleStoryMessage(data, isSilent = false) {
     const text = data.text;
     if (!text) return;
 
@@ -1254,7 +1334,7 @@ function handleStoryMessage(data) {
 
     // 如果是序章（刚进入世界时的第一条 world 消息），先应用模糊背景
     const isFirstWorldMessage = data.type === 'world' && eventHistory.length === 0;
-    if (isFirstWorldMessage) {
+    if (isFirstWorldMessage && !isSilent) {
         const container = document.getElementById('worldViewContainer');
         if (container) {
             container.classList.add('intro-mode');
@@ -1295,7 +1375,7 @@ function handleStoryMessage(data) {
     const isPrologue = data.type === 'world' && (text.length > 50 || text.includes('序章') || text.includes('睁开眼'));
     const isStorySummary = data.type === 'story';
 
-    if (isPrologue || isStorySummary) {
+    if (!isSilent && (isPrologue || isStorySummary)) {
         console.log('触发剧情焦点模态框');
         showStoryFocusModal(historyItem);
     }
@@ -1400,70 +1480,10 @@ function showStoryFocusModal(item) {
 }
 
 // 世界动态消息逻辑
-let introTimer = null;
 const eventHistory = []; // 存储所有发生过的事件
-const worldIntros = {
-    'A_Dream_in_Red_Mansions': [
-        "大观园内微风拂过，潇湘馆的翠竹沙沙作响。",
-        "贾宝玉正从怡红院出门，往沁芳亭方向去了。",
-        "刘姥姥正在秋爽斋与众人说笑，引得贾母开怀大笑。",
-        "林黛玉倚在窗前，正对着残荷暗自垂泪。",
-        "王熙凤在藕香榭筹办螃蟹宴，园子里好生热闹。",
-        "宝钗在蘅芜苑静坐，细细品味着手中的香茶。",
-        "大观园的角门悄悄开启，不知是谁在月色下徘徊。"
-    ],
-    'A_Song_of_Ice_and_Fire': [
-        "临冬城的寒风凛冽，乌鸦在神木林上空盘旋。",
-        "守夜人发来急报，绝境长城外的阴影正在扩散。",
-        "君临城的宫廷里，权力游戏的棋子正在悄然移动。",
-        "丹妮莉丝的巨龙在大海上空咆哮，火光映红了云层。",
-        "史塔克家族的狼旗在风中猎猎作响，冬天即将来临。"
-    ],
-    'default': [
-        "世界正在缓缓转动，无数故事在角落悄然发生。",
-        "微风带来了远方的消息，新的冒险正在拉开序幕。",
-        "当地的居民们正在忙碌，生活一如既往地继续着。",
-        "阳光洒在地图的每一个角落，等待着探险者的脚步。"
-    ]
-};
 
-function startWorldIntro() {
-    const introBar = document.getElementById('worldIntroBar');
-    const introEl = document.getElementById('introText');
-    if (!introEl || !introBar) return;
-
-    const source = worldSource || 'default';
-    const intros = worldIntros[source] || worldIntros['default'];
-    let index = 0;
-
-    const updateIntro = () => {
-        const text = intros[index];
-        const now = new Date();
-        const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-
-        // 记录到历史
-        eventHistory.unshift({
-            time: timeStr,
-            content: text
-        });
-        // 保持最近50条
-        if (eventHistory.length > 50) eventHistory.pop();
-
-        introEl.style.animation = 'none';
-        introEl.offsetHeight; // 触发重绘
-        introEl.textContent = text;
-        introEl.style.animation = 'slideInOut 8s infinite';
-
-        index = (index + 1) % intros.length;
-    };
-
-    // 初始化点击事件查看历史
-    introBar.addEventListener('click', showWorldHistory);
-
-    updateIntro();
-    if (introTimer) clearInterval(introTimer);
-    introTimer = setInterval(updateIntro, 8000);
-}
+// Removed automatic world intro generation logic (startWorldIntro and worldIntros)
+// The intro bar will only display real events or summaries.
 
 // 显示世界见闻历史
 function showWorldHistory() {
@@ -1512,8 +1532,9 @@ async function loadPlayerStatus() {
                 console.log('已从本地缓存加载角色数据:', role);
                 if (playerNameEl) playerNameEl.textContent = role.name || role.nickname || '穿越者';
                 if (playerIdentityEl) playerIdentityEl.textContent = role.identity || '已魂穿';
-                if (playerAvatarEl && role.avatar) {
-                    playerAvatarEl.innerHTML = `<img src="${role.avatar}" alt="玩家头像" onerror="this.src='../assets/images/default-icon.jpg'">`;
+                if (playerAvatarEl) {
+                    const avatarUrl = role.avatar || `/api/scroll/${scrollId}/character/${role.code || role.role_code}/avatar`;
+                    playerAvatarEl.innerHTML = `<img src="${avatarUrl}" alt="玩家头像" onerror="this.src='../assets/images/default-icon.jpg'">`;
                 }
             } catch (parseError) {
                 console.warn('解析localStorage中的selected_role失败:', parseError);
@@ -1559,3 +1580,63 @@ function setupViewMode() {
     }
 }
 
+/**
+ * 获取最近一次私语聊天的摘要，并添加到世界见闻录中
+ */
+async function fetchChatSummary() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const chatSessionId = urlParams.get('chat_session_id');
+
+    if (!chatSessionId) {
+        console.log('未发现 chat_session_id，跳过摘要获取');
+        return;
+    }
+
+    console.log('正在获取对话摘要, chatSessionId:', chatSessionId);
+
+    try {
+        const response = await authenticatedFetch(`/api/chat/summary/${chatSessionId}`);
+        if (!response.ok) {
+            throw new Error('获取摘要请求失败');
+        }
+
+        const data = await response.json();
+        if (data.success && data.summary) {
+            console.log('成功获取对话摘要:', data.summary);
+
+            // 将摘要作为一条"系统/世界"动态添加到见闻录中
+            // 此时应该是在 intro-mode 下，handleStoryMessage 会判断并在世界见闻录第一条时显示模态框
+            // 由于我们刚从聊天回来，eventHistory 可能为空（刷新页面）或者有旧数据
+            // 我们强制标记为需要显示模态框（通过特殊关键字或强制逻辑，但这里利用 prologue 逻辑）
+
+            // 为了确保显示模态框，我们可以清空 eventHistory 或者确保 summary 足够长
+            // 或者我们可以稍微 hack 一下，确保 handleStoryMessage 认为它是 prologue
+            // 这里的 summary 是 "30-50字"，通常 > 50 字符 (text.length)
+
+            handleStoryMessage({
+                text: "【此前见闻】" + data.summary, // 添加前缀增加长度并标识
+                type: 'world'
+            });
+
+            // 清除 URL 中的 chat_session_id 避免刷新页面重复添加
+            const newUrl = new URL(window.location.href);
+            newUrl.searchParams.delete('chat_session_id');
+            window.history.replaceState({}, '', newUrl);
+        } else {
+            throw new Error('摘要数据为空');
+        }
+    } catch (e) {
+        console.error('获取对话摘要失败:', e);
+        // 如果失败，确保 UI 显示出来，否则用户卡在模糊界面
+        const container = document.getElementById('worldViewContainer');
+        const topOverlay = document.getElementById('sessionTopOverlay');
+        const playerStatusBar = document.getElementById('playerStatusBar');
+
+        if (container) {
+            container.classList.remove('intro-mode');
+            container.style.opacity = '1';
+        }
+        if (topOverlay) topOverlay.style.display = 'flex';
+        if (playerStatusBar) playerStatusBar.style.display = 'flex';
+    }
+}

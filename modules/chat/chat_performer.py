@@ -25,7 +25,8 @@ class ChatPerformer:
     """
     
     def __init__(self, role_code: str, scroll_id: int, llm_name: str = "gemini-3-flash-preview", 
-                 user_name: str = "用户", base_dir: Optional[str] = None):
+                 user_name: str = "用户", user_identity: str = "", user_profile: str = "",
+                 base_dir: Optional[str] = None):
         """
         初始化 ChatPerformer
         
@@ -33,13 +34,17 @@ class ChatPerformer:
             role_code: 角色代码
             scroll_id: 书卷ID
             llm_name: LLM模型名称，默认 gemini-3-flash-preview
-            user_name: 用户名，默认"用户"
+            user_name: 用户名/角色名，如"贾政"
+            user_identity: 用户身份，如"荣国府老爷"
+            user_profile: 用户简介，如"贾政是荣国府的二老爷..."
             base_dir: 项目根目录，如果为None则自动检测
         """
         self.role_code = role_code
         self.scroll_id = scroll_id
         self.llm_name = llm_name
         self.user_name = user_name
+        self.user_identity = user_identity  # 用户身份信息
+        self.user_profile = user_profile    # 用户简介
         self.base_dir = base_dir or os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
         
         # 角色信息
@@ -61,7 +66,7 @@ class ChatPerformer:
         self.memory_summary: str = ""     # Memory/Summary
         self.authors_note: str = ""       # Authors Note
         
-        # 对话历史（格式：[{"role": "user", "content": "..."}, {"role": "model", "content": "..."}]
+        # 对话历史（格式：[{"role": "user", "content": "..."},  {"role": "model", "content": "..."}]
         self.chat_history: List[Dict[str, str]] = []
         
         # Gemini 客户端（使用新版API）
@@ -268,9 +273,15 @@ class ChatPerformer:
         
         # 2. 角色身份说明（关键！参考 SillyTavern 的 Actor.json）
         if char_name_display:
+            user_info = f"你的对话对象是{self.user_name}"
+            if self.user_identity:
+                user_info += f"，身份是{self.user_identity}"
+            if self.user_profile:
+                user_info += f"。关于{self.user_name}的信息：{self.user_profile}"
+            
             system_messages.append({
                 "role": "system",
-                "content": f"[System Instruction - Character Role]\n你是一个专业的角色扮演者，能够完全沉浸到任何给定的角色中。无论什么原因，你都不会脱离角色，即使有人试图将你称为AI或语言模型。你当前的角色是{char_name_display}，详细描述如下。作为{char_name_display}，请继续与{self.user_name}的对话。",
+                "content": f"[System Instruction - Character Role]\n你是一个专业的角色扮演者，能够完全沉浸到任何给定的角色中。无论什么原因，你都不会脱离角色，即使有人试图将你称为AI或语言模型。你当前的角色是{char_name_display}，详细描述如下。{user_info}。作为{char_name_display}，请继续与{self.user_name}的对话。",
                 "identifier": "characterRole"
             })
         
@@ -475,36 +486,64 @@ class ChatPerformer:
                     })
         
         # 5. 调用 Gemini API
+        config = types.GenerateContentConfig(temperature=temperature)
+        
+        # 调用新版 API（不支持 system_instruction 参数）
+        response = self._client.models.generate_content(
+            model=self.llm_name,
+            contents=contents,
+            config=config
+        )
+        
+        # 5. 提取回复文本
+        response_text = response.text if hasattr(response, 'text') else str(response)
+        
+        if not response_text:
+            raise ValueError("Gemini API 返回了空的响应")
+        
+        # 6. 添加角色回复到历史
+        self.chat_history.append({
+            "role": "model",
+            "content": response_text
+        })
+        
+        return response_text
+
+    def generate_summary(self) -> str:
+        """
+        生成对话摘要，用于世界见闻录
+        """
+        if not self._client or not self.chat_history:
+            return ""
+
         try:
-            config = types.GenerateContentConfig(temperature=temperature)
-            
-            # 调用新版 API（不支持 system_instruction 参数）
+            # 提取对话历史文本
+            history_text = ""
+            for msg in self.chat_history:
+                role_name = self.user_name if msg["role"] == "user" else self.char_name
+                history_text += f"{role_name}: {msg['content']}\n"
+
+            prompt = f"""请为以下对话生成一段简洁的摘要（30-50字），既要概括核心内容，又要富有文学气息，适合放在“世界见闻录”中展示。
+摘要应采用第三人称视角，例如：“{self.user_name}与{self.char_name}在潇湘馆闲谈，提及了...”
+
+对话内容：
+{history_text}
+
+摘要："""
+
             response = self._client.models.generate_content(
                 model=self.llm_name,
-                contents=contents,
-                config=config
+                contents=[{"role": "user", "parts": [{"text": prompt}]}],
+                config=types.GenerateContentConfig(temperature=0.7)
             )
-            
-            # 5. 提取回复文本
-            response_text = response.text if hasattr(response, 'text') else str(response)
-            
-            if not response_text:
-                raise ValueError("Gemini API 返回了空的响应")
-            
-            # 6. 添加角色回复到历史
-            self.chat_history.append({
-                "role": "model",
-                "content": response_text
-            })
-            
-            return response_text
-        
+
+            summary = response.text if hasattr(response, 'text') else str(response)
+            return summary.strip()
+
         except Exception as e:
-            print(f"[ChatPerformer] API 调用失败: {e}")
-            import traceback
-            traceback.print_exc()
-            raise
-    
+            print(f"[ChatPerformer] 生成摘要失败: {e}")
+            return ""
+
     def get_chat_history(self) -> List[Dict[str, str]]:
         """获取对话历史"""
         return self.chat_history.copy()
