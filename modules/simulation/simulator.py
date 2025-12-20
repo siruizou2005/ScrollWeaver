@@ -2,7 +2,7 @@
 Simulator for ScrollWeaver simulation.
 """
 
-from typing import Dict, Any, List, Literal, Generator, Tuple
+from typing import Dict, Any, List, Literal, Generator, Tuple, Optional
 import uuid
 import random
 from modules.utils.role_utils import name2code
@@ -25,7 +25,8 @@ class Simulator:
                  current_status: Dict,
                  role_codes: List[str],
                  logger,
-                 language: str = "zh"):
+                 language: str = "zh",
+                 user_role_code: Optional[str] = None):
         """
         Initialize Simulator.
         
@@ -44,6 +45,7 @@ class Simulator:
             role_codes: List of role codes
             logger: Logger instance
             language: Language code
+            user_role_code: Optional user role code
         """
         self.performers = performers
         self.orchestrator = orchestrator
@@ -59,6 +61,7 @@ class Simulator:
         self.role_codes = role_codes
         self.logger = logger
         self.language = language
+        self.user_role_code = user_role_code
         self.cur_round: int = 0
         self.mode: str = "free"
     
@@ -100,6 +103,36 @@ class Simulator:
         sub_start_round: int = meta_info["sub_round"] if "sub_round" in meta_info else 0
         if start_round == rounds:
             return
+            
+        # Soul-Transmigration Prologue (First-time user entry) - Moved to be very first
+        # Check if we should generate a prologue (e.g., if there's a primary player)
+        if start_round == 0 and hasattr(self, 'user_role_code') and self.user_role_code and self.user_role_code in self.performers:
+            print(f"[Simulator] 正在为角色 {self.user_role_code} 生成魂穿序章...")
+            player = self.performers[self.user_role_code]
+            other_roles_in_loc = [p.nickname for code, p in self.performers.items() 
+                                 if code != self.user_role_code and p.location_code == player.location_code]
+            other_roles_text = ", ".join(other_roles_in_loc) if other_roles_in_loc else "附近没有其他人。"
+            
+            prologue = self.orchestrator.generate_soul_trans_prologue(
+                role_name=player.nickname,
+                role_profile=player.role_profile,
+                motivation=player.motivation,
+                location_name=player.location_name,
+                location_description=self.orchestrator.locations_info.get(player.location_code, {}).get('detail', ''),
+                other_roles_text=other_roles_text
+            )
+            
+            record_id = str(uuid.uuid4())
+            self.record_manager.record(
+                role_code=self.user_role_code,
+                detail=prologue,
+                actor_type="world",
+                act_type="prologue",
+                actor="world",
+                group=[self.user_role_code],
+                record_id=record_id
+            )
+            yield ("world", "", prologue, record_id)
         
         # Setting Locations
         if not meta_info["location_setted"]:
@@ -285,6 +318,7 @@ class Simulator:
                 )
         
         yield ("system", "", "-- Simulation Started --", None)
+        
         selected_role_codes = []
         
         # Simulating
@@ -325,6 +359,31 @@ class Simulator:
             if group:
                 self.current_status['location_code'] = self.performers[group[0]].location_code
             self.scene_manager.set_scene_characters(current_round, group)
+            
+            # 场景化更迭：进入新地点或新幕时的文学性描述
+            if group and current_round >= start_round:
+                location_code = self.performers[group[0]].location_code
+                location_info_text = self.state_manager.get_location_info_text(location_code)
+                history_text = "\n".join(self.history_manager.get_recent_history(5))
+                
+                prologue = self.orchestrator.generate_location_prologue(
+                    location_code=location_code,
+                    history_text=history_text,
+                    event=self.event_manager.event,
+                    location_info_text=location_info_text
+                )
+                
+                record_id = str(uuid.uuid4())
+                self.record_manager.record(
+                    role_code="world",
+                    detail=prologue,
+                    actor_type="world",
+                    act_type="prologue",
+                    actor="world",
+                    group=group,
+                    record_id=record_id
+                )
+                yield ("world", "", prologue, record_id)
             
             start_idx = len(self.history_manager)
             
@@ -407,7 +466,14 @@ class Simulator:
                         group=[],
                         record_id=record_id
                     )
-                    yield ("world", "", "--Epilogue--: " + epilogue, record_id)
+                    yield ("world", "", epilogue, record_id)
+                    
+                    # 场景化更迭：将当前记录转换为故事流
+                    current_scene_logs = self.history_manager.get_recent_history(len(self.history_manager) - start_idx)
+                    if current_scene_logs:
+                        story_segment = self.orchestrator.log2story(current_scene_logs)
+                        story_record_id = str(uuid.uuid4())
+                        yield ("story", "", story_segment, story_record_id)
                     break
             
             for role_code in group:
