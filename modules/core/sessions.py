@@ -126,10 +126,12 @@ class ChatSession(BaseSession):
     
     def __init__(self, session_id: str, scroll_id: Optional[int] = None, 
                  user_id: Optional[int] = None, role_code: Optional[str] = None,
-                 user_name: str = "用户"):
+                 user_name: str = "用户", user_identity: str = "", user_profile: str = ""):
         super().__init__(session_id, scroll_id, user_id, SessionMode.CHAT)
         self.role_code = role_code  # 对话的目标角色
         self.user_name = user_name  # 用户名
+        self.user_identity = user_identity  # 用户身份
+        self.user_profile = user_profile  # 用户简介
         self.chat_performer = None  # ChatPerformer 实例
         self.chat_history: List[Dict[str, Any]] = []
         
@@ -145,12 +147,16 @@ class ChatSession(BaseSession):
         # 创建 ChatPerformer 实例
         llm_name = config.get("llm_name", "gemini-3-flash-preview")
         user_name = config.get("user_name", self.user_name)
+        user_identity = config.get("user_identity", self.user_identity)
+        user_profile = config.get("user_profile", self.user_profile)
         
         self.chat_performer = ChatPerformer(
             role_code=self.role_code,
             scroll_id=self.scroll_id,
             llm_name=llm_name,
-            user_name=user_name
+            user_name=user_name,
+            user_identity=user_identity,
+            user_profile=user_profile
         )
         
         return {

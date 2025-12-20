@@ -159,7 +159,7 @@ class Performer:
         
         self.icon_path: str = os.path.join(base_dir, role_path,"icon.png")
         self.avatar_path: str = os.path.join(base_dir, role_path,"avatar.png")
-        for image_type in ['jpg','png','bmp']:
+        for image_type in ['jpg', 'png', 'bmp', 'webp']:
             if os.path.exists(os.path.join(base_dir, role_path,f"./avatar.{image_type}")):
                 self.avatar_path: str = os.path.join(base_dir, role_path,f"avatar.{image_type}")
             if os.path.exists(os.path.join(base_dir, role_path,f"./icon.{image_type}")):

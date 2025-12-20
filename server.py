@@ -182,6 +182,27 @@ class ConnectionManager:
         if client_id in self.client_locations:
             del self.client_locations[client_id]
             
+    async def send_json_safe(self, client_id: str, data: dict):
+        """安全地发送 JSON 消息，处理连接已关闭的情况"""
+        if client_id not in self.active_connections:
+            return False
+        try:
+            await self.active_connections[client_id].send_json(data)
+            return True
+        except RuntimeError as e:
+            if "websocket.send" in str(e) or "websocket.close" in str(e):
+                print(f"[ConnectionManager] 客户端 {client_id} 已断开连接 (RuntimeError)")
+            else:
+                print(f"[ConnectionManager] 发送消息给 {client_id} 时出错 (RuntimeError): {e}")
+            if client_id in self.active_connections:
+                del self.active_connections[client_id]
+            return False
+        except Exception as e:
+            print(f"[ConnectionManager] 发送消息给 {client_id} 时出错: {e}")
+            if client_id in self.active_connections:
+                del self.active_connections[client_id]
+            return False
+
     def stop_story(self, client_id: str):
         if client_id in self.story_tasks:
             self.story_tasks[client_id].cancel()
@@ -244,10 +265,11 @@ class ConnectionManager:
                                     end_payload['message'] = f"故事终止：收到无效消息（{detail}）"
                             elif reason == 'empty':
                                 end_payload['message'] = "故事终止：未收到有效的剧情消息。"
-                        await self.active_connections[client_id].send_json({
+                        if not await self.send_json_safe(client_id, {
                             'type': 'story_ended',
                             'data': end_payload
-                        })
+                        }):
+                            print(f"Failed to send story_ended to {client_id}, client likely disconnected.")
                         break
                     
                     # 检查是否轮到用户选择的角色
@@ -261,13 +283,14 @@ class ConnectionManager:
                         if current_role_code and current_role_code == user_role_code:
                             # 暂停生成，等待用户输入
                             self.waiting_for_input[client_id] = True
-                            await self.active_connections[client_id].send_json({
+                            if not await self.send_json_safe(client_id, {
                                 'type': 'waiting_for_user_input',
                                 'data': {
                                     'role_name': message.get('username'),
                                     'message': '请为角色输入内容'
                                 }
-                            })
+                            }):
+                                break
                             
                             # 等待用户输入
                             if client_id not in self.pending_user_inputs:
@@ -282,10 +305,11 @@ class ConnectionManager:
                                 original_uuid = message.get('uuid')
                                 if not user_text.strip():
                                     # 空输入，继续等待
-                                    await self.active_connections[client_id].send_json({
+                                    if not await self.send_json_safe(client_id, {
                                         'type': 'error',
                                         'data': {'message': '输入不能为空，请重新输入'}
-                                    })
+                                    }):
+                                        break
                                     # 重新创建Future继续等待
                                     self.pending_user_inputs[client_id] = asyncio.Future()
                                     continue
@@ -331,27 +355,18 @@ class ConnectionManager:
                     # 正常发送消息
                     print(f"Sending message to client {client_id}: type={message.get('type', 'unknown')}, username={message.get('username', 'unknown')}")
                     status = meta
-                    try:
-                        await self.active_connections[client_id].send_json({
-                            'type': 'message',
-                            'data': message
-                        })
-                        print(f"Message sent successfully to client {client_id}")
-                    except Exception as e:
-                        print(f"Error sending message to client {client_id}: {e}")
-                        import traceback
-                        traceback.print_exc()
+                    if not await self.send_json_safe(client_id, {
+                        'type': 'message',
+                        'data': message
+                    }):
                         break
+                    print(f"Message sent successfully to client {client_id}")
                     
                     if status is not None:
-                        try:
-                            await self.active_connections[client_id].send_json({
-                                'type': 'status_update',
-                                'data': status
-                            })
-                        except Exception as e:
-                            print(f"Error sending status to client {client_id}: {e}")
-                            # 继续发送消息，状态更新失败不是致命错误
+                        await self.send_json_safe(client_id, {
+                            'type': 'status_update',
+                            'data': status
+                        })
                     
                     # 添加延迟，控制消息发送频率
                     await asyncio.sleep(0.2)  # 可以调整这个值
@@ -699,14 +714,15 @@ class ConnectionManager:
             }
             
             # 发送消息
-            await self.active_connections[client_id].send_json({
+            if not await self.send_json_safe(client_id, {
                 'type': 'message',
                 'data': message
-            })
+            }):
+                return
             
             # 发送状态更新
             status = self.scrollweaver.get_current_status()
-            await self.active_connections[client_id].send_json({
+            await self.send_json_safe(client_id, {
                 'type': 'status_update',
                 'data': status
             })
@@ -2643,10 +2659,16 @@ async def get_scroll_for_intro(scroll_id: int):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/scroll/{scroll_id}/characters")
-async def get_scroll_characters(scroll_id: int, current_user: Optional[dict] = Depends(get_optional_user)):
+async def get_scroll_characters(scroll_id: str, current_user: Optional[dict] = Depends(get_optional_user)):
     """获取书卷的角色列表"""
     try:
-        scroll = db.get_scroll(scroll_id)
+        # 支持整数和字符串格式的scroll_id
+        try:
+            scroll_id_int = int(scroll_id)
+            scroll = db.get_scroll(scroll_id_int)
+        except (ValueError, TypeError):
+            scroll = db.get_scroll(scroll_id)
+            
         if not scroll:
             raise HTTPException(status_code=404, detail="书卷不存在")
         
@@ -2685,11 +2707,24 @@ async def get_scroll_characters(scroll_id: int, current_user: Optional[dict] = D
                     role_info_path = os.path.join(base_dir, role_path, "role_info.json")
                     if os.path.exists(role_info_path):
                         role_info = load_json_file(role_info_path)
+                        # 查找头像文件
+                        avatar_url = None
+                        avatar_filenames = ['avatar', 'icon']
+                        avatar_extensions = ['.png', '.jpg', '.jpeg', '.webp']
+                        for name in avatar_filenames:
+                            for ext in avatar_extensions:
+                                potential_avatar = os.path.join(base_dir, role_path, f"{name}{ext}")
+                                if os.path.exists(potential_avatar):
+                                    avatar_url = f"/api/scroll/{scroll_id}/character/{role_code}/avatar"
+                                    break
+                            if avatar_url: break
+
                         character = {
                             'code': role_code,
                             'name': role_info.get('role_name', role_code),
                             'nickname': role_info.get('nickname', role_info.get('role_name', role_code)),
                             'role': role_info.get('relation', {}).get('relation', ''),
+                            'avatar': avatar_url,
                             'description': role_info.get('profile', '')[:100] + '...' if len(role_info.get('profile', '')) > 100 else role_info.get('profile', '')
                         }
                         characters.append(character)
@@ -2713,10 +2748,16 @@ async def get_scroll_characters(scroll_id: int, current_user: Optional[dict] = D
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/scroll/{scroll_id}/character/{role_code}")
-async def get_character_detail(scroll_id: int, role_code: str, current_user: Optional[dict] = Depends(get_optional_user)):
+async def get_character_detail(scroll_id: str, role_code: str, current_user: Optional[dict] = Depends(get_optional_user)):
     """获取角色详细信息"""
     try:
-        scroll = db.get_scroll(scroll_id)
+        # 支持整数和字符串格式的scroll_id
+        try:
+            scroll_id_int = int(scroll_id)
+            scroll = db.get_scroll(scroll_id_int)
+        except (ValueError, TypeError):
+            scroll = db.get_scroll(scroll_id)
+            
         if not scroll:
             raise HTTPException(status_code=404, detail="书卷不存在")
         
@@ -2757,13 +2798,17 @@ async def get_character_detail(scroll_id: int, role_code: str, current_user: Opt
         
         # 查找头像文件
         avatar_path = None
-        avatar_extensions = ['.png', '.jpg', '.jpeg']
-        for ext in avatar_extensions:
-            potential_avatar = os.path.join(base_dir, role_path, f"avatar{ext}")
-            if os.path.exists(potential_avatar):
-                # 返回API端点路径
-                avatar_path = f"/api/scroll/{scroll_id}/character/{role_code}/avatar"
-                break
+        avatar_filenames = ['avatar', 'icon']
+        avatar_extensions = ['.png', '.jpg', '.jpeg', '.webp']
+        for name in avatar_filenames:
+            for ext in avatar_extensions:
+                # 如果 role_path 是绝对路径，os.path.join 会正确处理
+                potential_avatar = os.path.join(role_path, f"{name}{ext}")
+                if os.path.exists(potential_avatar):
+                    # 返回API端点路径
+                    avatar_path = f"/api/scroll/{scroll_id}/character/{role_code}/avatar"
+                    break
+            if avatar_path: break
         
         # 构建角色详细信息
         character_detail = {
@@ -2788,10 +2833,16 @@ async def get_character_detail(scroll_id: int, role_code: str, current_user: Opt
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/scroll/{scroll_id}/character/{role_code}/avatar")
-async def get_character_avatar(scroll_id: int, role_code: str, current_user: Optional[dict] = Depends(get_optional_user)):
+async def get_character_avatar(scroll_id: str, role_code: str, current_user: Optional[dict] = Depends(get_optional_user)):
     """获取角色头像"""
     try:
-        scroll = db.get_scroll(scroll_id)
+        # 支持整数和字符串格式的scroll_id
+        try:
+            scroll_id_int = int(scroll_id)
+            scroll = db.get_scroll(scroll_id_int)
+        except (ValueError, TypeError):
+            scroll = db.get_scroll(scroll_id)
+            
         if not scroll:
             raise HTTPException(status_code=404, detail="书卷不存在")
         
@@ -2822,14 +2873,18 @@ async def get_character_avatar(scroll_id: int, role_code: str, current_user: Opt
                     break
         
         if not role_path:
+            print(f"DEBUG: 角色不存在: role_code={role_code}, source={source}")
             raise HTTPException(status_code=404, detail="角色不存在")
         
         # 查找头像文件
-        avatar_extensions = ['.png', '.jpg', '.jpeg']
-        for ext in avatar_extensions:
-            potential_avatar = os.path.join(base_dir, role_path, f"avatar{ext}")
-            if os.path.exists(potential_avatar):
-                return FileResponse(potential_avatar)
+        avatar_filenames = ['avatar', 'icon']
+        avatar_extensions = ['.png', '.jpg', '.jpeg', '.webp']
+        for name in avatar_filenames:
+            for ext in avatar_extensions:
+                potential_avatar = os.path.join(role_path, f"{name}{ext}")
+                # print(f"DEBUG: 正在查找头像: {potential_avatar}")
+                if os.path.exists(potential_avatar):
+                    return FileResponse(potential_avatar)
         
         # 如果没有找到头像，返回默认图标
         if os.path.exists(default_icon_path):
@@ -3424,6 +3479,8 @@ async def create_chat_session(request: Request, current_user: dict = Depends(get
         scroll_id = data.get('scroll_id')
         role_code = data.get('role_code')
         user_name = data.get('user_name', current_user.get('username', '用户'))
+        user_identity = data.get('user_identity', '')  # 用户身份，如"荣国府老爷"
+        user_profile = data.get('user_profile', '')    # 用户简介
         
         if not scroll_id:
             raise HTTPException(status_code=400, detail="缺少scroll_id")
@@ -3441,13 +3498,17 @@ async def create_chat_session(request: Request, current_user: dict = Depends(get
             scroll_id=scroll_id,
             user_id=current_user['id'],
             role_code=role_code,
-            user_name=user_name
+            user_name=user_name,
+            user_identity=user_identity,
+            user_profile=user_profile
         )
         
         # 初始化会话
         config = {
             'llm_name': 'gemini-3-flash-preview',
-            'user_name': user_name
+            'user_name': user_name,
+            'user_identity': user_identity,
+            'user_profile': user_profile
         }
         init_result = await session.initialize(config)
         
@@ -3635,6 +3696,36 @@ async def get_chat_extensions(session_id: str, current_user: dict = Depends(get_
                 "memory_summary": performer.memory_summary,
                 "authors_note": performer.authors_note
             }
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/chat/summary/{session_id}")
+async def get_chat_summary(session_id: str, current_user: dict = Depends(get_current_user)):
+    """生成并获取对话摘要"""
+    try:
+        # 获取会话
+        session = session_manager.get_session(session_id)
+        if not session:
+            raise HTTPException(status_code=404, detail="会话不存在")
+        
+        # 验证用户权限
+        if session.user_id != current_user['id']:
+            raise HTTPException(status_code=403, detail="无权访问此会话")
+        
+        if not hasattr(session, 'chat_performer') or not session.chat_performer:
+            raise HTTPException(status_code=400, detail="会话未初始化")
+        
+        # 生成摘要
+        summary = session.chat_performer.generate_summary()
+        
+        return {
+            "success": True,
+            "summary": summary
         }
     except HTTPException:
         raise
@@ -4463,7 +4554,7 @@ async def list_crossworld_scrolls(current_user: dict = Depends(get_current_user)
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/crossworld/{scroll_id}/characters")
-async def get_crossworld_characters(scroll_id: int, current_user: dict = Depends(get_current_user)):
+async def get_crossworld_characters(scroll_id: str, current_user: dict = Depends(get_current_user)):
     """获取指定世界的角色列表"""
     # 直接复用已有的接口逻辑
     return await get_scroll_characters(scroll_id, current_user)

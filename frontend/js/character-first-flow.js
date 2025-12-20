@@ -37,7 +37,7 @@
         const urlParams = new URLSearchParams(window.location.search);
         const location = urlParams.get('location');
         const roles = urlParams.get('roles');
-        
+
         if (location && roles) {
             console.log('[CharacterFirstFlow] 检测到location和roles参数，跳过角色和地点选择');
             // 隐藏所有遮罩层
@@ -45,6 +45,26 @@
             hideFullscreenMapOverlay();
             // 标记为已跳过选择流程
             window.skipCharacterLocationSelection = true;
+
+            // 同时检查localStorage中是否有已选角色，用于显示右侧栏
+            const savedRole = localStorage.getItem('selected_role');
+            if (savedRole) {
+                try {
+                    const role = JSON.parse(savedRole);
+                    if (role && role.code) {
+                        selectedCharacter = {
+                            name: role.name || role.nickname,
+                            nickname: role.nickname || role.name,
+                            code: role.code,
+                            icon: role.avatar || './frontend/assets/images/default-icon.jpg'
+                        };
+                        window.selectedCharacterForMap = selectedCharacter;
+                        console.log('[CharacterFirstFlow] 从localStorage恢复已选角色:', selectedCharacter.name);
+                    }
+                } catch (e) {
+                    console.warn('[CharacterFirstFlow] 解析localStorage中的selected_role失败:', e);
+                }
+            }
             return;
         }
 
