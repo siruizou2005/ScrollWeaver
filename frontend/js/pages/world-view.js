@@ -23,6 +23,8 @@ let scrollId = null;
 let worldSource = ''; // 世界source（用于判断时间格式）
 let buildingCharactersMap = {}; // 建筑物代码 -> 角色列表的映射
 const token = localStorage.getItem('token'); // 获取登录令牌
+let socket = null; // WebSocket 连接
+let messageHistory = []; // 存储收到的消息
 
 // 通用 fetch 包装器，自动添加认证头
 async function authenticatedFetch(url, options = {}) {
@@ -1124,31 +1126,277 @@ function setupSessionMode() {
             header.style.display = 'none';
         }
 
-        // 显示顶部交互叠加层 (包含World Intro和时间)
+        // 先隐藏所有游戏内 UI，等待点击“开启我的世界”后再显示
         const topOverlay = document.getElementById('sessionTopOverlay');
-        if (topOverlay) {
-            topOverlay.style.display = 'flex';
-            startWorldIntro();
-        }
+        if (topOverlay) topOverlay.style.display = 'none';
 
-        // 显示玩家状态栏
         const playerStatusBar = document.getElementById('playerStatusBar');
-        if (playerStatusBar) {
-            console.log('找到玩家状态栏元素，准备初始化');
-            playerStatusBar.style.display = 'flex';
-            // 不阻塞主流程
-            setTimeout(() => loadPlayerStatus(), 0);
-        }
+        if (playerStatusBar) playerStatusBar.style.display = 'none';
 
         // 设置全屏样式
         const container = document.getElementById('worldViewContainer');
         if (container) {
             container.classList.add('session-mode');
+            // 默认进入“魂穿加载模式”：模糊背景
+            container.classList.add('intro-mode');
         }
+
+        // 加载玩家数据备用
+        loadPlayerStatus();
+
+        // 连接 WebSocket 以获取实时世界动态
+        connectWebSocket();
+
+        // 初始化通知栏点击事件（查看历史）
+        const introBar = document.getElementById('worldIntroBar');
+        if (introBar) {
+            introBar.addEventListener('click', showWorldHistory);
+        }
+
         console.log('会话模式 UI 设置完成');
     } catch (err) {
         console.error('设置会话模式失败:', err);
     }
+}
+
+// 连接 WebSocket
+function connectWebSocket() {
+    if (!sessionId || !scrollId) {
+        console.warn('缺少 sessionId 或 scrollId，无法连接 WebSocket');
+        return;
+    }
+
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const clientId = 'client_' + Math.random().toString(36).substr(2, 9);
+    const wsUrl = `${protocol}//${window.location.host}/ws/${clientId}`;
+
+    console.log('正在连接 WebSocket:', wsUrl);
+    socket = new WebSocket(wsUrl);
+
+    socket.onopen = function () {
+        console.log('WebSocket 连接已建立');
+
+        // 获取当前魂穿的角色和地点（如果有）
+        const savedRole = localStorage.getItem('selected_role');
+        let roles = '';
+        if (savedRole) {
+            try {
+                const role = JSON.parse(savedRole);
+                roles = role.code || '';
+            } catch (e) { }
+        }
+
+        // 发送初始化消息
+        const initMessage = {
+            type: 'init',
+            scroll_id: parseInt(scrollId),
+            token: token
+        };
+
+        if (roles) {
+            initMessage.roles = roles;
+            // 如果是在特定建筑物点击进入的，可能带有 location 信息
+            // 否则后端会自动分配或保持原状
+        }
+
+        socket.send(JSON.stringify(initMessage));
+
+        // 自动开始故事模拟以触发序章
+        setTimeout(() => {
+            socket.send(JSON.stringify({ type: 'start' }));
+            console.log('已发送 start 消息触发模拟');
+        }, 1000);
+    };
+
+    socket.onmessage = function (event) {
+        const message = JSON.parse(event.data);
+        console.log('收到 WebSocket 消息:', message.type, message);
+
+        if (message.type === 'message') {
+            handleStoryMessage(message.data);
+        } else if (message.type === 'initial_data') {
+            // 处理初始数据更新（可能包含角色新位置）
+            if (message.data.status && message.data.status.location) {
+                console.log('收到位置更新:', message.data.status.location);
+            }
+        }
+    };
+
+    socket.onclose = function () {
+        console.log('WebSocket 连接已关闭');
+    };
+
+    socket.onerror = function (error) {
+        console.error('WebSocket 错误:', error);
+    };
+}
+
+// 处理故事/世界消息
+function handleStoryMessage(data) {
+    const text = data.text;
+    if (!text) return;
+
+    console.log('处理故事消息:', data.type, text.substring(0, 30) + '...');
+
+    const introEl = document.getElementById('introText');
+    const introBar = document.getElementById('worldIntroBar');
+
+    // 记录到历史
+    const now = new Date();
+    const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+
+    const historyItem = {
+        time: timeStr,
+        content: text,
+        type: data.type,
+        username: data.username
+    };
+
+    // 如果是序章（刚进入世界时的第一条 world 消息），先应用模糊背景
+    const isFirstWorldMessage = data.type === 'world' && eventHistory.length === 0;
+    if (isFirstWorldMessage) {
+        const container = document.getElementById('worldViewContainer');
+        if (container) {
+            container.classList.add('intro-mode');
+        }
+    }
+
+    eventHistory.unshift(historyItem);
+    if (eventHistory.length > 100) eventHistory.pop();
+
+    // 更新顶部通知栏（如果是世界动态消息）
+    if (introEl && (data.type === 'world' || data.type === 'system')) {
+        // 停止当前动画并强制重绘以立即显示新消息
+        introEl.style.animation = 'none';
+        void introEl.offsetWidth;
+
+        // 如果是长文本（如序章），通知栏只显示第一句或摘要
+        let summary = text;
+        if (text.length > 60) {
+            summary = text.split(/[。！？\n]/)[0] + '...';
+        }
+        introEl.textContent = summary;
+
+        // 重新启动动画
+        introEl.style.animation = 'slideInOut 8s infinite';
+
+        // 增加一个高亮闪烁提示有新动态
+        if (introBar) {
+            introBar.style.borderColor = '#8b6f47';
+            introBar.style.boxShadow = '0 0 15px rgba(139, 111, 71, 0.4)';
+            setTimeout(() => {
+                introBar.style.borderColor = '';
+                introBar.style.boxShadow = '';
+            }, 2000);
+        }
+    }
+
+    // 如果是序章或重要剧情（type 为 world 且比较长，或者包含序章关键字），弹出模态框显示
+    const isPrologue = data.type === 'world' && (text.length > 50 || text.includes('序章') || text.includes('睁开眼'));
+    const isStorySummary = data.type === 'story';
+
+    if (isPrologue || isStorySummary) {
+        console.log('触发剧情焦点模态框');
+        showStoryFocusModal(historyItem);
+    }
+}
+
+// 显示剧情焦点模态框 (序章或重要事件)
+function showStoryFocusModal(item) {
+    // 检查是否已经有这个模态框，没有则创建一个简单的
+    let modal = document.getElementById('storyFocusModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'storyFocusModal';
+        modal.className = 'story-focus-modal';
+        modal.innerHTML = `
+            <div class="modal-overlay"></div>
+            <div class="modal-content">
+                <div class="story-content"></div>
+                <div class="modal-actions" style="margin-top: 30px; text-align: center; display: none;">
+                    <button class="start-world-btn" style="
+                        background: #8b6f47;
+                        color: #fff;
+                        border: none;
+                        padding: 12px 40px;
+                        font-size: 18px;
+                        border-radius: 30px;
+                        cursor: pointer;
+                        font-family: 'Noto Serif SC', serif;
+                        box-shadow: 0 4px 15px rgba(139, 111, 71, 0.3);
+                        transition: all 0.3s ease;
+                    ">开启我的世界</button>
+                </div>
+                <button class="modal-close" style="display: none; position: absolute; top: 20px; right: 20px; background: transparent; border: none; font-size: 30px; color: #8b6f47; cursor: pointer;">&times;</button>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        const closeBtn = modal.querySelector('.modal-close');
+        const startBtn = modal.querySelector('.start-world-btn');
+        const overlay = modal.querySelector('.modal-overlay');
+
+        const closeModal = () => {
+            modal.style.display = 'none';
+            // 当序章关闭时，移除模糊，展现世界
+            const container = document.getElementById('worldViewContainer');
+            if (container) {
+                container.classList.remove('intro-mode');
+                container.style.opacity = '1';
+            }
+
+            // 显示游戏内 UI
+            const topOverlay = document.getElementById('sessionTopOverlay');
+            if (topOverlay) topOverlay.style.display = 'flex';
+
+            const playerStatusBar = document.getElementById('playerStatusBar');
+            if (playerStatusBar) playerStatusBar.style.display = 'flex';
+        };
+
+        closeBtn.onclick = closeModal;
+        startBtn.onclick = closeModal;
+        overlay.onclick = () => {
+            // 如果按钮可见，点击背景不关闭，必须点击按钮
+            if (actionsEl.style.display === 'none') {
+                closeModal();
+            }
+        };
+    }
+
+    const contentEl = modal.querySelector('.story-content');
+    const actionsEl = modal.querySelector('.modal-actions');
+    const closeBtn = modal.querySelector('.modal-close');
+
+    // 格式化文本，将换行符转为段落
+    const formattedText = item.content.split('\n').map(p => `<p>${p}</p>`).join('');
+    contentEl.innerHTML = `
+        <div class="story-time">${item.time}</div>
+        <div class="story-text">${formattedText}</div>
+    `;
+
+    // 如果是序章，显示“开启我的世界”按钮，隐藏关闭叉号
+    const isPrologue = item.content.includes('序章') || item.content.includes('睁开眼') || (item.type === 'world' && eventHistory.length <= 5);
+
+    if (isPrologue) {
+        actionsEl.style.display = 'block';
+        closeBtn.style.display = 'none';
+        // 确保背景处于模糊模式
+        const container = document.getElementById('worldViewContainer');
+        if (container) {
+            container.classList.add('intro-mode');
+        }
+    } else {
+        actionsEl.style.display = 'none';
+        closeBtn.style.display = 'block';
+        // 非序章弹窗，确保背景可见
+        const container = document.getElementById('worldViewContainer');
+        if (container) {
+            container.classList.remove('intro-mode');
+            container.style.opacity = '1';
+        }
+    }
+
+    modal.style.display = 'flex';
 }
 
 // 世界动态消息逻辑
@@ -1261,6 +1509,7 @@ async function loadPlayerStatus() {
         if (savedRole && savedRole !== 'undefined' && savedRole !== 'null') {
             try {
                 const role = JSON.parse(savedRole);
+                console.log('已从本地缓存加载角色数据:', role);
                 if (playerNameEl) playerNameEl.textContent = role.name || role.nickname || '穿越者';
                 if (playerIdentityEl) playerIdentityEl.textContent = role.identity || '已魂穿';
                 if (playerAvatarEl && role.avatar) {
@@ -1271,15 +1520,17 @@ async function loadPlayerStatus() {
                 if (playerNameEl) playerNameEl.textContent = '测试玩家';
             }
         } else {
+            console.log('未找到本地角色缓存，使用默认状态');
             if (playerNameEl) playerNameEl.textContent = '测试玩家';
             if (playerIdentityEl) playerIdentityEl.textContent = '临时访客';
         }
 
-        // 模拟养成数值（实际可从后端获取）
-        updateStat('talent', Math.floor(Math.random() * 40) + 40); // 40-80
-        updateStat('bond', Math.floor(Math.random() * 30) + 20);   // 20-50
+        // 模拟养成数值：根据角色类型生成比较美观的初始值
+        // 这些数值会在点击“开启我的世界”显示状态栏时平滑滑入
+        updateStat('talent', 65);
+        updateStat('bond', 45);
         updateStat('energy', 100);
-        console.log('玩家状态加载完成');
+        console.log('玩家状态加载完成（等待 UI 开启时显示）');
     } catch (e) {
         console.error('加载玩家状态发生严重错误:', e);
     }

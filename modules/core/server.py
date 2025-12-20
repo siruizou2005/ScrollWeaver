@@ -60,6 +60,7 @@ class Server:
         
         self.language: str = config.get("language", "zh")
         self.source: str = config.get("source", "")
+        self.user_role_code: Optional[str] = None
         
         self.idx: int = 0
         self.cur_round: int = 0
@@ -194,7 +195,8 @@ class Server:
             self.current_status,
             self.role_codes,
             self.logger,
-            self.language
+            self.language,
+            self.user_role_code
         )
     
     def init_performers(self,
