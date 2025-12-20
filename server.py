@@ -368,6 +368,7 @@ class ConnectionManager:
                     'status': {},
                     'history_messages': []
                 }
+            
             return {
                 'characters': self.scrollweaver.get_characters_info(use_selected=False),
                 'map': self.scrollweaver.get_map_info(),
@@ -1003,12 +1004,49 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                     role_code = manager._get_role_code_by_name(role_name)
                     if role_code:
                         manager.user_selected_roles[client_id] = role_code
+                        
+                        # 在角色选择时初始化所有角色的位置（如果尚未初始化）
+                        import random
+                        if hasattr(manager.scrollweaver, 'server') and manager.scrollweaver.server:
+                            server = manager.scrollweaver.server
+                            if hasattr(server, 'performers') and hasattr(server, 'orchestrator'):
+                                locations = server.orchestrator.locations if server.orchestrator.locations else []
+                                if locations:
+                                    needs_init = any(
+                                        not p.location_code or not p.location_name 
+                                        for p in server.performers.values()
+                                    )
+                                    if needs_init:
+                                        print("[select_role] 正在初始化所有角色位置...")
+                                        init_locs = random.choices(locations, k=len(server.performers))
+                                        for i, (rc, performer) in enumerate(server.performers.items()):
+                                            performer.set_location(
+                                                init_locs[i],
+                                                server.orchestrator.find_location_name(init_locs[i])
+                                            )
+                                            print(f"[select_role] {performer.role_name} -> {performer.location_name}")
+                        
+                        # 返回角色选择成功消息
                         await websocket.send_json({
                             'type': 'role_selected',
                             'data': {
                                 'role_name': role_name,
                                 'role_code': role_code,
                                 'message': f'已选择角色: {role_name}'
+                            }
+                        })
+                        
+                        # 返回更新后的角色和地图数据（包含位置信息）
+                        updated_characters = manager.scrollweaver.get_characters_info(use_selected=False)
+                        updated_map = manager.scrollweaver.get_map_info()
+                        await websocket.send_json({
+                            'type': 'initial_data',
+                            'data': {
+                                'characters': updated_characters,
+                                'map': updated_map,
+                                'settings': manager.scrollweaver.get_settings_info(),
+                                'status': manager.scrollweaver.get_current_status(),
+                                'history_messages': []
                             }
                         })
                     else:
@@ -1317,6 +1355,71 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                         'data': {
                             'message': f'重置session时出错: {str(e)}'
                         }
+                    })
+            
+            elif message['type'] == 'move_character':
+                # 处理用户指定的角色移动请求
+                try:
+                    role_name = message.get('role_name')
+                    target_location = message.get('target_location')
+                    
+                    if not role_name or not target_location:
+                        await websocket.send_json({
+                            'type': 'error',
+                            'data': {'message': '缺少角色名或目标地点'}
+                        })
+                    else:
+                        # 获取角色代码
+                        role_code = manager._get_role_code_by_name(role_name)
+                        if not role_code:
+                            await websocket.send_json({
+                                'type': 'error',
+                                'data': {'message': f'未找到角色: {role_name}'}
+                            })
+                        else:
+                            # 获取目标地点代码
+                            target_location_code = None
+                            for loc_code in manager.scrollweaver.server.orchestrator.locations:
+                                loc_name = manager.scrollweaver.server.orchestrator.find_location_name(loc_code)
+                                if loc_name == target_location:
+                                    target_location_code = loc_code
+                                    break
+                            
+                            if not target_location_code:
+                                await websocket.send_json({
+                                    'type': 'error',
+                                    'data': {'message': f'未找到地点: {target_location}'}
+                                })
+                            else:
+                                # 设置角色位置
+                                performer = manager.scrollweaver.server.performers[role_code]
+                                old_location = performer.location_name or '未知位置'
+                                performer.set_location(target_location_code, target_location)
+                                
+                                # 发送成功消息
+                                await websocket.send_json({
+                                    'type': 'character_moved',
+                                    'data': {
+                                        'role_name': role_name,
+                                        'from_location': old_location,
+                                        'to_location': target_location,
+                                        'message': f'{role_name} 已前往 {target_location}'
+                                    }
+                                })
+                                
+                                # 发送更新后的状态
+                                status = manager.scrollweaver.get_current_status()
+                                await websocket.send_json({
+                                    'type': 'status_update',
+                                    'data': status
+                                })
+                except Exception as e:
+                    print(f"Error moving character: {e}")
+                    import traceback
+                    traceback.print_exc()
+                    await websocket.send_json({
+                        'type': 'error',
+                        'data': {'message': f'移动角色时出错: {str(e)}'}
                     })
             else:
                 # Unknown message type

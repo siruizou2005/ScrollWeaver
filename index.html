@@ -27,13 +27,6 @@
             <button class="left-section-toggle" id="leftSectionToggle" aria-label="折叠左侧栏" title="折叠侧边栏">
                 <i class="fas fa-chevron-left"></i>
             </button>
-            <!-- 已选角色区域 -->
-            <div class="selected-character-section" id="selectedCharacterSection" style="display: none;">
-                <h3 class="selected-title">已选角色</h3>
-                <div class="selected-character-card" id="selectedCharacterCard">
-                    <!-- 选中的角色将显示在这里 -->
-                </div>
-            </div>
             <!-- 地图区域 -->
             <div class="map-section">
                 <h3 class="map-title" data-i18n="map">地图</h3>
@@ -111,6 +104,13 @@
             </div>
             <div class="right-content">
                 <div class="tab-panel active" id="status-panel">
+                    <!-- 已选角色区域 (从左侧栏移动到这里) -->
+                    <div class="selected-character-section" id="selectedCharacterSection" style="display: none;">
+                        <h3 class="selected-title">已选角色</h3>
+                        <div class="selected-character-card" id="selectedCharacterCard">
+                            <!-- 选中的角色将显示在这里 -->
+                        </div>
+                    </div>
                     <div class="status-container">
                         <div class="status-module" id="current-event">
                             <h3 data-i18n="currentEvent">当前事件</h3>
@@ -240,9 +240,47 @@
             </div>
         </div>
     </div>
+
+    <!-- 强制角色选择遮罩层 (进入页面后必须先选择角色) -->
+    <div id="character-select-overlay" class="fullscreen-overlay active" aria-hidden="false">
+        <div class="overlay-content character-select-content">
+            <div class="overlay-header">
+                <h2 class="overlay-title">选择你的角色</h2>
+                <p class="overlay-subtitle">请选择一个角色来开始你的故事之旅</p>
+            </div>
+            <div class="character-select-grid" id="characterSelectGrid">
+                <!-- 角色卡片将通过 JS 动态填充 -->
+                <div class="loading-placeholder">
+                    <div class="loading-spinner"></div>
+                    <p>正在加载角色...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 全屏地图遮罩层 (选择角色后选择目的地) -->
+    <div id="fullscreen-map-overlay" class="fullscreen-overlay" aria-hidden="true">
+        <div class="overlay-content fullscreen-map-content">
+            <div class="overlay-header">
+                <h2 class="overlay-title" id="mapOverlayTitle">选择目的地</h2>
+                <p class="overlay-subtitle" id="mapOverlaySubtitle">点击地图上的地点，让你的角色前往</p>
+            </div>
+            <div class="fullscreen-map-container" id="fullscreenMapContainer">
+                <!-- 全屏地图将由 JS 渲染 -->
+            </div>
+            <div class="map-legend" id="mapLegend">
+                <!-- 角色图例将动态生成 -->
+            </div>
+            <button class="overlay-back-btn" id="backToCharacterSelect">
+                <i class="fas fa-arrow-left"></i> 重新选择角色
+            </button>
+        </div>
+    </div>
+
     <script src="./frontend/js/i18n.js"></script>
     <script src="./frontend/js/sidebar-toggle.js"></script>
     <script src="./frontend/js/message.js"></script>
+    <script src="./frontend/js/character-first-flow.js"></script>
     <script src="./frontend/js/left-section/map-panel.js"></script>
     <script src="./frontend/js/left-section/profile-panel.js"></script>
     <script src="./frontend/js/right-section/api-panel.js"></script>
