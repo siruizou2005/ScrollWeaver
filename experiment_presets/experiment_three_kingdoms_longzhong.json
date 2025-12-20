@@ -1,0 +1,13 @@
+{
+    "experiment_subname": "longzhong",
+    "world_file_path": "./data/worlds/Romance_of_the_Three_Kingdoms/world_info.json",
+    "map_file_path": "./data/maps/Romance_of_the_Three_Kingdoms.csv",
+    "loc_file_path": "./data/locations/Romance_of_the_Three_Kingdoms.json",
+    "role_file_dir": "./data/roles/",
+    "performer_codes": ["zhugeliang-zh", "liubei-zh", "guanyu-zh", "zhangfei-zh"],
+    "intervention": "",
+    "script": "这是《三国演义》第三十七回'司马徽再荐名士 刘玄德三顾草庐'的场景。刘备三次拜访诸葛亮，最终在隆中卧龙岗的草庐中请出卧龙先生。",
+    "source": "Romance_of_the_Three_Kingdoms_Longzhong",
+    "language": "zh"
+}
+

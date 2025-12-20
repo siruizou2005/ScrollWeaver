@@ -138,8 +138,9 @@ function loadTimeDisplay() {
     if (!timeText) return;
 
     let timeString = '';
-    if (worldSource === 'A_Dream_in_Red_Mansions') {
-        // 红楼梦：古代时辰格式
+    const ancientWorlds = ['A_Dream_in_Red_Mansions', 'Romance_of_the_Three_Kingdoms', 'Romance_of_the_Three_Kingdoms_Longzhong'];
+    if (ancientWorlds.includes(worldSource)) {
+        // 古代时辰格式
         const shichen = ['子时', '丑时', '寅时', '卯时', '辰时', '巳时',
             '午时', '未时', '申时', '酉时', '戌时', '亥时'];
         const randomShichen = shichen[Math.floor(Math.random() * shichen.length)];
@@ -598,10 +599,22 @@ function createBuildingElement(building) {
     ].join(' ');
 
     polygon.setAttribute('points', points);
-    polygon.setAttribute('fill', 'transparent');
-    polygon.setAttribute('fill-opacity', '0');
-    polygon.setAttribute('stroke', 'transparent');
-    polygon.setAttribute('stroke-width', '0');
+    
+    // 如果是三国演义（隆中）或没有背景图，显示建筑物颜色
+    const showBuildingColor = worldSource !== 'A_Dream_in_Red_Mansions';
+    
+    if (showBuildingColor && color) {
+        polygon.setAttribute('fill', color);
+        polygon.setAttribute('fill-opacity', '0.6');
+        polygon.setAttribute('stroke', color);
+        polygon.setAttribute('stroke-width', '2');
+    } else {
+        polygon.setAttribute('fill', 'transparent');
+        polygon.setAttribute('fill-opacity', '0');
+        polygon.setAttribute('stroke', 'transparent');
+        polygon.setAttribute('stroke-width', '0');
+    }
+    
     polygon.setAttribute('class', 'building-polygon');
     polygon.setAttribute('data-building-name', building_name);
     polygon.setAttribute('data-building-description', description);
@@ -624,7 +637,39 @@ function createBuildingElement(building) {
 
     buildingGroup.appendChild(polygon);
 
-    // 不显示图标和名称（已隐藏）
+    // 如果不是红楼梦，显示图标和名称
+    if (worldSource !== 'A_Dream_in_Red_Mansions') {
+        const centerX = (sw.x + se.x + ne.x + nw.x) / 4;
+        const centerY = (sw.y + se.y + ne.y + nw.y) / 4;
+
+        // 添加图标
+        if (icon) {
+            const textIcon = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            textIcon.setAttribute('x', centerX);
+            textIcon.setAttribute('y', centerY);
+            textIcon.setAttribute('text-anchor', 'middle');
+            textIcon.setAttribute('dominant-baseline', 'middle');
+            textIcon.setAttribute('font-size', '20');
+            textIcon.setAttribute('class', 'building-icon');
+            textIcon.textContent = icon;
+            textIcon.style.pointerEvents = 'none'; // 确保不干扰点击
+            buildingGroup.appendChild(textIcon);
+        }
+
+        // 添加名称
+        const textName = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        textName.setAttribute('x', centerX);
+        textName.setAttribute('y', centerY + 20);
+        textName.setAttribute('text-anchor', 'middle');
+        textName.setAttribute('dominant-baseline', 'middle');
+        textName.setAttribute('font-size', '12');
+        textName.setAttribute('font-weight', 'bold');
+        textName.setAttribute('fill', '#3d2817');
+        textName.setAttribute('class', 'building-name');
+        textName.textContent = building_name;
+        textName.style.pointerEvents = 'none'; // 确保不干扰点击
+        buildingGroup.appendChild(textName);
+    }
 
     return buildingGroup;
 }
