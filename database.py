@@ -124,6 +124,19 @@ class Database:
             )
         ''')
         
+        # 人格模型表（Soulverse数字孪生）
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS persona_models (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                name TEXT NOT NULL,
+                profile TEXT NOT NULL,  -- JSON格式的人格画像数据
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            )
+        ''')
+        
         # 创建索引以提高查询性能
         cursor.execute('''
             CREATE INDEX IF NOT EXISTS idx_business_games_user_id ON business_games(user_id)
@@ -612,6 +625,89 @@ class Database:
                 'best_profit': round(result[1] or 0, 2),
                 'avg_profit': round(result[2] or 0, 2),
                 'total_profit_sum': round(result[3] or 0, 2)
+            }
+        return None
+    
+    def create_persona_model(self, user_id: int, name: str, profile: Dict) -> Optional[int]:
+        """创建人格模型"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        try:
+            profile_json = json.dumps(profile, ensure_ascii=False)
+            now = datetime.now().isoformat()
+            
+            cursor.execute('''
+                INSERT INTO persona_models (user_id, name, profile, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (user_id, name, profile_json, now, now))
+            
+            model_id = cursor.lastrowid
+            conn.commit()
+            conn.close()
+            return model_id
+        except Exception as e:
+            conn.rollback()
+            conn.close()
+            print(f"Error creating persona model: {e}")
+            return None
+    
+    def get_persona_models(self, user_id: int) -> List[Dict]:
+        """获取用户的所有人格模型"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            SELECT id, name, profile, created_at, updated_at
+            FROM persona_models
+            WHERE user_id = ?
+            ORDER BY created_at DESC
+        ''', (user_id,))
+        
+        results = cursor.fetchall()
+        conn.close()
+        
+        models = []
+        for result in results:
+            models.append({
+                'id': result[0],
+                'name': result[1],
+                'profile': json.loads(result[2]) if result[2] else {},
+                'created_at': result[3],
+                'updated_at': result[4]
+            })
+        
+        return models
+    
+    def get_persona_model(self, model_id: int, user_id: Optional[int] = None) -> Optional[Dict]:
+        """获取指定的人格模型"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        if user_id:
+            cursor.execute('''
+                SELECT id, user_id, name, profile, created_at, updated_at
+                FROM persona_models
+                WHERE id = ? AND user_id = ?
+            ''', (model_id, user_id))
+        else:
+            cursor.execute('''
+                SELECT id, user_id, name, profile, created_at, updated_at
+                FROM persona_models
+                WHERE id = ?
+            ''', (model_id,))
+        
+        result = cursor.fetchone()
+        conn.close()
+        
+        if result:
+            return {
+                'id': result[0],
+                'user_id': result[1],
+                'name': result[2],
+                'profile': json.loads(result[3]) if result[3] else {},
+                'created_at': result[4],
+                'updated_at': result[5]
             }
         return None
 

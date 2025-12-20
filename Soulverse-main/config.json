@@ -1,0 +1,25 @@
+{
+    "role_llm_name": "gemini-2.5-flash-lite",
+    "world_llm_name": "gemini-2.5-flash-lite",
+    "embedding_model_name":"bge-small",
+    "preset_path":"./experiment_presets/soulverse_sandbox.json",
+    "if_save": 0,
+    "scene_mode": 1,
+    "rounds": 10,
+    "save_dir": "",
+    "mode": "free",
+    "user_input_timeout": 60,
+    "user_input_timeout_warning_seconds": 10,
+    "user_input_timeout_reminder_intervals": [30, 15, 10],
+
+    "OPENAI_API_KEY":"sk-WumUMG1dMrQXMhidtYuWHq5Mv6DVtrN72LQfwQGMdzJIwErq",
+    "OPENAI_API_BASE":"https://www.chataiapi.com/v1",
+    "GEMINI_API_KEY":"AIzaSyDcy9hhWyFs6p-HUNcwH0KwbMir8svMbNM",
+    "ANTHROPIC_API_KEY":"",
+    "OPENROUTER_API_KEY":"",
+    "DASHSCOPE_API_KEY":"",
+    "DEEPSEEK_API_KEY":"",
+    "ARK_API_KEY":"",
+    "NOTE":"前端配置已禁用。请在服务器上编辑此文件并重启服务以应用新的模型或 API Key。"
+
+}

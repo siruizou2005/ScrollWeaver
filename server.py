@@ -11,7 +11,7 @@ import sqlite3
 from pathlib import Path
 from datetime import datetime
 from typing import Optional, Dict
-from sw_utils import is_image, load_json_file
+from sw_utils import is_image, load_json_file, get_models, json_parser
 from ScrollWeaver import ScrollWeaver
 from modules.utils.text_utils import remove_markdown
 from database import db
@@ -3643,6 +3643,421 @@ async def who_is_human_websocket_endpoint(websocket: WebSocket, game_id: str):
         print(f"Who is human game WebSocket error: {e}")
         import traceback
         traceback.print_exc()
+
+# ==================== Soulverse数字孪生相关API ====================
+
+@app.post("/api/generate-digital-twin-profile")
+async def generate_digital_twin_profile(request: Request, current_user: dict = Depends(get_current_user)):
+    """生成数字孪生完整画像"""
+    try:
+        data = await request.json()
+        
+        # 提取输入数据
+        mbti_type = data.get('mbti_type')
+        mbti_answers = data.get('mbti_answers', [])
+        big_five_answers = data.get('big_five_answers', [])
+        
+        # 新增 Phase 2 数据
+        defense_answers = data.get('defense_answers', [])
+        attachment_answers = data.get('attachment_answers', [])
+        values_order = data.get('values_order', [])
+        
+        chat_history = data.get('chat_history', '')
+        user_name = data.get('user_name', '')
+        relationship = data.get('relationship', '')
+        
+        # 1. 确定MBTI类型
+        final_mbti = mbti_type
+        if not final_mbti and mbti_answers:
+            # 计算MBTI（基于Likert量表，1-5分）
+            # 前端发送的mbti_answers是数值数组（1-5），需要根据题目维度计算
+            # 由于后端没有题目元数据，这里需要前端传递计算好的MBTI类型
+            # 或者前端在发送前已经计算好了
+            # 暂时跳过计算，等待前端传递
+            pass
+        elif not final_mbti:
+            # 如果没有MBTI类型，使用默认值
+            final_mbti = 'INTJ'
+            
+        # 2. 计算Big Five分数
+        big_five_scores = None
+        if big_five_answers:
+            scores = {
+                'openness': [], 
+                'conscientiousness': [], 
+                'extraversion': [], 
+                'agreeableness': [], 
+                'neuroticism': []
+            }
+            
+            for answer in big_five_answers:
+                if answer and isinstance(answer, dict) and 'dimension' in answer and 'value' in answer:
+                    dim = answer['dimension']
+                    try:
+                        val = float(answer['value'])
+                        
+                        # 处理反向计分 (1-5量表)
+                        if 'direction' in answer and int(answer.get('direction', 1)) == -1:
+                            val = 6 - val
+                            
+                        if dim in scores:
+                            scores[dim].append(val)
+                    except (ValueError, TypeError):
+                        continue
+            
+            big_five_scores = {}
+            for dim, values in scores.items():
+                if values:
+                    # 计算平均分 (1-5)
+                    avg = sum(values) / len(values)
+                    # 归一化到 0-1 (1->0, 5->1)
+                    normalized = (avg - 1) / 4
+                    big_five_scores[dim] = round(max(0.0, min(1.0, normalized)), 2)
+                else:
+                    big_five_scores[dim] = 0.5
+
+        # 3. 计算防御机制分数
+        defense_scores = {}
+        if defense_answers:
+            d_scores = {}
+            for answer in defense_answers:
+                if answer and isinstance(answer, dict) and 'dimension' in answer and 'value' in answer:
+                    dim = answer['dimension']
+                    try:
+                        val = float(answer['value'])
+                        if dim not in d_scores: 
+                            d_scores[dim] = []
+                        d_scores[dim].append(val)
+                    except (ValueError, TypeError):
+                        continue
+            
+            for dim, values in d_scores.items():
+                if values:
+                    defense_scores[dim] = round(sum(values) / len(values), 2)
+
+        # 4. 计算依恋风格分数
+        attachment_scores = {}
+        if attachment_answers:
+            a_scores = {}
+            for answer in attachment_answers:
+                if answer and isinstance(answer, dict) and 'dimension' in answer and 'value' in answer:
+                    dim = answer['dimension']
+                    try:
+                        val = float(answer['value'])
+                        if dim not in a_scores: 
+                            a_scores[dim] = []
+                        a_scores[dim].append(val)
+                    except (ValueError, TypeError):
+                        continue
+            
+            for dim, values in a_scores.items():
+                if values:
+                    attachment_scores[dim] = round(sum(values) / len(values), 2)
+        
+        # 5. 构建Prompt
+        prompt = "你是一位专业的数字孪生人格分析师。请基于以下所有信息，生成用户的完整人格画像。\n\n"
+        
+        # MBTI信息
+        prompt += "## 一、MBTI类型信息\n"
+        if mbti_type:
+            prompt += f"**用户自己选择的MBTI类型**: {mbti_type}\n**重要**: 这是用户自己确定的MBTI类型，你必须使用这个类型，不可更改。\n"
+        elif final_mbti:
+            prompt += f"**根据问卷计算的MBTI类型**: {final_mbti}\n"
+        else:
+            prompt += "**MBTI类型**: 未知\n"
+            
+        # 核心层信息
+        prompt += "\n## 二、核心层信息 (Big Five)\n"
+        if big_five_scores:
+            prompt += f"**Big Five评分**（基于问卷计算）: {json.dumps(big_five_scores, ensure_ascii=False, indent=2)}\n"
+        else:
+            prompt += "用户未完成核心层问卷。\n"
+
+        # 深层机制信息
+        prompt += "\n## 三、深层机制信息\n"
+        if defense_scores:
+            prompt += f"**防御机制倾向** (1-5分): {json.dumps(defense_scores, ensure_ascii=False, indent=2)}\n"
+            # 找出得分最高的防御机制
+            top_defense = max(defense_scores.items(), key=lambda x: x[1])[0] if defense_scores else "Unknown"
+            prompt += f"**主要防御机制**: {top_defense}\n"
+        else:
+            prompt += "用户未完成防御机制问卷。\n"
+
+        if attachment_scores:
+            prompt += f"**依恋风格倾向** (1-5分): {json.dumps(attachment_scores, ensure_ascii=False, indent=2)}\n"
+            # 找出得分最高的依恋风格
+            top_attachment = max(attachment_scores.items(), key=lambda x: x[1])[0] if attachment_scores else "Unknown"
+            prompt += f"**主要依恋风格**: {top_attachment}\n"
+        else:
+            prompt += "用户未完成依恋风格问卷。\n"
+
+        if values_order:
+            prompt += f"**价值观排序** (从最重要到最不重要): {', '.join(values_order)}\n"
+        else:
+            prompt += "用户未完成价值观排序。\n"
+
+        if not big_five_scores and not defense_scores and chat_history:
+             prompt += "**注意**: 由于缺乏问卷数据，请重点基于后续提供的聊天记录，推断用户的Big Five人格特征、价值观和防御机制。\n"
+                
+        # 聊天记录信息
+        prompt += "\n## 四、用户聊天记录\n"
+        if chat_history:
+            prompt += f"**用户名称**: {user_name}\n"
+            if relationship:
+                prompt += f"**聊天对象关系**: {relationship}\n"
+            
+            # 截取最近的聊天记录以避免超出token限制
+            truncated_history = chat_history[-10000:] if len(chat_history) > 10000 else chat_history
+            prompt += f"\n**聊天记录内容**:\n{truncated_history}\n\n"
+            
+            prompt += "**重要说明**:\n"
+            prompt += f"- 请识别出用户自己发送的消息（发送者为\"{user_name}\"的消息）\n"
+            prompt += "- 基于用户自己的消息，分析语言风格特征（表象层）\n"
+            prompt += "- 基于完整聊天记录，分析用户的性格特征\n"
+        else:
+            prompt += "用户未上传聊天记录。\n"
+            
+        # 生成要求
+        prompt += """
+\n## 五、分析与生成要求
+
+请按以下步骤进行思考 (Chain of Thought):
+1. **核心特质识别**: 结合MBTI、Big Five和价值观排序，构建用户的人格核心。
+2. **深层动力分析**: 
+   - 结合依恋风格和防御机制，分析用户在压力或亲密关系中的行为模式。
+   - 确保生成的 defense_mechanism 与问卷结果一致（如有）。
+   - 确保生成的 values 与用户的价值观排序一致（如有）。
+3. **一致性检验**: 如果有聊天记录，对比问卷结果和聊天风格是否一致。
+4. **语言风格设计**: 确保生成的语言风格（speaking_style）与人格特质高度匹配。
+
+请生成一个完整的JSON对象，包含以下所有字段：
+
+{
+  "core_traits": {
+    "mbti": "MBTI类型",
+    "big_five": {"openness": 0.5, "conscientiousness": 0.5, "extraversion": 0.5, "agreeableness": 0.5, "neuroticism": 0.5},
+    "values": ["价值观1", "价值观2", "价值观3"],
+    "defense_mechanism": "防御机制名称 (英文)",
+    "attachment_style": "依恋风格 (Secure/Anxious/Avoidant)"
+  },
+  "speaking_style": {
+    "sentence_length": "short/medium/long/mixed",
+    "vocabulary_level": "academic/casual/network/mixed",
+    "punctuation_habit": "minimal/standard/excessive/mixed",
+    "emoji_usage": {
+      "frequency": "none/low/medium/high",
+      "preferred": ["表情1", "表情2"],
+      "avoided": []
+    },
+    "catchphrases": ["口头禅1", "口头禅2"],
+    "tone_markers": ["语气词1", "语气词2"]
+  }
+}
+
+**重要规则**:
+1. **MBTI类型**: 必须使用确定的MBTI类型。
+2. **核心层数据**: 
+   - Big Five评分必须基于计算结果（如有）。
+   - values数组生成3-5个中文词汇，必须优先参考用户的价值观排序。
+   - defense_mechanism: 如果有问卷结果，必须使用得分最高的机制；否则从以下选择：Rationalization, Projection, Denial, Repression, Sublimation, Displacement, ReactionFormation, Humor, Intellectualization。
+   - attachment_style: 如果有问卷结果，必须使用得分最高的风格；否则根据分析推断。
+3. **表象层数据**: 
+   - 如果有聊天记录，必须深入分析生成speaking_style对象。
+   - 如果没有聊天记录，请根据MBTI和Big Five推断最可能的语言风格。
+4. **输出格式要求（非常重要）**:
+   - **只返回JSON对象，不要包含任何其他文本、思考过程、解释或markdown代码块标记**
+   - **不要包含"Chain of Thought"、"思考过程"或任何分析说明**
+   - **直接输出JSON，格式如下，不要有任何前缀或后缀文本**
+   - **确保JSON格式完全正确，可以直接被解析**
+
+请严格按照以上要求，只返回JSON对象。
+"""
+
+        # 4. 调用LLM
+        # 使用配置中的默认模型
+        model_name = config.get("role_llm_name", "gpt-3.5-turbo")
+        llm = get_models(model_name)
+        
+        # Async call to prevent blocking server
+        loop = asyncio.get_running_loop()
+        response = await loop.run_in_executor(None, llm.chat, prompt)
+        
+        # 5. 解析响应
+        try:
+            # 尝试清理markdown标记
+            cleaned_response = response.strip()
+            
+            # 移除markdown代码块标记
+            if cleaned_response.startswith("```json"):
+                cleaned_response = cleaned_response[7:]
+            elif cleaned_response.startswith("```"):
+                cleaned_response = cleaned_response[3:]
+            if cleaned_response.endswith("```"):
+                cleaned_response = cleaned_response[:-3]
+            cleaned_response = cleaned_response.strip()
+            
+            # 尝试提取JSON部分（查找最后一个完整的JSON对象）
+            import re
+            
+            # 方法1: 尝试直接解析
+            try:
+                profile_data = json.loads(cleaned_response)
+            except json.JSONDecodeError:
+                profile_data = None
+                
+                # 方法2: 查找包含core_traits的JSON块（最可靠的方法）
+                # 查找所有包含core_traits的JSON对象位置
+                core_traits_positions = []
+                for match in re.finditer(r'["\']?core_traits["\']?\s*:', cleaned_response):
+                    core_traits_positions.append(match.start())
+                
+                if core_traits_positions:
+                    # 从最后一个core_traits位置开始，向前找{，向后找匹配的}
+                    for pos in reversed(core_traits_positions):
+                        # 向前查找最近的{
+                        start_pos = cleaned_response.rfind('{', 0, pos)
+                        if start_pos != -1:
+                            # 从start_pos开始，使用平衡括号匹配找到完整的JSON
+                            bracket_count = 0
+                            end_pos = start_pos
+                            for i in range(start_pos, len(cleaned_response)):
+                                char = cleaned_response[i]
+                                if char == '{':
+                                    bracket_count += 1
+                                elif char == '}':
+                                    bracket_count -= 1
+                                    if bracket_count == 0:
+                                        end_pos = i
+                                        break
+                            
+                            if bracket_count == 0:
+                                json_str = cleaned_response[start_pos:end_pos+1]
+                                try:
+                                    profile_data = json.loads(json_str)
+                                    break
+                                except json.JSONDecodeError:
+                                    continue
+                
+                # 方法3: 如果方法2失败，查找最后一个完整的JSON对象（从最后一个{开始）
+                if profile_data is None:
+                    last_open_brace = cleaned_response.rfind('{')
+                    if last_open_brace != -1:
+                        bracket_count = 0
+                        end_pos = last_open_brace
+                        for i in range(last_open_brace, len(cleaned_response)):
+                            char = cleaned_response[i]
+                            if char == '{':
+                                bracket_count += 1
+                            elif char == '}':
+                                bracket_count -= 1
+                                if bracket_count == 0:
+                                    end_pos = i
+                                    break
+                        
+                        if bracket_count == 0:
+                            json_str = cleaned_response[last_open_brace:end_pos+1]
+                            try:
+                                profile_data = json.loads(json_str)
+                            except json.JSONDecodeError:
+                                pass
+                
+                # 方法4: 使用json_parser作为最后手段
+                if profile_data is None:
+                    profile_data = json_parser(cleaned_response)
+            
+            # 验证profile_data结构
+            if not isinstance(profile_data, dict):
+                raise ValueError("解析结果不是字典类型")
+            if 'core_traits' not in profile_data or 'speaking_style' not in profile_data:
+                raise ValueError("解析结果缺少必要字段")
+            
+            return {
+                "success": True,
+                "profile": profile_data
+            }
+        except Exception as e:
+            print(f"Error parsing LLM response: {e}")
+            print(f"Raw response (first 1000 chars): {response[:1000]}")
+            print(f"Raw response (last 1000 chars): {response[-1000:]}")
+            
+            # 尝试最后一次提取：查找包含core_traits的JSON
+            try:
+                import re
+                # 查找包含core_traits的JSON块
+                core_traits_pattern = r'\{[^{}]*"core_traits"[^{}]*(?:\{[^{}]*\}[^{}]*)*\}'
+                matches = re.findall(core_traits_pattern, response, re.DOTALL)
+                if matches:
+                    # 尝试解析最长的匹配
+                    longest_match = max(matches, key=len)
+                    profile_data = json.loads(longest_match)
+                    return {
+                        "success": True,
+                        "profile": profile_data
+                    }
+            except Exception as final_error:
+                print(f"Final extraction attempt failed: {final_error}")
+            
+            return {
+                "success": False,
+                "error": "生成失败，无法解析AI响应",
+                "detail": str(e),
+                "raw_response": response[:1000] if len(response) > 1000 else response
+            }
+            
+    except Exception as e:
+        print(f"Error in generate_digital_twin_profile: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/user/persona-model")
+async def save_persona_model(request: Request, current_user: dict = Depends(get_current_user)):
+    """保存人格模型"""
+    try:
+        data = await request.json()
+        name = data.get('name', f'数字孪生-{datetime.now().strftime("%Y%m%d-%H%M%S")}')
+        profile = data.get('profile')
+        
+        if not profile:
+            raise HTTPException(status_code=400, detail="profile不能为空")
+        
+        user_id = current_user['id']
+        model_id = db.create_persona_model(user_id, name, profile)
+        
+        if model_id:
+            return {
+                "success": True,
+                "model_id": model_id,
+                "id": model_id,
+                "message": "人格模型保存成功"
+            }
+        else:
+            raise HTTPException(status_code=500, detail="保存失败")
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error in save_persona_model: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/user/persona-models")
+async def get_persona_models(current_user: dict = Depends(get_current_user)):
+    """获取用户的所有人格模型"""
+    try:
+        user_id = current_user['id']
+        models = db.get_persona_models(user_id)
+        
+        return {
+            "success": True,
+            "models": models
+        }
+    except Exception as e:
+        print(f"Error in get_persona_models: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     uvicorn.run("server:app", host="0.0.0.0", port=8000, reload=True)

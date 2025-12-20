@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>选择穿越方式 - ScrollWeaver</title>
+    <link rel="stylesheet" href="../css/pages/crossworld-select.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="crossworld-select-container">
+        <!-- 顶部导航 -->
+        <header class="select-header">
+            <button class="back-btn" id="backBtn">
+                <i class="fas fa-arrow-left"></i>
+                <span>返回</span>
+            </button>
+            <h1 class="scroll-title" id="scrollTitle">选择穿越方式</h1>
+            <div class="header-spacer"></div>
+        </header>
+
+        <!-- 主要内容区域 - 左右分栏 -->
+        <div class="select-content">
+            <!-- 左侧：做自己 -->
+            <div class="select-left">
+                <section class="cross-option-section self-option">
+                    <div class="option-header">
+                        <div class="option-icon">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <h2>做自己</h2>
+                        <p class="option-subtitle">以真实身份进入世界</p>
+                    </div>
+                    
+                    <div class="option-description">
+                        <p>你将保持自己的身份和性格，在这个世界中自由探索和互动。可以选择真实身份参与，或使用Soulverse人格模型让AI代理你行动。</p>
+                    </div>
+
+                    <div class="self-modes">
+                        <!-- 真实身份模式 -->
+                        <div class="mode-option" id="selfRealMode">
+                            <div class="mode-icon">
+                                <i class="fas fa-user-circle"></i>
+                            </div>
+                            <div class="mode-info">
+                                <h3>真实身份</h3>
+                                <p>以你的真实身份参与，完全由你控制</p>
+                            </div>
+                            <div class="mode-arrow">
+                                <i class="fas fa-chevron-right"></i>
+                            </div>
+                        </div>
+
+                        <!-- Soulverse模式 -->
+                        <div class="mode-option" id="selfSoulverseMode">
+                            <div class="mode-icon">
+                                <i class="fas fa-robot"></i>
+                            </div>
+                            <div class="mode-info">
+                                <h3>Soulverse模式</h3>
+                                <p>使用AI人格模型代理行动，可随时接管</p>
+                            </div>
+                            <div class="mode-arrow">
+                                <i class="fas fa-chevron-right"></i>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- 右侧：魂穿 -->
+            <div class="select-right">
+                <section class="cross-option-section character-option">
+                    <div class="option-header">
+                        <div class="option-icon">
+                            <i class="fas fa-mask"></i>
+                        </div>
+                        <h2>魂穿</h2>
+                        <p class="option-subtitle">穿越到角色身上</p>
+                    </div>
+                    
+                    <div class="option-description">
+                        <p>选择一个角色，以该角色的身份和视角体验世界。你将拥有角色的记忆、性格和目标，完全沉浸在这个角色的故事中。</p>
+                    </div>
+
+                    <div class="characters-list" id="charactersList">
+                        <div class="characters-loading">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <p>加载角色中...</p>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <!-- 角色详情模态框 -->
+    <div class="character-detail-modal" id="characterDetailModal" style="display: none;">
+        <div class="modal-overlay" id="modalOverlay"></div>
+        <div class="modal-content">
+            <button class="modal-close" id="modalClose">
+                <i class="fas fa-times"></i>
+            </button>
+            <div class="character-detail-header">
+                <div class="character-detail-avatar" id="detailAvatar">
+                    <i class="fas fa-user"></i>
+                </div>
+                <div class="character-detail-title">
+                    <h2 id="detailName">角色名称</h2>
+                    <p id="detailNickname" class="character-nickname"></p>
+                </div>
+            </div>
+            <div class="character-detail-body">
+                <div class="detail-section">
+                    <h3><i class="fas fa-book-open"></i> 角色简介</h3>
+                    <div class="detail-content" id="detailProfile">加载中...</div>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-cancel" id="detailCancelBtn">取消</button>
+                <button class="btn-confirm" id="detailConfirmBtn">确认魂穿</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Soulverse模式选择模态框 -->
+    <div class="modal" id="soulverseModal" style="display: none;">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-robot"></i> 选择Soulverse人格模型</h2>
+                <span class="close" id="closeSoulverseModal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <p>请选择要使用的Soulverse人格模型：</p>
+                <select id="soulverseSelect" class="form-select">
+                    <option value="">加载中...</option>
+                </select>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-cancel" id="soulverseCancelBtn">取消</button>
+                <button class="btn-confirm" id="soulverseConfirmBtn">确认</button>
+            </div>
+        </div>
+    </div>
+
+    <link rel="stylesheet" href="../css/common/confirm-dialog.css">
+    <script src="../js/pages/crossworld-select.js"></script>
+</body>
+</html>
+

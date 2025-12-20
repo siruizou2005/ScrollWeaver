@@ -1,0 +1,12 @@
+{
+    "experiment_subname": "soulverse_1on1",
+    "world_file_path": "./data/worlds/soulverse_sandbox/general_1on1.json",
+    "map_file_path": "./data/maps/soulverse_map.csv",
+    "loc_file_path": "./data/locations/soulverse_locations.json",
+    "role_file_dir": "./data/roles/",
+    "performer_codes": [],
+    "intervention": "",
+    "script": "",
+    "source": "soulverse",
+    "language": "zh"
+}
