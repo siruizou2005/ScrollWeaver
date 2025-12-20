@@ -1,4 +1,12 @@
 // 世界地图页面脚本
+console.log('world-view.js 脚本开始加载...');
+
+// 全局错误处理
+window.onerror = function(msg, url, line, col, error) {
+    console.error('全局错误:', msg, 'at', url, ':', line);
+    // alert('页面加载出错: ' + msg); // 开发调试时开启
+    return false;
+};
 
 // 网格配置
 const GRID_COLS = 24;
@@ -17,54 +25,69 @@ let buildingCharactersMap = {}; // 建筑物代码 -> 角色列表的映射
 
 // 初始化地图
 async function initWorldMap() {
-    const mapContainer = document.getElementById('mapContainer');
-    const svg = document.getElementById('worldMap');
-    
-    if (!mapContainer || !svg) {
-        console.error('地图容器或SVG元素未找到');
-        return;
-    }
+    console.log('开始初始化地图...');
+    try {
+        const mapContainer = document.getElementById('mapContainer');
+        const svg = document.getElementById('worldMap');
+        
+        if (!mapContainer || !svg) {
+            console.error('地图容器或SVG元素未找到');
+            return;
+        }
 
-    // 获取容器尺寸
-    const containerWidth = mapContainer.clientWidth;
-    const containerHeight = mapContainer.clientHeight;
-    
-    // 设置SVG尺寸
-    svg.setAttribute('width', containerWidth);
-    svg.setAttribute('height', containerHeight);
-    svg.setAttribute('viewBox', `0 0 ${containerWidth} ${containerHeight}`);
+        // 获取容器尺寸
+        let containerWidth = mapContainer.clientWidth;
+        let containerHeight = mapContainer.clientHeight;
+        
+        // 兜底尺寸：如果由于某种原因尺寸为0，使用窗口尺寸或默认比例
+        if (containerWidth === 0 || containerHeight === 0) {
+            console.warn('地图容器尺寸异常(0)，尝试使用视口尺寸兜底');
+            containerWidth = window.innerWidth;
+            containerHeight = window.innerHeight;
+        }
+        
+        console.log(`初始化地图尺寸: ${containerWidth}x${containerHeight}`);
+        
+        // 设置SVG尺寸
+        svg.setAttribute('width', containerWidth);
+        svg.setAttribute('height', containerHeight);
+        svg.setAttribute('viewBox', `0 0 ${containerWidth} ${containerHeight}`);
 
-    // 计算每个格子的尺寸
-    cellWidth = containerWidth / GRID_COLS;
-    cellHeight = containerHeight / GRID_ROWS;
+        // 计算每个格子的尺寸
+        cellWidth = containerWidth / GRID_COLS;
+        cellHeight = containerHeight / GRID_ROWS;
 
-    // 先加载建筑物数据（需要在绘制网格前加载，以便网格能检测建筑物）
-    await loadAndDrawBuildings(svg);
-    
-    // 加载背景图片（需要在获取scroll_id后）
-    await loadBackgroundImage(svg, containerWidth, containerHeight);
-    
-    // 如果是session模式，加载时间显示（需要在获取worldSource后）
-    if (isSessionMode) {
-        loadTimeDisplay();
-    }
-    
-    // 绘制网格线（隐藏但保留用于调试）
-    drawGridLines(svg, containerWidth, containerHeight, cellWidth, cellHeight);
-    
-    // 绘制网格单元格（保留交互功能，会根据建筑物数据显示对应信息）
-    // 注意：在session模式下，grid cells不应该阻止建筑物的点击事件
-    drawGridCells(svg, containerWidth, containerHeight, cellWidth, cellHeight);
-    
-    // 绘制建筑物（透明多边形，仅用于交互）
-    // 必须在grid cells之后绘制，这样建筑物在上层，可以接收点击事件
-    drawBuildings(svg);
-    
-    // 如果是session模式，等待角色数据加载完成后绘制人物
-    if (isSessionMode) {
-        // 确保角色数据已加载
-        await loadBuildingCharacters();
-        drawCharacters(svg);
+        // 先加载建筑物数据（需要在绘制网格前加载，以便网格能检测建筑物）
+        await loadAndDrawBuildings(svg);
+        
+        // 加载背景图片（需要在获取scroll_id后）
+        await loadBackgroundImage(svg, containerWidth, containerHeight);
+        
+        // 如果是session模式，加载时间显示（需要在获取worldSource后）
+        if (isSessionMode) {
+            loadTimeDisplay();
+        }
+        
+        // 绘制网格线（隐藏但保留用于调试）
+        drawGridLines(svg, containerWidth, containerHeight, cellWidth, cellHeight);
+        
+        // 绘制网格单元格（保留交互功能，会根据建筑物数据显示对应信息）
+        // 注意：在session模式下，grid cells不应该阻止建筑物的点击事件
+        drawGridCells(svg, containerWidth, containerHeight, cellWidth, cellHeight);
+        
+        // 绘制建筑物（透明多边形，仅用于交互）
+        // 必须在grid cells之后绘制，这样建筑物在上层，可以接收点击事件
+        drawBuildings(svg);
+        
+        // 如果是session模式，等待角色数据加载完成后绘制人物
+        if (isSessionMode) {
+            // 确保角色数据已加载
+            await loadBuildingCharacters();
+            drawCharacters(svg);
+        }
+        console.log('地图初始化成功');
+    } catch (err) {
+        console.error('地图初始化发生错误:', err);
     }
 }
 
@@ -98,22 +121,9 @@ async function loadBuildingCharacters() {
     }
     
     try {
-        // 为每个建筑物获取角色列表
+        // 为每个建筑物使用模拟角色数据
         for (const building of buildingsData) {
-            try {
-                const response = await fetch(`/api/world/${sessionId}/location/${building.building_code}/characters`);
-                if (response.ok) {
-                    const data = await response.json();
-                    buildingCharactersMap[building.building_code] = data.characters || [];
-                } else {
-                    // 如果API不存在，使用模拟数据
-                    buildingCharactersMap[building.building_code] = getMockCharactersForBuilding(building.building_code);
-                }
-            } catch (error) {
-                console.warn(`获取建筑物 ${building.building_code} 的角色数据失败:`, error);
-                // 使用模拟数据
-                buildingCharactersMap[building.building_code] = getMockCharactersForBuilding(building.building_code);
-            }
+            buildingCharactersMap[building.building_code] = getMockCharactersForBuilding(building.building_code);
         }
     } catch (error) {
         console.error('加载建筑物角色数据时出错:', error);
@@ -238,9 +248,30 @@ function drawCharacters(svg) {
                 document.body.appendChild(nameTooltip);
                 
                 const rect = e.target.getBoundingClientRect();
-                nameTooltip.style.left = `${rect.left + rect.width / 2}px`;
-                nameTooltip.style.top = `${rect.top - 10}px`;
-                nameTooltip.style.transform = 'translate(-50%, -100%)';
+                const tooltipRect = nameTooltip.getBoundingClientRect();
+                const padding = 10;
+                
+                let left = rect.left + rect.width / 2;
+                let top = rect.top - 10;
+                let transformY = '-100%';
+
+                // 如果上方空间不足，改为向下弹出
+                if (rect.top - tooltipRect.height - padding < 0) {
+                    top = rect.bottom + 10;
+                    transformY = '0';
+                }
+
+                // 修正横向溢出
+                const halfWidth = tooltipRect.width / 2;
+                if (left - halfWidth < padding) {
+                    left = halfWidth + padding;
+                } else if (left + halfWidth > window.innerWidth - padding) {
+                    left = window.innerWidth - halfWidth - padding;
+                }
+
+                nameTooltip.style.left = `${left}px`;
+                nameTooltip.style.top = `${top}px`;
+                nameTooltip.style.transform = `translate(-50%, ${transformY})`;
             };
             
             const hideName = () => {
@@ -651,20 +682,30 @@ function showCharacterSelectModal(characters) {
         return;
     }
     
+    // 先关闭建筑物模态框
+    hideBuildingModal();
+    
     // 清空并填充角色列表
     list.innerHTML = '';
     characters.forEach(char => {
         const charItem = document.createElement('div');
         charItem.className = 'character-select-item';
+        const roleName = char.role_name || char.name || '未知角色';
+        const roleCode = char.role_code || char.code;
         charItem.innerHTML = `
             <div class="character-avatar">
-                <img src="/frontend/assets/images/default-icon.jpg" alt="${char.role_name}">
+                <img src="/frontend/assets/images/default-icon.jpg" alt="${roleName}" 
+                     onerror="this.src='/frontend/assets/images/default-icon.jpg'">
             </div>
-            <div class="character-name">${char.role_name}</div>
+            <div class="character-name">${roleName}</div>
         `;
         charItem.addEventListener('click', () => {
-            startChat(char.role_code);
-            hideCharacterSelectModal();
+            if (roleCode) {
+                startChat(roleCode);
+                hideCharacterSelectModal();
+            } else {
+                console.error('角色代码不存在:', char);
+            }
         });
         list.appendChild(charItem);
     });
@@ -732,11 +773,44 @@ function showBuildingTooltip(event, buildingName, description) {
     `;
     document.body.appendChild(tooltipElement);
 
-    // 定位提示框
+    // 智能定位逻辑：检测视口边界
     const rect = event.target.getBoundingClientRect();
-    tooltipElement.style.left = `${rect.left + rect.width / 2}px`;
-    tooltipElement.style.top = `${rect.top - 10}px`;
-    tooltipElement.style.transform = 'translate(-50%, -100%)';
+    const tooltipRect = tooltipElement.getBoundingClientRect();
+    const padding = 15;
+    const windowWidth = window.innerWidth;
+    const windowHeight = window.innerHeight;
+
+    let left = rect.left + rect.width / 2;
+    let top = rect.top - 10;
+    let transformY = '-100%'; // 默认向上弹出
+
+    // 1. 处理垂直方向溢出：如果上方空间不足，改为向下弹出
+    if (rect.top - tooltipRect.height - padding < 0) {
+        top = rect.bottom + 10;
+        transformY = '0';
+    }
+
+    // 2. 处理水平方向溢出：确保提示框不超出屏幕左右边缘
+    const halfWidth = tooltipRect.width / 2;
+    if (left - halfWidth < padding) {
+        // 太靠左
+        left = halfWidth + padding;
+    } else if (left + halfWidth > windowWidth - padding) {
+        // 太靠右
+        left = windowWidth - halfWidth - padding;
+    }
+
+    // 3. 处理玩家状态栏遮挡 (左上角区域)
+    // 玩家状态栏大约宽260px，高200px
+    if (left - halfWidth < 300 && top < 250 && transformY === '-100%') {
+        // 如果在左上角区域且向上弹出可能被遮挡，尝试向下弹出
+        top = rect.bottom + 10;
+        transformY = '0';
+    }
+
+    tooltipElement.style.left = `${left}px`;
+    tooltipElement.style.top = `${top}px`;
+    tooltipElement.style.transform = `translate(-50%, ${transformY})`;
 }
 
 // 隐藏建筑物提示
@@ -876,9 +950,30 @@ function showCellTooltip(event, row, col) {
 
     // 定位提示框
     const rect = event.target.getBoundingClientRect();
-    cellTooltipElement.style.left = `${rect.left + rect.width / 2}px`;
-    cellTooltipElement.style.top = `${rect.top - 10}px`;
-    cellTooltipElement.style.transform = 'translate(-50%, -100%)';
+    const tooltipRect = cellTooltipElement.getBoundingClientRect();
+    const padding = 10;
+    
+    let left = rect.left + rect.width / 2;
+    let top = rect.top - 10;
+    let transformY = '-100%';
+
+    // 如果上方空间不足，改为向下弹出
+    if (rect.top - tooltipRect.height - padding < 0) {
+        top = rect.bottom + 10;
+        transformY = '0';
+    }
+
+    // 修正横向溢出
+    const halfWidth = tooltipRect.width / 2;
+    if (left - halfWidth < padding) {
+        left = halfWidth + padding;
+    } else if (left + halfWidth > window.innerWidth - padding) {
+        left = window.innerWidth - halfWidth - padding;
+    }
+
+    cellTooltipElement.style.left = `${left}px`;
+    cellTooltipElement.style.top = `${top}px`;
+    cellTooltipElement.style.transform = `translate(-50%, ${transformY})`;
     
     // 单元格高亮
     const cell = event.target;
@@ -975,25 +1070,83 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // 设置进入世界模式
 function setupSessionMode() {
-    // 隐藏顶部导航
-    const header = document.getElementById('worldViewHeader');
-    if (header) {
-        header.style.display = 'none';
+    console.log('正在设置会话模式 UI...');
+    try {
+        // 隐藏顶部导航
+        const header = document.getElementById('worldViewHeader');
+        if (header) {
+            header.style.display = 'none';
+        }
+        
+        // 显示时间显示
+        const timeDisplay = document.getElementById('timeDisplay');
+        if (timeDisplay) {
+            timeDisplay.style.display = 'block';
+        }
+
+        // 显示玩家状态栏
+        const playerStatusBar = document.getElementById('playerStatusBar');
+        if (playerStatusBar) {
+            console.log('找到玩家状态栏元素，准备初始化');
+            playerStatusBar.style.display = 'flex';
+            // 不阻塞主流程
+            setTimeout(() => loadPlayerStatus(), 0);
+        }
+        
+        // 设置全屏样式
+        const container = document.getElementById('worldViewContainer');
+        if (container) {
+            container.classList.add('session-mode');
+        }
+        console.log('会话模式 UI 设置完成');
+    } catch (err) {
+        console.error('设置会话模式失败:', err);
     }
-    
-    // 显示时间显示
-    const timeDisplay = document.getElementById('timeDisplay');
-    if (timeDisplay) {
-        timeDisplay.style.display = 'block';
+}
+
+// 加载玩家状态
+async function loadPlayerStatus() {
+    try {
+        console.log('开始加载玩家状态...');
+        // 尝试从localStorage获取已选角色信息
+        const savedRole = localStorage.getItem('selected_role');
+        const playerNameEl = document.getElementById('playerName');
+        const playerIdentityEl = document.getElementById('playerIdentity');
+        const playerAvatarEl = document.getElementById('playerAvatar');
+
+        if (savedRole && savedRole !== 'undefined' && savedRole !== 'null') {
+            try {
+                const role = JSON.parse(savedRole);
+                if (playerNameEl) playerNameEl.textContent = role.name || role.nickname || '穿越者';
+                if (playerIdentityEl) playerIdentityEl.textContent = '已魂穿';
+                if (playerAvatarEl && role.avatar) {
+                    playerAvatarEl.innerHTML = `<img src="${role.avatar}" alt="玩家头像" onerror="this.src='../assets/images/default-icon.jpg'">`;
+                }
+            } catch (parseError) {
+                console.warn('解析localStorage中的selected_role失败:', parseError);
+                if (playerNameEl) playerNameEl.textContent = '测试玩家';
+            }
+        } else {
+            if (playerNameEl) playerNameEl.textContent = '测试玩家';
+            if (playerIdentityEl) playerIdentityEl.textContent = '临时访客';
+        }
+
+        // 模拟养成数值（实际可从后端获取）
+        updateStat('talent', Math.floor(Math.random() * 40) + 40); // 40-80
+        updateStat('bond', Math.floor(Math.random() * 30) + 20);   // 20-50
+        updateStat('energy', 100);
+        console.log('玩家状态加载完成');
+    } catch (e) {
+        console.error('加载玩家状态发生严重错误:', e);
     }
-    
-    // 设置全屏样式
-    const container = document.getElementById('worldViewContainer');
-    if (container) {
-        container.classList.add('session-mode');
-    }
-    
-    // 注意：时间显示和建筑物位置的角色数据将在initWorldMap中加载
+}
+
+// 更新养成数值UI
+function updateStat(type, value) {
+    const bar = document.getElementById(`${type}Bar`);
+    const val = document.getElementById(`${type}Val`);
+    if (bar) bar.style.width = `${value}%`;
+    if (val) val.textContent = value;
 }
 
 // 设置查看模式
