@@ -69,21 +69,32 @@ if (logo) {
     });
 }
 
-// 四象阵卡片点击跳转
+// 双模块卡片点击跳转
 document.getElementById('creationCard')?.addEventListener('click', () => {
     window.location.href = '/frontend/pages/creation.html';
 });
 
-document.getElementById('gatheringCard')?.addEventListener('click', () => {
-    window.location.href = '/frontend/pages/gathering.html';
+document.getElementById('crossworldCard')?.addEventListener('click', () => {
+    const modal = document.getElementById('crossworldModal');
+    if (modal) modal.classList.add('active');
 });
 
-document.getElementById('libraryCard')?.addEventListener('click', () => {
+// 弹窗内部关闭逻辑
+document.getElementById('closeCrossworldModal')?.addEventListener('click', () => {
+    document.getElementById('crossworldModal')?.classList.remove('active');
+});
+
+// 子模块跳转逻辑
+document.getElementById('gotoLibrary')?.addEventListener('click', () => {
     window.location.href = '/frontend/pages/library.html';
 });
 
-document.getElementById('exploreCard')?.addEventListener('click', () => {
+document.getElementById('gotoExplore')?.addEventListener('click', () => {
     window.location.href = '/frontend/pages/explore.html';
+});
+
+document.getElementById('gotoGathering')?.addEventListener('click', () => {
+    window.location.href = '/frontend/pages/gathering.html';
 });
 
 // 页面加载完成后初始化
