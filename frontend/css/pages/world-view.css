@@ -1,0 +1,317 @@
+/* 世界地图页面样式 */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Noto Serif SC', 'Inter', sans-serif;
+    background: linear-gradient(135deg, #f5f1e8 0%, #e8ddd4 50%, #f0ebe0 100%);
+    background-attachment: fixed;
+    height: 100vh;
+    overflow: hidden;
+    color: #3d2817;
+    position: relative;
+}
+
+/* 背景装饰 */
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image:
+        radial-gradient(circle at 20% 30%, rgba(139, 111, 71, 0.03) 0%, transparent 50%),
+        radial-gradient(circle at 80% 70%, rgba(107, 85, 55, 0.03) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+}
+
+.world-view-container {
+    max-width: 100%;
+    margin: 0 auto;
+    padding: 10px;
+    position: relative;
+    z-index: 1;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* 顶部导航 */
+.world-view-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 20px;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 12px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+    margin-bottom: 10px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(212, 196, 176, 0.3);
+    opacity: 0;
+    transform: translateY(-20px);
+    animation: fadeInDown 0.6s ease-out forwards;
+    flex-shrink: 0;
+}
+
+@keyframes fadeInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.back-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 24px;
+    background: linear-gradient(135deg, #8b6f47 0%, #6b5537 100%);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 500;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 12px rgba(139, 111, 71, 0.2);
+}
+
+.back-btn:hover {
+    background: linear-gradient(135deg, #6b5537 0%, #5a4630 100%);
+    transform: translateX(-4px);
+    box-shadow: 0 6px 20px rgba(139, 111, 71, 0.3);
+}
+
+.back-btn:active {
+    transform: translateX(-2px);
+}
+
+.world-map-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: #3d2817;
+    text-align: center;
+    flex: 1;
+    letter-spacing: 2px;
+    text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.8);
+}
+
+.header-actions {
+    width: 120px; /* 与返回按钮宽度保持一致，保持居中 */
+}
+
+/* 地图区域 */
+.map-section {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0 10px 10px 10px;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.map-container {
+    width: 100%;
+    height: 100%;
+    max-width: 100%;
+    aspect-ratio: 24 / 12;
+    background: #fdfaf5;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1),
+                0 4px 16px rgba(0, 0, 0, 0.05);
+    border: 2px solid rgba(139, 69, 19, 0.15);
+    overflow: hidden;
+    position: relative;
+    background-image: 
+        radial-gradient(circle at 30% 40%, rgba(139, 111, 71, 0.05) 0%, transparent 50%),
+        radial-gradient(circle at 70% 60%, rgba(107, 85, 55, 0.05) 0%, transparent 50%);
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+/* 动态背景图片 */
+.map-container.has-background {
+    background-color: transparent;
+}
+
+.world-map-svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+    position: relative;
+    z-index: 1;
+}
+
+/* 确保背景图片在SVG下方 */
+.map-container.has-background .world-map-svg {
+    background: transparent;
+}
+
+/* 背景图片样式 */
+.map-background-image {
+    pointer-events: none;
+}
+
+.background-image-group {
+    pointer-events: none;
+}
+
+/* 网格线样式 - 隐藏但保留用于调试 */
+.grid-line {
+    stroke: transparent;
+    stroke-width: 0;
+    vector-effect: non-scaling-stroke;
+    display: none;
+}
+
+/* 网格单元格样式 - 隐藏边框但保留交互 */
+.grid-cell {
+    fill: transparent;
+    stroke: transparent;
+    stroke-width: 0;
+    cursor: pointer;
+    transition: fill 0.2s ease;
+}
+
+.grid-cell:hover {
+    fill: rgba(139, 111, 71, 0.15);
+}
+
+/* 建筑物样式 - 完全隐藏，仅保留交互 */
+.building-polygon {
+    cursor: pointer;
+    fill: transparent !important;
+    stroke: transparent !important;
+    opacity: 0;
+    pointer-events: all; /* 确保可以接收鼠标事件 */
+}
+
+.building-polygon:hover {
+    /* 悬停时不改变外观，只触发提示 */
+}
+
+.building-icon {
+    display: none;
+    pointer-events: none;
+    user-select: none;
+}
+
+.building-name {
+    display: none;
+    pointer-events: none;
+    user-select: none;
+}
+
+/* 建筑物提示框 */
+.building-tooltip {
+    position: fixed;
+    background: rgba(255, 252, 245, 0.98);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 2px solid rgba(139, 69, 19, 0.3);
+    border-radius: 12px;
+    padding: 16px 20px;
+    box-shadow: 0 12px 30px rgba(107, 68, 35, 0.2),
+                0 4px 10px rgba(0, 0, 0, 0.1);
+    font-family: 'Noto Serif SC', serif;
+    color: #3e2723;
+    min-width: 200px;
+    max-width: 300px;
+    z-index: 10000;
+    pointer-events: none;
+    animation: fadeInTooltip 0.2s ease-out;
+}
+
+@keyframes fadeInTooltip {
+    from {
+        opacity: 0;
+        transform: translate(-50%, -90%);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, -100%);
+    }
+}
+
+.tooltip-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #5d4037;
+    margin-bottom: 8px;
+    border-bottom: 1px solid rgba(139, 69, 19, 0.2);
+    padding-bottom: 6px;
+}
+
+.tooltip-description {
+    font-size: 13px;
+    line-height: 1.6;
+    color: #6b5537;
+}
+
+/* 单元格提示框样式 */
+.cell-tooltip {
+    position: fixed;
+    background: rgba(255, 252, 245, 0.95);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(139, 69, 19, 0.3);
+    border-radius: 8px;
+    padding: 8px 12px;
+    box-shadow: 0 4px 12px rgba(107, 68, 35, 0.15);
+    font-family: 'Noto Serif SC', serif;
+    color: #3e2723;
+    font-size: 12px;
+    z-index: 10000;
+    pointer-events: none;
+    white-space: nowrap;
+    animation: fadeInTooltip 0.2s ease-out;
+}
+
+.tooltip-content {
+    font-weight: 500;
+    color: #5d4037;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .world-view-container {
+        padding: 10px;
+    }
+
+    .world-view-header {
+        padding: 15px 20px;
+        margin-bottom: 15px;
+    }
+
+    .world-map-title {
+        font-size: 22px;
+    }
+
+    .back-btn {
+        padding: 10px 16px;
+        font-size: 14px;
+    }
+
+    .back-btn span {
+        display: none;
+    }
+
+    .map-section {
+        padding: 10px;
+    }
+}
+

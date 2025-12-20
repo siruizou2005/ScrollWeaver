@@ -47,6 +47,11 @@ for key in ['OPENAI_API_BASE', 'GEMINI_API_BASE', 'OPENROUTER_BASE_URL']:
 static_file_abspath = os.path.abspath(os.path.join(os.path.dirname(__file__), 'frontend'))
 app.mount("/frontend", StaticFiles(directory=static_file_abspath), name="frontend")
 
+# 添加map-pic静态文件服务
+map_pic_abspath = os.path.abspath(os.path.join(os.path.dirname(__file__), 'map-pic'))
+if os.path.exists(map_pic_abspath):
+    app.mount("/map-pic", StaticFiles(directory=map_pic_abspath), name="map-pic")
+
 # 预设文件目录
 PRESETS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'experiment_presets')
 
@@ -717,17 +722,21 @@ async def get_game():
 async def get_file(full_path: str):
     # 可以设置多个基础路径
     base_paths = [
-        Path("/data/")
+        Path("data/")  # 相对路径，从项目根目录开始
     ]
     
     for base_path in base_paths:
         file_path = base_path / full_path
         if file_path.exists() and file_path.is_file():
             return FileResponse(file_path)
-        else:
-            return FileResponse(default_icon_path)
     
-    raise HTTPException(status_code=404, detail="File not found")
+    # 如果文件不存在，检查是否是背景图片请求
+    # 如果是背景图片（maps/*/background.png），返回404而不是默认图标
+    if 'maps' in full_path and 'background.png' in full_path:
+        raise HTTPException(status_code=404, detail="Background image not found")
+    
+    # 其他文件不存在时，返回默认图标（用于头像等）
+    return FileResponse(default_icon_path)
 
 @app.get("/api/list-presets")
 async def list_presets():
@@ -1570,6 +1579,17 @@ async def get_scroll_for_intro(scroll_id: int):
         scroll = db.get_scroll(scroll_id)
         if not scroll:
             raise HTTPException(status_code=404, detail="书卷不存在")
+        
+        # 如果scroll中没有source字段，尝试从preset_path读取
+        if not scroll.get('source') and scroll.get('preset_path'):
+            try:
+                preset_path = scroll.get('preset_path')
+                if os.path.exists(preset_path):
+                    preset_data = load_json_file(preset_path)
+                    scroll['source'] = preset_data.get('source', '')
+            except Exception as e:
+                print(f"Error loading source from preset: {e}")
+        
         return scroll
     except HTTPException:
         raise
@@ -1588,6 +1608,55 @@ async def get_scroll(scroll_id: int):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/scrolls/{scroll_id}/map-buildings")
+async def get_map_buildings(scroll_id: str):
+    """获取指定书卷的地图建筑物数据"""
+    try:
+        # 尝试将scroll_id转换为int（如果可能）
+        try:
+            scroll_id_int = int(scroll_id)
+            scroll = db.get_scroll(scroll_id_int)
+        except (ValueError, TypeError):
+            # 如果转换失败，尝试作为字符串ID查找
+            scroll = db.get_scroll_by_id(scroll_id)
+        
+        if not scroll:
+            raise HTTPException(status_code=404, detail="书卷不存在")
+        
+        # 根据书卷的source名称查找对应的建筑物文件
+        source_name = scroll.get('source', '')
+        if not source_name:
+            # 尝试从preset_path获取source名称
+            preset_path = scroll.get('preset_path', '')
+            if preset_path:
+                # 从preset文件读取source
+                try:
+                    preset_data = load_json_file(preset_path)
+                    source_name = preset_data.get('source', '')
+                except Exception as e:
+                    print(f"Error loading preset file {preset_path}: {e}")
+        
+        if not source_name:
+            print(f"Warning: No source name found for scroll {scroll_id}")
+            return {"buildings": []}
+        
+        buildings_file = f"data/maps/{source_name}_buildings.json"
+        
+        if os.path.exists(buildings_file):
+            buildings_data = load_json_file(buildings_file)
+            return buildings_data
+        else:
+            # 如果没有找到对应的建筑物文件，返回空数据
+            print(f"Warning: Buildings file not found: {buildings_file}")
+            return {"buildings": []}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error loading map buildings: {e}")
+        import traceback
+        traceback.print_exc()
+        return {"buildings": []}
 
 @app.post("/api/scrolls")
 async def create_scroll_simple(request: Request, current_user: dict = Depends(get_current_user)):

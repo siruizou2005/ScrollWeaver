@@ -338,21 +338,24 @@ document.addEventListener('DOMContentLoaded', () => {
 function bindEventListeners() {
     // 返回按钮
     document.getElementById('backBtn').addEventListener('click', () => {
-        // 保存当前URL用于检测是否成功返回
-        const currentUrl = window.location.href;
-        
         // 检查是否有来源页面（referrer）
         const referrer = document.referrer;
         const currentOrigin = window.location.origin;
         
-        // 如果有来源页面且来源页面在当前域名下，且不是当前页面本身
+        // 如果有来源页面且来源页面在当前域名下
         if (referrer && referrer.startsWith(currentOrigin)) {
             try {
                 const referrerUrl = new URL(referrer);
                 const referrerPath = referrerUrl.pathname;
                 const currentPath = window.location.pathname;
                 
-                // 如果来源页面不是当前页面，直接返回上一页
+                // 如果来源页面是地图页，跳转到广场页而不是返回地图页
+                if (referrerPath.includes('world-view.html')) {
+                    window.location.href = '/frontend/pages/plaza.html';
+                    return;
+                }
+                
+                // 如果来源页面不是当前页面，且不是地图页，直接返回上一页
                 if (referrerPath !== currentPath) {
                     window.history.back();
                     return;
@@ -362,25 +365,8 @@ function bindEventListeners() {
             }
         }
         
-        // 如果没有有效的来源页面，尝试返回历史记录
-        // 监听popstate事件来检测是否成功返回
-        let hasReturned = false;
-        const handlePopState = () => {
-            hasReturned = true;
-            window.removeEventListener('popstate', handlePopState);
-        };
-        window.addEventListener('popstate', handlePopState);
-        
-        // 尝试返回
-        window.history.back();
-        
-        // 如果200ms后还在当前页面，说明没有历史记录，跳转到广场页
-        setTimeout(() => {
-            if (!hasReturned && window.location.href === currentUrl) {
-                window.removeEventListener('popstate', handlePopState);
-                window.location.href = '/frontend/pages/plaza.html';
-            }
-        }, 200);
+        // 如果没有有效的来源页面，或者来源页面是当前页面，跳转到广场页
+        window.location.href = '/frontend/pages/plaza.html';
     });
 
     // 共享按钮
