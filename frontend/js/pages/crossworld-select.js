@@ -194,9 +194,11 @@ function bindEventListeners() {
         window.history.back();
     });
 
-    // 真实身份模式
+    // 真实身份模式 - 显示名字输入弹窗
     document.getElementById('selfRealMode').addEventListener('click', () => {
-        createWorldSession('self');
+        document.getElementById('realIdentityModal').style.display = 'flex';
+        document.getElementById('realIdentityName').value = '';
+        document.getElementById('realIdentityName').focus();
     });
 
     // Soulverse模式 - 跳转到创建页面
@@ -251,6 +253,130 @@ function bindEventListeners() {
             alert('请选择一个人格模型');
         }
     });
+
+    // 真实身份模态框
+    document.getElementById('closeRealIdentityModal').addEventListener('click', () => {
+        document.getElementById('realIdentityModal').style.display = 'none';
+    });
+
+    document.getElementById('realIdentityBackdrop').addEventListener('click', () => {
+        document.getElementById('realIdentityModal').style.display = 'none';
+    });
+
+    document.getElementById('realIdentityCancelBtn').addEventListener('click', () => {
+        document.getElementById('realIdentityModal').style.display = 'none';
+    });
+
+    document.getElementById('realIdentityConfirmBtn').addEventListener('click', async () => {
+        const name = document.getElementById('realIdentityName').value.trim();
+        if (!name) {
+            alert('请输入你的名字');
+            return;
+        }
+
+        // 创建简单用户agent并进入世界
+        await createRealIdentityAndEnterWorld(name);
+    });
+
+    // 回车键确认
+    document.getElementById('realIdentityName').addEventListener('keypress', async (e) => {
+        if (e.key === 'Enter') {
+            const name = document.getElementById('realIdentityName').value.trim();
+            if (name) {
+                await createRealIdentityAndEnterWorld(name);
+            }
+        }
+    });
+}
+
+/**
+ * 创建真实身份用户agent并进入世界
+ * 使用默认的人格参数，只需要用户输入名字
+ */
+async function createRealIdentityAndEnterWorld(name) {
+    try {
+        // 显示加载状态
+        const confirmBtn = document.getElementById('realIdentityConfirmBtn');
+        const originalText = confirmBtn.textContent;
+        confirmBtn.textContent = '创建中...';
+        confirmBtn.disabled = true;
+
+        // 1. 创建简单的用户agent（使用默认值）
+        const createResponse = await fetch('/api/self-identity/create', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                scroll_id: parseInt(scrollId),
+                mbti: 'INFP',  // 默认MBTI
+                big_five: {    // 默认Big Five（平均值）
+                    openness: 0.5,
+                    conscientiousness: 0.5,
+                    extraversion: 0.5,
+                    agreeableness: 0.5,
+                    neuroticism: 0.5
+                },
+                identity: '旅行者',  // 默认身份
+                goal: '探索这个神奇的世界',  // 默认目标
+                nickname: name   // 用户输入的名字
+            })
+        });
+
+        if (!createResponse.ok) {
+            const errorData = await createResponse.json().catch(() => ({ detail: '创建失败' }));
+            throw new Error(errorData.detail || '创建用户失败');
+        }
+
+        const createData = await createResponse.json();
+        const roleCode = createData.role_code;
+
+        // 2. 创建世界会话
+        const sessionResponse = await fetch('/api/crossworld/create-session', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                scroll_id: parseInt(scrollId),
+                cross_type: 'self',
+                character_code: roleCode
+            })
+        });
+
+        if (!sessionResponse.ok) {
+            const errorData = await sessionResponse.json().catch(() => ({ detail: '创建会话失败' }));
+            throw new Error(errorData.detail || '创建会话失败');
+        }
+
+        const sessionData = await sessionResponse.json();
+        const sessionId = sessionData.session_id;
+
+        // 3. 保存角色信息到localStorage
+        localStorage.setItem('selected_role', JSON.stringify({
+            code: roleCode,
+            name: name,
+            nickname: name,
+            identity: '旅行者',
+            goal: '探索这个神奇的世界',
+            avatar: '../assets/images/default-icon.jpg'
+        }));
+
+        // 4. 隐藏弹窗并跳转
+        document.getElementById('realIdentityModal').style.display = 'none';
+        window.location.href = `/frontend/pages/world-view.html?session_id=${sessionId}&scroll_id=${scrollId}`;
+
+    } catch (error) {
+        console.error('创建真实身份失败:', error);
+        alert('进入世界失败: ' + error.message);
+
+        // 恢复按钮状态
+        const confirmBtn = document.getElementById('realIdentityConfirmBtn');
+        confirmBtn.textContent = '进入世界';
+        confirmBtn.disabled = false;
+    }
 }
 
 /**
