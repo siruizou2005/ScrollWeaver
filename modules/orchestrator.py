@@ -254,9 +254,16 @@ class Orchestrator:
             "event":event,
             "world_description":self.description
         })
-        response = self.llm.chat(prompt)
-        self.record(detail = response,prompt = prompt)
-        return "\n"+response
+        try:
+            response = self.llm.chat(prompt)
+            self.record(detail = response,prompt = prompt)
+            return "\n"+response
+        except Exception as e:
+            print(f"[Orchestrator] generate_location_prologue 失败: {e}")
+            location_name = self.locations_info[location_code]["location_name"]
+            default_response = f"场景转至{location_name}..." if self.language == "zh" else f"The scene shifts to {location_name}..."
+            self.record(detail=default_response, prompt=prompt)
+            return "\n"+default_response
     
     def generate_soul_trans_prologue(self, 
                                      role_name, 
@@ -277,9 +284,25 @@ class Orchestrator:
             "motivation": motivation,
             "other_roles": other_roles_text
         })
-        response = self.llm.chat(prompt)
-        self.record(detail=response, prompt=prompt)
-        return response
+        
+        try:
+            response = self.llm.chat(prompt)
+            self.record(detail=response, prompt=prompt)
+            return response
+        except Exception as e:
+            print(f"[Orchestrator] generate_soul_trans_prologue 失败: {e}")
+            # 返回默认的觉醒描述
+            default_response = (
+                f"意识从虚无中苏醒，你发现自己置身于{location_name}。"
+                f"作为{role_name}，你感到一种陌生又熟悉的感觉涌上心头。"
+                f"周围的一切开始变得清晰..."
+            ) if self.language == "zh" else (
+                f"Consciousness awakens from the void. You find yourself in {location_name}. "
+                f"As {role_name}, a strange yet familiar feeling washes over you. "
+                f"Everything around you begins to come into focus..."
+            )
+            self.record(detail=default_response, prompt=prompt)
+            return default_response
     
     def enviroment_interact(self, 
                             action_maker_name: str, 

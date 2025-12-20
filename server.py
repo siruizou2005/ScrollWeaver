@@ -910,6 +910,65 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                                     if hasattr(manager.scrollweaver, 'server') and manager.scrollweaver.server:
                                         server = manager.scrollweaver.server
                                         if hasattr(server, 'performers'):
+                                            # 检查是否有用户自定义agent（role_code以user_开头）
+                                            for role_code in role_codes:
+                                                if role_code.startswith('user_') and role_code not in server.performers:
+                                                    # 尝试加载用户agent
+                                                    try:
+                                                        user_agents_dir = os.path.join(os.path.dirname(__file__), "modules", "data", "user_agents")
+                                                        user_agent_file = os.path.join(user_agents_dir, f"{role_code}.json")
+                                                        
+                                                        # 也尝试另一个可能的路径
+                                                        if not os.path.exists(user_agent_file):
+                                                            user_agents_dir = os.path.join(os.path.dirname(__file__), "data", "user_agents")
+                                                            user_agent_file = os.path.join(user_agents_dir, f"{role_code}.json")
+                                                        
+                                                        if os.path.exists(user_agent_file):
+                                                            with open(user_agent_file, 'r', encoding='utf-8') as f:
+                                                                user_agent_info = json.load(f)
+                                                            
+                                                            print(f"[Init] 加载用户agent: {role_code}")
+                                                            
+                                                            # 创建ScrollWeaverUserAgent实例
+                                                            from modules.scrollweaver_user_agent import ScrollWeaverUserAgent
+                                                            
+                                                            # 获取world_file_path
+                                                            world_file_path = ""
+                                                            if hasattr(server, 'orchestrator') and hasattr(server.orchestrator, 'world_info'):
+                                                                # 尝试从orchestrator获取
+                                                                world_file_path = server.orchestrator.world_info.get('world_file_path', '')
+                                                            if not world_file_path:
+                                                                # 使用默认路径
+                                                                world_file_path = os.path.join(os.path.dirname(__file__), "data", "worlds", "default_world.json")
+                                                            
+                                                            user_agent = ScrollWeaverUserAgent(
+                                                                user_id=str(user_agent_info.get('user_id', role_code)),
+                                                                role_code=role_code,
+                                                                world_file_path=world_file_path,
+                                                                mbti=user_agent_info.get('mbti', 'INTJ'),
+                                                                big_five=user_agent_info.get('big_five', {}),
+                                                                identity=user_agent_info.get('identity', '旅行者'),
+                                                                goal=user_agent_info.get('goal', '探索世界'),
+                                                                nickname=user_agent_info.get('nickname', '用户'),
+                                                                language=server.language if hasattr(server, 'language') else 'zh',
+                                                                llm_name=config.get("role_llm_name", "gemini-2.5-flash")
+                                                            )
+                                                            
+                                                            # 添加到performers
+                                                            server.performers[role_code] = user_agent
+                                                            
+                                                            # 添加到role_codes列表
+                                                            if role_code not in server.role_codes:
+                                                                server.role_codes.append(role_code)
+                                                            
+                                                            print(f"[Init] 用户agent {role_code} 已加入performers")
+                                                        else:
+                                                            print(f"[Init] 用户agent文件不存在: {user_agent_file}")
+                                                    except Exception as e:
+                                                        print(f"[Init] 加载用户agent失败: {e}")
+                                                        import traceback
+                                                        traceback.print_exc()
+                                            
                                             # 过滤有效角色
                                             valid_role_codes = [code for code in role_codes if code in server.performers]
                                             

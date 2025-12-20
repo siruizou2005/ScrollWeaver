@@ -63,6 +63,7 @@ body::before {
         opacity: 0;
         transform: translateY(-20px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
@@ -105,7 +106,8 @@ body::before {
 }
 
 .header-spacer {
-    width: 120px; /* 与返回按钮宽度平衡 */
+    width: 120px;
+    /* 与返回按钮宽度平衡 */
 }
 
 /* 主要内容区域 */
@@ -123,6 +125,7 @@ body::before {
     from {
         opacity: 0;
     }
+
     to {
         opacity: 1;
     }
@@ -762,6 +765,93 @@ body::before {
     background: rgba(255, 255, 255, 0.8);
 }
 
+/* 通用模态框样式 */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+}
+
+.modal .modal-content {
+    position: relative;
+    max-width: 450px;
+    width: 90%;
+    background: linear-gradient(to bottom, #faf8f3 0%, #f5f1e8 100%);
+    border: 2px solid rgba(212, 175, 55, 0.3);
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    z-index: 1001;
+}
+
+/* 真实身份模态框 */
+#realIdentityModal .modal-header {
+    padding: 24px 24px 16px;
+    border-bottom: 2px solid rgba(212, 196, 176, 0.3);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+#realIdentityModal .modal-header h2 {
+    font-size: 20px;
+    font-weight: 700;
+    color: #6b5537;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+}
+
+#realIdentityModal .modal-header h2 i {
+    color: #8b6f47;
+}
+
+#realIdentityModal .close {
+    font-size: 28px;
+    color: #a08060;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+#realIdentityModal .close:hover {
+    color: #6b5537;
+}
+
+#realIdentityModal .modal-body {
+    padding: 24px;
+}
+
+#realIdentityModal .modal-body p {
+    color: #6b5537;
+    margin: 0;
+}
+
+#realIdentityModal .modal-actions {
+    padding: 16px 24px 24px;
+    border-top: 2px solid rgba(212, 196, 176, 0.3);
+    background: rgba(255, 255, 255, 0.8);
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    border-radius: 0 0 14px 14px;
+}
+
 /* 响应式设计 */
 @media (max-width: 1024px) {
     .select-content {
@@ -825,5 +915,3 @@ body::before {
         padding: 20px;
     }
 }
-
-

@@ -73,6 +73,38 @@ class StateManager:
                 location_info_text += f"【{location_name}】：" + role_names + "；"
         return location_info_text
     
+    def get_location_info_text(self, location_code: str) -> str:
+        """Get detailed information for a single location.
+        
+        Args:
+            location_code: The code of the location
+            
+        Returns:
+            Text describing the location with name, description, and current roles
+        """
+        if location_code not in self.orchestrator.locations_info:
+            return ""
+        
+        location_name = self.orchestrator.find_location_name(location_code)
+        location_data = self.orchestrator.locations_info[location_code]
+        description = location_data.get("description", "")
+        detail = location_data.get("detail", description)
+        
+        # 获取当前在这个地点的角色
+        roles_at_location = [
+            self.performers[code].role_name 
+            for code in self.role_codes 
+            if self.performers[code].location_code == location_code
+        ]
+        roles_text = ", ".join(roles_at_location) if roles_at_location else ("无人" if self.language == "zh" else "No one")
+        
+        if self.language == "zh":
+            info_text = f"【{location_name}】\n{detail}\n目前在这里的角色：{roles_text}"
+        else:
+            info_text = f"【{location_name}】\n{detail}\nRoles currently here: {roles_text}"
+        
+        return info_text
+    
     def find_group(self, role_code: str) -> List[str]:
         """Find group of roles at the same location."""
         return [code for code in self.role_codes if self.performers[code].location_code == self.performers[role_code].location_code]

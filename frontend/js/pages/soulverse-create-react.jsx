@@ -76,6 +76,7 @@
     const [selectedIdentity, setSelectedIdentity] = useState('');
     const [customIdentity, setCustomIdentity] = useState('');
     const [loadingIdentity, setLoadingIdentity] = useState(false);
+    const [userName, setUserName] = useState(''); // 用户自定义角色名
 
     // 目标选择状态 (新增)
     const [goalSuggestions, setGoalSuggestions] = useState([]);
@@ -218,6 +219,7 @@
         const identity = selectedIdentity || customIdentity;
         const goal = selectedGoal || customGoal;
         const bigFive = calculateBigFive();
+        const nickname = userName || '无名'; // 使用用户输入的名字
 
         const result = await scrollWeaverAPI.createUserAgent(
           scrollId,
@@ -225,7 +227,7 @@
           bigFive,
           identity,
           goal,
-          null // nickname使用默认
+          nickname // 传递用户输入的名字
         );
 
         if (result.success) {
@@ -234,7 +236,8 @@
             core_traits: { mbti: selectedMbti, big_five: bigFive },
             identity: identity,
             goal: goal,
-            role_code: result.role_code
+            role_code: result.role_code,
+            nickname: nickname  // 保存用户名以便后续使用
           });
           setProgress(100);
           setProgressText('创建完成！');
@@ -318,18 +321,50 @@
         const currentScrollId = urlParams.get('scroll_id') || scrollId;
         const roleCode = generatedProfile.role_code;
 
-        // 跳转到世界视图页面
-        if (roleCode && currentScrollId) {
-          window.location.href = `/frontend/pages/world-view.html?scroll_id=${currentScrollId}&role_code=${roleCode}&cross_type=self`;
-        } else if (onComplete) {
-          onComplete({ roleCode, profile: generatedProfile });
-        } else {
-          // 回退到crossworld-select
-          window.location.href = `/frontend/pages/crossworld-select.html?scroll_id=${currentScrollId}`;
+        if (!currentScrollId) {
+          alert('缺少书卷ID');
+          return;
         }
+
+        // 1. 调用createWorldSession API创建会话（与魂穿模式一致）
+        const token = localStorage.getItem('token');
+        const sessionResponse = await fetch('/api/crossworld/create-session', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            scroll_id: parseInt(currentScrollId),
+            cross_type: 'soulverse',
+            character_code: roleCode  // 使用创建的用户agent作为角色
+          })
+        });
+
+        if (!sessionResponse.ok) {
+          const errorData = await sessionResponse.json().catch(() => ({ detail: '创建会话失败' }));
+          throw new Error(errorData.detail || '创建会话失败');
+        }
+
+        const sessionData = await sessionResponse.json();
+        const sessionId = sessionData.session_id;
+
+        // 2. 保存角色信息到localStorage以便在世界界面显示
+        localStorage.setItem('selected_role', JSON.stringify({
+          code: roleCode,
+          name: generatedProfile.nickname || '无名',  // 使用用户设置的名字
+          nickname: generatedProfile.nickname || '无名',
+          identity: generatedProfile.identity,
+          goal: generatedProfile.goal,
+          avatar: '../assets/images/default-icon.jpg'
+        }));
+
+        // 3. 跳转到世界视图页面
+        window.location.href = `/frontend/pages/world-view.html?session_id=${sessionId}&scroll_id=${currentScrollId}`;
+
       } catch (error) {
         console.error('Redirect error:', error);
-        alert('跳转失败: ' + error.message);
+        alert('进入世界失败: ' + error.message);
       }
     };
 
@@ -566,6 +601,20 @@
             </div>
           ) : (
             <>
+              {/* 角色名输入 */}
+              <div className="mb-6">
+                <label className="block text-sm text-[#6b5537] mb-2 font-medium">先告诉我们你的名字</label>
+                <input
+                  type="text"
+                  value={userName}
+                  onChange={e => setUserName(e.target.value)}
+                  className="w-full bg-white border border-[#d4c4b0] rounded-lg px-4 py-3 text-[#6b5537] focus:border-[#8b6f47] outline-none placeholder:text-[#c4b49a]"
+                  placeholder="例如: 李青、王小明、无名..."
+                />
+              </div>
+
+              {/* 身份选择 */}
+              <label className="block text-sm text-[#6b5537] mb-2 font-medium">选择你的身份</label>
               <div className="grid grid-cols-2 gap-3 mb-6">
                 {identitySuggestions.map((identity, index) => (
                   <div
@@ -737,8 +786,9 @@
         }
       }
       if (step === 3) {
-        // 身份选择：需要选择或输入身份
+        // 身份选择：需要填写名字，并选择或输入身份
         if (loadingIdentity) return true;
+        if (!userName.trim()) return true;  // 必须填写名字
         return !selectedIdentity && !customIdentity;
       }
       if (step === 4) {

@@ -56,39 +56,104 @@ class ScrollWeaverUserAgent(Performer):
             embedding_name: Embedding模型名称
             embedding: Embedding实例（可选）
         """
+        # 保存用户特定属性
         self.user_id = user_id
         self.mbti = mbti
-        self.big_five = big_five
+        self.big_five = big_five or {}
         self.identity = identity
         self.user_goal = goal  # 使用user_goal避免与Performer.goal冲突
         self.is_user_agent = True
+        self.language = language
         
-        # 创建临时角色目录和文件
-        role_file_dir = self._create_temp_role_dir(
-            role_code=role_code,
-            nickname=nickname or user_id,
-            mbti=mbti,
-            big_five=big_five,
-            identity=identity,
-            goal=goal,
-            language=language
-        )
+        # 直接设置Performer所需的属性，而不是调用父类_init_from_file
+        self.role_code = role_code
+        self.nickname = nickname or user_id
+        self.role_name = f"用户_{self.nickname}" if language == "zh" else f"User_{self.nickname}"
+        self.role_profile = self._generate_profile(mbti, big_five or {}, identity, goal, language)
+        self.relation = {}
+        self.motivation = ""
+        self.hidden_motivation = ""
+        self.activity = 1.0
+        self.role_data = []  # 空的role_data用于向量数据库
+        self.icon_path = ""  # 用户agent默认无头像
         
-        # 调用父类构造函数
-        super().__init__(
-            role_code=role_code,
-            role_file_dir=role_file_dir,
-            world_file_path=world_file_path,
-            language=language,
-            db_type=db_type,
-            llm_name=llm_name,
-            llm=llm,
-            embedding_name=embedding_name,
-            embedding=embedding
-        )
+        # 设置状态属性
+        self.acted = False
+        self.status = ""
+        self.goal = ""
+        self.location_code = ""
+        self.location_name = ""
+        
+        # 加载世界信息（简化版）
+        from sw_utils import load_json_file
+        try:
+            if world_file_path and os.path.exists(world_file_path):
+                world_info = load_json_file(world_file_path)
+                self.world_settings = world_info.get("world_settings", world_info.get("description", ""))
+            else:
+                self.world_settings = ""
+        except:
+            self.world_settings = ""
+        
+        # 初始化prompt模板
+        self._init_prompt()
+        
+        # 初始化LLM
+        from sw_utils import get_models
+        self.llm_name = llm_name
+        if llm is None:
+            llm = get_models(llm_name)
+        self.llm = llm
+        
+        # 初始化embedding和向量数据库（空的）
+        from modules.embedding import get_embedding_model
+        from sw_utils import clean_collection_name, build_db
+        if embedding is None:
+            embedding = get_embedding_model(embedding_name, language=language)
+        
+        self.db_name = clean_collection_name(f"role_{role_code}_{embedding_name}")
+        self.db = None  # 用户agent不需要db，设为None
+        
+        # 初始化history_manager（用于记录历史）
+        from modules.history_manager import HistoryManager
+        self.history_manager = HistoryManager()
+        
+        # 初始化memory（用于记忆检索，简化版）
+        self.memory = None  # 用户agent不需要复杂记忆系统
         
         # 设置motivation为用户目标
         self.motivation = self._generate_motivation_from_goal()
+    
+    def _init_prompt(self):
+        """初始化prompt模板"""
+        if self.language == "zh":
+            from modules.prompt.performer_prompt_zh import (
+                ROLE_PLAN_PROMPT, ROLE_SINGLE_ROLE_RESPONSE_PROMPT, ROLE_MULTI_ROLE_RESPONSE_PROMPT,
+                ROLE_SET_GOAL_PROMPT, INTERVENTION_PROMPT, UPDATE_GOAL_PROMPT, UPDATE_STATUS_PROMPT,
+                ROLE_SET_MOTIVATION_PROMPT, SCRIPT_ATTENTION_PROMPT, ROLE_MOVE_PROMPT,
+                SUMMARIZE_PROMPT, ROLE_NPC_RESPONSE_PROMPT, ROLE_THINK_PROMPT
+            )
+        else:
+            from modules.prompt.performer_prompt_en import (
+                ROLE_PLAN_PROMPT, ROLE_SINGLE_ROLE_RESPONSE_PROMPT, ROLE_MULTI_ROLE_RESPONSE_PROMPT,
+                ROLE_SET_GOAL_PROMPT, INTERVENTION_PROMPT, UPDATE_GOAL_PROMPT, UPDATE_STATUS_PROMPT,
+                ROLE_SET_MOTIVATION_PROMPT, SCRIPT_ATTENTION_PROMPT, ROLE_MOVE_PROMPT,
+                SUMMARIZE_PROMPT, ROLE_NPC_RESPONSE_PROMPT, ROLE_THINK_PROMPT
+            )
+        
+        self._ROLE_SET_GOAL_PROMPT = ROLE_SET_GOAL_PROMPT
+        self._ROLE_PLAN_PROMPT = ROLE_PLAN_PROMPT
+        self._ROLE_SINGLE_ROLE_RESPONSE_PROMPT = ROLE_SINGLE_ROLE_RESPONSE_PROMPT
+        self._ROLE_MULTI_ROLE_RESPONSE_PROMPT = ROLE_MULTI_ROLE_RESPONSE_PROMPT
+        self._INTERVENTION_PROMPT = INTERVENTION_PROMPT
+        self._UPDATE_GOAL_PROMPT = UPDATE_GOAL_PROMPT
+        self._UPDATE_STATUS_PROMPT = UPDATE_STATUS_PROMPT
+        self._ROLE_SET_MOTIVATION_PROMPT = ROLE_SET_MOTIVATION_PROMPT
+        self._SCRIPT_PROMPT = SCRIPT_ATTENTION_PROMPT
+        self._ROLE_MOVE_PROMPT = ROLE_MOVE_PROMPT
+        self._SUMMARIZE_PROMPT = SUMMARIZE_PROMPT
+        self._ROLE_NPC_RESPONSE_PROMPT = ROLE_NPC_RESPONSE_PROMPT
+        self._ROLE_THINK_PROMPT = ROLE_THINK_PROMPT
     
     def _create_temp_role_dir(self,
                                role_code: str,
