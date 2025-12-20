@@ -32,8 +32,19 @@ class WorldMap {
             // 监听WebSocket消息
             window.addEventListener('websocket-message', (event) => {
                 const message = event.detail;
-                if (message.type === 'initial_data' && message.data.map) {
-                    this.updateMap(message.data.map);
+                if (message.type === 'initial_data') {
+                    // 存储角色数据
+                    if (message.data.characters) {
+                        this.characters = message.data.characters;
+                    }
+                    // 更新地图
+                    if (message.data.map) {
+                        this.updateMap(message.data.map);
+                    }
+                }
+                // 角色移动后刷新地图角色显示
+                if (message.type === 'character_moved' || message.type === 'status_update') {
+                    this.updateCharacterAvatarsOnMap();
                 }
             });
         });
@@ -130,6 +141,9 @@ class WorldMap {
         this.createLinks(links);
         this.createNodes(nodes);
 
+        // 渲染角色头像到地图节点上
+        this.updateCharacterAvatarsOnMap();
+
         // 更新力导向图
         this.simulation
             .nodes(nodes)
@@ -199,6 +213,85 @@ class WorldMap {
         d3.select("body").on("click", (event) => {
             if (this.selectedNode && !event.target.closest('.node')) {
                 this.deselectNode();
+            }
+        });
+    }
+
+    // 在地图节点上显示角色头像
+    updateCharacterAvatarsOnMap() {
+        if (!this.node || !this.characters) return;
+
+        // 移除旧的头像
+        this.container.selectAll('.character-avatar-group').remove();
+
+        // 创建位置到角色的映射
+        const locationCharacterMap = {};
+        this.characters.forEach(char => {
+            const loc = char.location || '';
+            if (loc) {
+                if (!locationCharacterMap[loc]) {
+                    locationCharacterMap[loc] = [];
+                }
+                locationCharacterMap[loc].push(char);
+            }
+        });
+
+        // 为每个节点添加角色头像
+        this.node.each(function (d) {
+            const nodeGroup = d3.select(this);
+            const chars = locationCharacterMap[d.id] || [];
+
+            if (chars.length === 0) return;
+
+            // 计算头像位置（围绕节点排列）
+            const avatarRadius = 10;
+            const nodeRadius = 15;
+            const angleStep = (2 * Math.PI) / Math.max(chars.length, 4);
+
+            chars.slice(0, 4).forEach((char, i) => { // 小地图最多显示4个
+                const angle = -Math.PI / 2 + i * angleStep;
+                const x = (nodeRadius + avatarRadius + 3) * Math.cos(angle);
+                const y = (nodeRadius + avatarRadius + 3) * Math.sin(angle);
+
+                const avatarGroup = nodeGroup.append("g")
+                    .attr("class", "character-avatar-group")
+                    .attr("transform", `translate(${x}, ${y})`);
+
+                // 头像背景圆
+                avatarGroup.append("circle")
+                    .attr("r", avatarRadius)
+                    .style("fill", "#8b4513")
+                    .style("stroke", "#faf8f3")
+                    .style("stroke-width", 1.5);
+
+                // 头像图片
+                const icon = char.icon || './frontend/assets/images/default-icon.jpg';
+                avatarGroup.append("clipPath")
+                    .attr("id", `clip-small-avatar-${d.id.replace(/\s/g, '-')}-${i}`)
+                    .append("circle")
+                    .attr("r", avatarRadius - 1);
+
+                avatarGroup.append("image")
+                    .attr("xlink:href", icon)
+                    .attr("width", avatarRadius * 2 - 2)
+                    .attr("height", avatarRadius * 2 - 2)
+                    .attr("x", -(avatarRadius - 1))
+                    .attr("y", -(avatarRadius - 1))
+                    .attr("clip-path", `url(#clip-small-avatar-${d.id.replace(/\s/g, '-')}-${i})`)
+                    .attr("preserveAspectRatio", "xMidYMid slice");
+            });
+
+            // 如果有更多角色，显示数字
+            if (chars.length > 4) {
+                nodeGroup.append("text")
+                    .attr("class", "character-avatar-group")
+                    .attr("x", nodeRadius + 5)
+                    .attr("y", -nodeRadius - 5)
+                    .attr("text-anchor", "middle")
+                    .style("font-size", "10px")
+                    .style("fill", "#6b4423")
+                    .style("font-weight", "bold")
+                    .text(`+${chars.length - 4}`);
             }
         });
     }

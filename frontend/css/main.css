@@ -1512,3 +1512,323 @@ body::before {
         max-width: calc(100% - 20px);
     }
 }
+
+/* ====================================
+   全屏遮罩层样式 (角色选择 & 地图选择)
+   ==================================== */
+.fullscreen-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(61, 40, 23, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    z-index: 100000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+}
+
+.fullscreen-overlay.active {
+    display: flex;
+    opacity: 1;
+}
+
+.overlay-content {
+    background: linear-gradient(to bottom, #faf8f3 0%, #f5f1e8 100%);
+    border-radius: 20px;
+    border: 3px solid rgba(212, 175, 55, 0.4);
+    box-shadow:
+        0 30px 80px rgba(61, 40, 23, 0.5),
+        inset 0 1px 0 rgba(255, 255, 255, 0.5);
+    max-width: 90vw;
+    max-height: 90vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    animation: slideUp 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px) scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.overlay-header {
+    text-align: center;
+    padding: 30px 40px 20px;
+    border-bottom: 2px solid rgba(212, 175, 55, 0.2);
+}
+
+.overlay-title {
+    font-family: 'Noto Serif SC', serif;
+    font-size: 2rem;
+    font-weight: 700;
+    color: #3d2817;
+    margin: 0 0 8px 0;
+    text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.8);
+}
+
+.overlay-subtitle {
+    font-size: 1rem;
+    color: #6b4423;
+    margin: 0;
+}
+
+/* 角色选择内容区 */
+.character-select-content {
+    width: 85vw;
+    max-width: 1200px;
+}
+
+.character-select-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 20px;
+    padding: 30px 40px;
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+/* 角色选择卡片 */
+.character-select-card {
+    background: rgba(255, 255, 255, 0.9);
+    border: 2px solid rgba(212, 175, 55, 0.3);
+    border-radius: 16px;
+    padding: 20px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.character-select-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #8b4513 0%, #d4af37 50%, #8b4513 100%);
+    transform: scaleX(0);
+    transition: transform 0.3s ease;
+}
+
+.character-select-card:hover {
+    border-color: rgba(212, 175, 55, 0.7);
+    box-shadow: 0 12px 30px rgba(107, 68, 35, 0.2);
+    transform: translateY(-6px);
+}
+
+.character-select-card:hover::before {
+    transform: scaleX(1);
+}
+
+.character-select-card .avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #8b4513 0%, #6b4423 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 15px;
+    overflow: hidden;
+    border: 3px solid rgba(212, 175, 55, 0.4);
+    box-shadow: 0 4px 12px rgba(107, 68, 35, 0.2);
+}
+
+.character-select-card .avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.character-select-card .avatar i {
+    font-size: 2rem;
+    color: #faf8f3;
+}
+
+.character-select-card .name {
+    font-family: 'Noto Serif SC', serif;
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #3d2817;
+    margin-bottom: 8px;
+}
+
+.character-select-card .description {
+    font-size: 0.85rem;
+    color: #6b4423;
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.character-select-card .location {
+    font-size: 0.8rem;
+    color: #8b7355;
+    margin-top: 10px;
+    padding: 4px 12px;
+    background: rgba(212, 175, 55, 0.15);
+    border-radius: 20px;
+}
+
+/* 全屏地图内容区 */
+.fullscreen-map-content {
+    width: 90vw;
+    height: 85vh;
+    max-width: none;
+    position: relative;
+}
+
+.fullscreen-map-container {
+    flex: 1;
+    min-height: 0;
+    position: relative;
+    background: #fdfaf5;
+    border-radius: 12px;
+    margin: 20px;
+    overflow: hidden;
+    border: 2px solid rgba(139, 69, 19, 0.15);
+}
+
+.map-legend {
+    position: absolute;
+    bottom: 100px;
+    left: 40px;
+    background: rgba(255, 252, 245, 0.95);
+    backdrop-filter: blur(8px);
+    border-radius: 12px;
+    padding: 15px 20px;
+    border: 1px solid rgba(139, 69, 19, 0.2);
+    box-shadow: 0 8px 24px rgba(107, 68, 35, 0.15);
+    max-width: 300px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.map-legend h4 {
+    font-family: 'Noto Serif SC', serif;
+    font-size: 0.95rem;
+    color: #3d2817;
+    margin: 0 0 10px 0;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(139, 69, 19, 0.1);
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 5px 0;
+    font-size: 0.85rem;
+    color: #6b4423;
+}
+
+.legend-item .legend-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #8b4513;
+    overflow: hidden;
+}
+
+.legend-item .legend-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.overlay-back-btn {
+    position: absolute;
+    bottom: 30px;
+    right: 40px;
+    padding: 12px 24px;
+    background: rgba(255, 255, 255, 0.9);
+    border: 2px solid rgba(139, 69, 19, 0.3);
+    border-radius: 30px;
+    font-family: 'Noto Serif SC', serif;
+    font-size: 0.95rem;
+    color: #6b4423;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(107, 68, 35, 0.1);
+}
+
+.overlay-back-btn:hover {
+    background: #faf8f3;
+    border-color: rgba(139, 69, 19, 0.5);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(107, 68, 35, 0.15);
+}
+
+/* 加载占位符 */
+.loading-placeholder {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    color: #6b4423;
+}
+
+.loading-placeholder p {
+    margin-top: 20px;
+    font-size: 1rem;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+    .character-select-content {
+        width: 95vw;
+    }
+
+    .character-select-grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 15px;
+        padding: 20px;
+    }
+
+    .overlay-title {
+        font-size: 1.5rem;
+    }
+
+    .fullscreen-map-content {
+        width: 95vw;
+        height: 90vh;
+    }
+
+    .map-legend {
+        left: 20px;
+        bottom: 80px;
+    }
+
+    .overlay-back-btn {
+        right: 20px;
+        bottom: 20px;
+    }
+}
