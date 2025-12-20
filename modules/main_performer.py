@@ -7,6 +7,10 @@ from modules.embedding import get_embedding_model
 from modules.memory import build_performer_memory
 from modules.history_manager import HistoryManager
 from modules.models import RolePlan, SingleRoleResponse, MultiRoleResponse, NPCRoleResponse, UpdateGoal, UpdateStatus, MoveResponse
+from modules.personality_model import PersonalityProfile
+from modules.dual_process_agent import DualProcessAgent
+from modules.dynamic_state_manager import DynamicStateManager
+from modules.style_vector_db import StyleVectorDB
 from sw_utils import *
 import random
 import warnings
@@ -66,6 +70,24 @@ class Performer:
                                               type="naive"
                                               )
         
+        # 初始化三层人格模型相关组件（如果存在personality_profile）
+        self.dual_process_agent: Optional[DualProcessAgent] = None
+        self.dynamic_state_manager: Optional[DynamicStateManager] = None
+        self.style_vector_db: Optional[StyleVectorDB] = None
+        
+        if self.personality_profile:
+            self.dual_process_agent = DualProcessAgent(llm=self.llm, language=self.language)
+            self.dynamic_state_manager = DynamicStateManager(llm=self.llm, language=self.language)
+            
+            # 初始化风格向量数据库（如果存在）
+            if self.style_vector_db_name and embedding:
+                self.style_vector_db = StyleVectorDB(
+                    db_name=self.style_vector_db_name,
+                    embedding_name=embedding_name,
+                    db_type=db_type,
+                    language=self.language
+                )
+        
     def _init_prompt(self):
         if self.language == 'zh':
             from modules.prompt.performer_prompt_zh \
@@ -120,6 +142,21 @@ class Performer:
         self.hidden_motivation: str = role_info.get("hidden_motivation", "")
         
         self.activity: float = float(role_info["activity"]) if "activity" in role_info else 1.0
+        
+        # 加载三层人格模型（如果存在）
+        self.personality_profile: Optional[PersonalityProfile] = None
+        if "personality_profile" in role_info:
+            try:
+                self.personality_profile = PersonalityProfile.from_dict(role_info["personality_profile"])
+            except Exception as e:
+                print(f"Warning: Failed to load personality_profile for {role_code}: {e}")
+        
+        # 加载风格样本（如果存在）
+        self.style_examples: List[Dict[str, str]] = role_info.get("style_examples", [])
+        
+        # 风格向量数据库名称（如果存在）
+        self.style_vector_db_name: Optional[str] = role_info.get("style_vector_db_name")
+        
         self.icon_path: str = os.path.join(base_dir, role_path,"icon.png")
         self.avatar_path: str = os.path.join(base_dir, role_path,"avatar.png")
         for image_type in ['jpg','png','bmp']:
@@ -503,7 +540,8 @@ class Performer:
                 interaction.update(json_parser(response_text))
             except Exception as e2:
                 print(f"[{self.role_name}] 文本解析也失败: {e2}")
-                print(f"[{self.role_name}] 使用默认值")
+        print(f"[{self.role_name}] 所有尝试都失败，使用默认值")
+        
         self.save_prompt(detail = interaction["detail"], 
                       prompt = prompt)
         return interaction
@@ -520,12 +558,78 @@ class Performer:
         
         relation = f"role_code:{action_maker_code}\n" + self.search_relation(action_maker_code)
         
-        if intervention:
-            intervention = self._INTERVENTION_PROMPT.format(**
-                {"intervention": intervention}
+        # 检查是否应该使用双重思维链
+        use_dual_process = False
+        if self.personality_profile and self.dual_process_agent:
+            other_role_info = {"role_code": action_maker_code, "role_name": action_maker_name}
+            relationship_map = self.personality_profile.dynamic_state.relationship_map
+            use_dual_process = self.dual_process_agent.is_critical_interaction(
+                action_detail=action_detail,
+                other_role_info=other_role_info,
+                personality_profile=self.personality_profile,
+                relationship_map=relationship_map
             )
-        prompt = self._ROLE_SINGLE_ROLE_RESPONSE_PROMPT.format(**
-            {
+        
+        if use_dual_process and self.personality_profile:
+            # 使用双重思维链
+            # Step 1: 生成内心独白
+            inner_monologue = self.dual_process_agent.generate_inner_monologue(
+                personality_profile=self.personality_profile,
+                action_detail=action_detail,
+                action_maker_name=action_maker_name,
+                history=history,
+                goal=self.goal,
+                status=self.status
+            )
+            
+            # 检索风格样本
+            style_examples = self.style_examples.copy()
+            if self.style_vector_db:
+                similar_examples = self.style_vector_db.search_similar_style(action_detail, top_k=3)
+                style_examples.extend([
+                    {"context": ex.get("context", ""), "response": ex["text"]}
+                    for ex in similar_examples
+                ])
+            
+            # Step 2: 生成风格化回复
+            styled_response = self.dual_process_agent.generate_styled_response(
+                inner_monologue=inner_monologue,
+                personality_profile=self.personality_profile,
+                style_examples=style_examples,
+                action_detail=action_detail,
+                action_maker_name=action_maker_name,
+                history=history
+            )
+            
+            # 构建回复（使用标准格式）
+            interaction = {
+                "if_end_interaction": False,
+                "extra_interact_type": "no",
+                "target_npc_name": "",
+                "detail": styled_response
+            }
+            
+            # 更新动态状态
+            if self.dynamic_state_manager:
+                self.dynamic_state_manager.update_state_after_interaction(
+                    personality_profile=self.personality_profile,
+                    interaction_detail=styled_response,
+                    other_role_code=action_maker_code,
+                    other_role_name=action_maker_name
+                )
+                # 保存更新后的状态到role_info.json
+                self._save_personality_profile()
+            
+            self.save_prompt(detail=interaction["detail"], prompt="")
+        else:
+            # 使用传统方法
+            if intervention:
+                intervention = self._INTERVENTION_PROMPT.format(**
+                    {"intervention": intervention}
+                )
+            
+            # 构建prompt，如果有人格画像则添加人格信息
+            prompt_dict = {
                 "role_name": self.role_name,
                 "nickname": self.nickname,
                 "action_maker_name": action_maker_name,
@@ -536,43 +640,60 @@ class Performer:
                 "goal": self.goal,
                 "status": self.status,
                 "references": references,
-                "knowledges":knowledges,
+                "knowledges": knowledges,
                 "history": history
             }
-            )
-        prompt = intervention + prompt
+            
+            prompt = self._ROLE_SINGLE_ROLE_RESPONSE_PROMPT.format(**prompt_dict)
+            
+            # 如果有人格画像，附加人格信息到prompt
+            if self.personality_profile:
+                personality_info = self._format_big_five_info() + self._format_speaking_style_info() + self._format_style_examples()
+                prompt = prompt + personality_info
+            
+            prompt = intervention + prompt
+            
+            max_tries = 3
+            interaction = {
+                        "if_end_interaction": True,
+                        "extra_interact_type":"no",
+                        "target_npc_name":"",
+                        "detail": "",
+                        }
+            
+            for i in range(max_tries):
+                try:
+                    # 使用结构化输出
+                    response_model = self.llm.chat(prompt, response_model=SingleRoleResponse)
+                    interaction.update(response_model.model_dump())
+                    break
+                except Exception as e:
+                    print(f"[{self.role_name}] 结构化输出失败! 第{i+1}次尝试. 错误: {e}")
+                    # 如果结构化输出失败，回退到文本解析
+                    if i < max_tries - 1:
+                        try:
+                            response_text = self.llm.chat(prompt)
+                            interaction.update(json_parser(response_text))
+                            break
+                        except Exception as e2:
+                            print(f"[{self.role_name}] 文本解析也失败: {e2}")
+                            continue
+                    else:
+                        # 最后一次尝试，使用默认值
+                        print(f"[{self.role_name}] 所有尝试都失败，使用默认值")
+            
+            # 更新动态状态（即使不使用双重思维链）
+            if self.personality_profile and self.dynamic_state_manager:
+                self.dynamic_state_manager.update_state_after_interaction(
+                    personality_profile=self.personality_profile,
+                    interaction_detail=interaction.get("detail", ""),
+                    other_role_code=action_maker_code,
+                    other_role_name=action_maker_name
+                )
+                self._save_personality_profile()
+            
+            self.save_prompt(detail=interaction["detail"], prompt=prompt)
         
-        max_tries = 3
-        interaction = {
-                    "if_end_interaction": True,
-                    "extra_interact_type":"no",
-                    "target_npc_name":"",
-                    "detail": "",
-                    }
-        
-        for i in range(max_tries):
-            try:
-                # 使用结构化输出
-                response_model = self.llm.chat(prompt, response_model=SingleRoleResponse)
-                interaction.update(response_model.model_dump())
-                break
-            except Exception as e:
-                print(f"[{self.role_name}] 结构化输出失败! 第{i+1}次尝试. 错误: {e}")
-                # 如果结构化输出失败，回退到文本解析
-                if i < max_tries - 1:
-                    try:
-                        response_text = self.llm.chat(prompt)
-                        interaction.update(json_parser(response_text))
-                        break
-                    except Exception as e2:
-                        print(f"[{self.role_name}] 文本解析也失败: {e2}")
-                        continue
-                else:
-                    # 最后一次尝试，使用默认值
-                    print(f"[{self.role_name}] 所有尝试都失败，使用默认值")
-        
-        self.save_prompt(detail = interaction["detail"], 
-                      prompt = prompt)
         return interaction
     
     def multi_role_interact(self, 
@@ -608,6 +729,12 @@ class Performer:
                 "history": history
             }
             )
+        
+        # 如果有人格画像，附加人格信息到prompt
+        if self.personality_profile:
+            personality_info = self._format_big_five_info() + self._format_speaking_style_info() + self._format_style_examples()
+            prompt = prompt + personality_info
+        
         prompt = intervention + prompt
         max_tries = 3
         interaction = {
@@ -808,6 +935,109 @@ class Performer:
     def set_location(self, location_code, location_name):
         self.location_code: Optional[str] = location_code
         self.location_name: Optional[str] = location_name
+    
+    # ========== 三层人格模型相关方法 ==========
+    
+    def _format_big_five_info(self) -> str:
+        """格式化Big Five信息用于prompt"""
+        if not self.personality_profile:
+            return ""
+        
+        big_five = self.personality_profile.core_traits.big_five
+        if self.language == "zh":
+            return f"""
+## 大五人格特征（影响你的思维和决策）：
+- 开放性(Openness): {big_five['openness']:.2f} - {'高' if big_five['openness'] > 0.7 else '低' if big_five['openness'] < 0.4 else '中'} - 影响你对新想法和可能性的接受程度
+- 尽责性(Conscientiousness): {big_five['conscientiousness']:.2f} - {'高' if big_five['conscientiousness'] > 0.7 else '低' if big_five['conscientiousness'] < 0.4 else '中'} - 影响你的组织性和责任感
+- 外向性(Extraversion): {big_five['extraversion']:.2f} - {'高' if big_five['extraversion'] > 0.7 else '低' if big_five['extraversion'] < 0.4 else '中'} - 影响你的社交性和积极性
+- 宜人性(Agreeableness): {big_five['agreeableness']:.2f} - {'高' if big_five['agreeableness'] > 0.7 else '低' if big_five['agreeableness'] < 0.4 else '中'} - 影响你的合作性和同理心
+- 神经质(Neuroticism): {big_five['neuroticism']:.2f} - {'高' if big_five['neuroticism'] > 0.7 else '低' if big_five['neuroticism'] < 0.4 else '中'} - 影响你的情绪稳定性
+"""
+        else:
+            return f"""
+## Big Five Personality Traits (affecting your thinking and decisions):
+- Openness: {big_five['openness']:.2f} - {'High' if big_five['openness'] > 0.7 else 'Low' if big_five['openness'] < 0.4 else 'Medium'}
+- Conscientiousness: {big_five['conscientiousness']:.2f} - {'High' if big_five['conscientiousness'] > 0.7 else 'Low' if big_five['conscientiousness'] < 0.4 else 'Medium'}
+- Extraversion: {big_five['extraversion']:.2f} - {'High' if big_five['extraversion'] > 0.7 else 'Low' if big_five['extraversion'] < 0.4 else 'Medium'}
+- Agreeableness: {big_five['agreeableness']:.2f} - {'High' if big_five['agreeableness'] > 0.7 else 'Low' if big_five['agreeableness'] < 0.4 else 'Medium'}
+- Neuroticism: {big_five['neuroticism']:.2f} - {'High' if big_five['neuroticism'] > 0.7 else 'Low' if big_five['neuroticism'] < 0.4 else 'Medium'}
+"""
+    
+    def _format_speaking_style_info(self) -> str:
+        """格式化语言风格信息用于prompt"""
+        if not self.personality_profile:
+            return ""
+        
+        style = self.personality_profile.speaking_style
+        if self.language == "zh":
+            emoji_info = ""
+            if style.emoji_usage["frequency"] != "none":
+                preferred = ", ".join(style.emoji_usage.get("preferred", []))
+                if preferred:
+                    emoji_info = f"\n- 表情使用：{style.emoji_usage['frequency']}，常用表情：{preferred}"
+            
+            return f"""
+## 语言风格要求（严格遵守）：
+- 句长偏好：{style.sentence_length}（{'短句为主' if style.sentence_length == 'short' else '长句为主' if style.sentence_length == 'long' else '中等长度' if style.sentence_length == 'medium' else '混合'}）
+- 词汇等级：{style.vocabulary_level}（{'学术/正式' if style.vocabulary_level == 'academic' else '口语化' if style.vocabulary_level == 'casual' else '网络用语' if style.vocabulary_level == 'network' else '混合'}）
+- 标点习惯：{style.punctuation_habit}（{'少用标点' if style.punctuation_habit == 'minimal' else '标准使用' if style.punctuation_habit == 'standard' else '频繁使用' if style.punctuation_habit == 'excessive' else '混合'}）
+- 语气词：{', '.join(style.tone_markers) if style.tone_markers else '无'}
+- 口头禅：{', '.join(style.catchphrases) if style.catchphrases else '无'}{emoji_info}
+"""
+        else:
+            emoji_info = ""
+            if style.emoji_usage["frequency"] != "none":
+                preferred = ", ".join(style.emoji_usage.get("preferred", []))
+                if preferred:
+                    emoji_info = f"\n- Emoji usage: {style.emoji_usage['frequency']}, preferred: {preferred}"
+            
+            return f"""
+## Speaking Style Requirements (strictly follow):
+- Sentence length: {style.sentence_length}
+- Vocabulary level: {style.vocabulary_level}
+- Punctuation habit: {style.punctuation_habit}
+- Tone markers: {', '.join(style.tone_markers) if style.tone_markers else 'none'}
+- Catchphrases: {', '.join(style.catchphrases) if style.catchphrases else 'none'}{emoji_info}
+"""
+    
+    def _format_style_examples(self) -> str:
+        """格式化Few-Shot样本用于prompt"""
+        if not self.style_examples:
+            return ""
+        
+        if self.language == "zh":
+            examples_text = "\n## 参考样本（Few-Shot Examples，模仿这些风格）：\n"
+            for i, ex in enumerate(self.style_examples[:5], 1):
+                examples_text += f"\n样本{i}:\nContext: {ex.get('context', '')}\nResponse: {ex.get('response', '')}\n"
+            return examples_text
+        else:
+            examples_text = "\n## Reference Examples (Few-Shot, imitate this style):\n"
+            for i, ex in enumerate(self.style_examples[:5], 1):
+                examples_text += f"\nExample {i}:\nContext: {ex.get('context', '')}\nResponse: {ex.get('response', '')}\n"
+            return examples_text
+    
+    def _save_personality_profile(self):
+        """保存更新后的personality_profile到role_info.json"""
+        if not self.personality_profile:
+            return
+        
+        try:
+            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            role_info_path = None
+            
+            # 查找role_info.json路径
+            for path in get_grandchild_folders(os.path.join(base_dir, "data", "roles")):
+                if self.role_code in path:
+                    role_info_path = os.path.join(base_dir, path, "role_info.json")
+                    break
+            
+            if role_info_path and os.path.exists(role_info_path):
+                role_info = load_json_file(role_info_path)
+                role_info["personality_profile"] = self.personality_profile.to_dict()
+                save_json_file(role_info_path, role_info)
+        except Exception as e:
+            print(f"Warning: Failed to save personality_profile: {e}")
+
             
     def __getstate__(self):
         states = {key: value for key, value in self.__dict__.items() \
