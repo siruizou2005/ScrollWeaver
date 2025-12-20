@@ -11,6 +11,7 @@ import sqlite3
 from pathlib import Path
 from datetime import datetime
 from typing import Optional, Dict
+from urllib.parse import unquote
 from sw_utils import is_image, load_json_file, get_models, json_parser
 from ScrollWeaver import ScrollWeaver
 from modules.utils.text_utils import remove_markdown
@@ -766,6 +767,14 @@ async def get_game():
     """游戏页面"""
     html_file = Path("index.html")
     return HTMLResponse(html_file.read_text(encoding="utf-8"))
+
+@app.get("/三国演义背景图.png")
+async def get_sanguo_background():
+    """返回三国演义背景图"""
+    image_path = Path("三国演义背景图.png")
+    if image_path.exists() and image_path.is_file():
+        return FileResponse(image_path, media_type="image/png")
+    raise HTTPException(status_code=404, detail="三国演义背景图未找到")
 
 @app.get("/data/{full_path:path}")
 async def get_file(full_path: str):
