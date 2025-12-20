@@ -672,6 +672,125 @@ body::before {
     transform: translateY(0);
 }
 
+/* 进入世界-测试卡片 */
+.enter-world-test-card {
+    background: rgba(255, 255, 255, 0.95);
+    padding: 32px 30px;
+    border-radius: 20px;
+    border: 1px solid rgba(212, 196, 176, 0.3);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08),
+        0 4px 12px rgba(0, 0, 0, 0.04);
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.enter-world-test-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #d4a574 0%, #c94c4c 50%, #d4a574 100%);
+}
+
+.enter-world-test-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.12),
+        0 6px 16px rgba(0, 0, 0, 0.06);
+}
+
+.enter-world-test-card .card-icon {
+    margin-bottom: 20px;
+    position: relative;
+}
+
+.enter-world-test-card .card-icon i {
+    font-size: 64px;
+    background: linear-gradient(135deg, #c94c4c 0%, #d4a574 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 2px 4px rgba(201, 76, 76, 0.2));
+    transition: all 0.3s ease;
+}
+
+.enter-world-test-card:hover .card-icon i {
+    transform: scale(1.1);
+    filter: drop-shadow(0 4px 8px rgba(201, 76, 76, 0.3));
+}
+
+.enter-world-test-card h2 {
+    font-size: 24px;
+    color: #3d2817;
+    margin-bottom: 12px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.enter-world-test-card p {
+    color: #6b5537;
+    font-size: 14px;
+    line-height: 1.6;
+    margin-bottom: 24px;
+}
+
+.enter-world-test-btn {
+    width: 100%;
+    padding: 16px 24px;
+    background: linear-gradient(135deg, #c94c4c 0%, #b83d3d 100%);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    letter-spacing: 0.5px;
+    box-shadow: 0 4px 12px rgba(201, 76, 76, 0.3);
+    position: relative;
+    overflow: hidden;
+}
+
+.enter-world-test-btn::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+}
+
+.enter-world-test-btn:hover::before {
+    width: 300px;
+    height: 300px;
+}
+
+.enter-world-test-btn:hover {
+    background: linear-gradient(135deg, #b83d3d 0%, #a82d2d 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(201, 76, 76, 0.4);
+}
+
+.enter-world-test-btn:active {
+    transform: translateY(0);
+}
+
 .mode-card {
     background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 245, 240, 0.9) 100%);
     border: 2px solid rgba(212, 196, 176, 0.4);

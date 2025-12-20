@@ -405,6 +405,15 @@ function bindEventListeners() {
         });
     }
 
+    // 进入世界-测试按钮
+    const enterWorldTestBtn = document.getElementById('enterWorldTestBtn');
+    if (enterWorldTestBtn) {
+        enterWorldTestBtn.addEventListener('click', () => {
+            // 测试模式：直接跳转到世界视图页面（使用scroll_id作为session_id进行测试）
+            window.location.href = `/frontend/pages/world-view.html?session_id=test_${scrollId}`;
+        });
+    }
+
     // 组局模式（如果元素存在）
     const createRoomBtn = document.getElementById('createRoomBtn');
     if (createRoomBtn) {

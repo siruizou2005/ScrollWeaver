@@ -9,9 +9,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="world-view-container">
-        <!-- 顶部导航 -->
-        <header class="world-view-header">
+    <div class="world-view-container" id="worldViewContainer">
+        <!-- 顶部导航（仅在查看模式显示） -->
+        <header class="world-view-header" id="worldViewHeader">
             <button class="back-btn" id="backBtn">
                 <i class="fas fa-arrow-left"></i>
                 <span>返回</span>
@@ -22,10 +22,60 @@
             </div>
         </header>
 
+        <!-- 时间显示（仅在进入世界模式显示） -->
+        <div class="time-display" id="timeDisplay" style="display: none;">
+            <div class="time-card">
+                <i class="fas fa-clock"></i>
+                <span id="timeText">--:--</span>
+            </div>
+        </div>
+
         <!-- 地图区域 -->
-        <div class="map-section">
+        <div class="map-section" id="mapSection">
             <div class="map-container" id="mapContainer">
                 <svg id="worldMap" class="world-map-svg"></svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- 建筑物详情模态框 -->
+    <div class="building-modal" id="buildingModal" style="display: none;">
+        <div class="modal-overlay" id="modalOverlay"></div>
+        <div class="modal-content building-modal-content">
+            <button class="modal-close" id="modalClose">
+                <i class="fas fa-times"></i>
+            </button>
+            <div class="building-modal-header">
+                <h2 id="buildingModalTitle">建筑物名称</h2>
+            </div>
+            <div class="building-modal-body">
+                <div class="characters-list-section">
+                    <h3><i class="fas fa-users"></i> 在此处的人物</h3>
+                    <div class="characters-list" id="buildingCharactersList">
+                        <!-- 人物列表将在这里动态生成 -->
+                    </div>
+                </div>
+                <div class="actions-section" id="actionsSection">
+                    <!-- 操作按钮将在这里动态生成 -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 角色选择模态框 -->
+    <div class="character-select-modal" id="characterSelectModal" style="display: none;">
+        <div class="modal-overlay" id="characterSelectOverlay"></div>
+        <div class="modal-content character-select-content">
+            <button class="modal-close" id="characterSelectClose">
+                <i class="fas fa-times"></i>
+            </button>
+            <div class="character-select-header">
+                <h2>选择私语对象</h2>
+            </div>
+            <div class="character-select-body">
+                <div class="character-select-list" id="characterSelectList">
+                    <!-- 角色列表将在这里动态生成 -->
+                </div>
             </div>
         </div>
     </div>

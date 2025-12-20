@@ -33,6 +33,21 @@
 
         console.log('[CharacterFirstFlow] 初始化角色优先选择流程');
 
+        // 检查URL参数，如果有location和roles，跳过选择流程
+        const urlParams = new URLSearchParams(window.location.search);
+        const location = urlParams.get('location');
+        const roles = urlParams.get('roles');
+        
+        if (location && roles) {
+            console.log('[CharacterFirstFlow] 检测到location和roles参数，跳过角色和地点选择');
+            // 隐藏所有遮罩层
+            hideCharacterSelectOverlay();
+            hideFullscreenMapOverlay();
+            // 标记为已跳过选择流程
+            window.skipCharacterLocationSelection = true;
+            return;
+        }
+
         // 监听 WebSocket 消息以获取角色和地图数据
         window.addEventListener('websocket-message', handleWebSocketMessage);
 
