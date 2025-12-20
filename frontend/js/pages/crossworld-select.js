@@ -66,7 +66,7 @@ async function loadScrollInfo() {
 async function loadCharacters() {
     try {
         const charactersList = document.getElementById('charactersList');
-        
+
         const response = await fetch(`/api/scroll/${scrollId}/characters`, {
             headers: {
                 'Authorization': `Bearer ${token}`
@@ -139,7 +139,7 @@ async function loadCharacters() {
 async function showCharacterDetail(roleCode, characterData) {
     try {
         const modal = document.getElementById('characterDetailModal');
-        
+
         // 如果没有传入角色数据，从API获取
         if (!characterData) {
             const response = await fetch(`/api/scroll/${scrollId}/character/${roleCode}`, {
@@ -204,7 +204,7 @@ function bindEventListeners() {
         // 检查URL参数中是否有新创建的模型ID
         const urlParams = new URLSearchParams(window.location.search);
         const newModelId = urlParams.get('persona_model_id');
-        
+
         if (newModelId) {
             // 如果URL中有新创建的模型ID，直接使用它创建会话
             createWorldSession('soulverse', null, newModelId);
@@ -269,13 +269,13 @@ async function showSoulverseModal() {
         // 检查URL参数中是否有新创建的模型ID
         const urlParams = new URLSearchParams(window.location.search);
         const newModelId = urlParams.get('persona_model_id');
-        
+
         if (newModelId) {
             // 如果URL中有新创建的模型ID，直接使用它
             createWorldSession('soulverse', null, newModelId);
             return;
         }
-        
+
         // 加载Soulverse人格模型列表
         const response = await fetch('/api/user/persona-models', {
             headers: {
@@ -284,11 +284,11 @@ async function showSoulverseModal() {
         });
 
         const select = document.getElementById('soulverseSelect');
-        
+
         if (response.ok) {
             const data = await response.json();
             const models = data.models || [];
-            
+
             if (models.length === 0) {
                 // 如果没有模型，跳转到创建页面
                 const createUrl = `/frontend/pages/soulverse-create.html?scroll_id=${scrollId}`;
@@ -298,8 +298,8 @@ async function showSoulverseModal() {
                 return;
             }
 
-            select.innerHTML = '<option value="">请选择一个人格模型</option>' + 
-                models.map(model => 
+            select.innerHTML = '<option value="">请选择一个人格模型</option>' +
+                models.map(model =>
                     `<option value="${model.id}">${model.name || `模型 ${model.id}`}</option>`
                 ).join('');
         } else {

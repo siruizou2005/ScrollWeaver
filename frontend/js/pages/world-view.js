@@ -2,7 +2,7 @@
 console.log('world-view.js 脚本开始加载...');
 
 // 全局错误处理
-window.onerror = function(msg, url, line, col, error) {
+window.onerror = function (msg, url, line, col, error) {
     console.error('全局错误:', msg, 'at', url, ':', line);
     // alert('页面加载出错: ' + msg); // 开发调试时开启
     return false;
@@ -41,7 +41,7 @@ async function initWorldMap() {
     try {
         const mapContainer = document.getElementById('mapContainer');
         const svg = document.getElementById('worldMap');
-        
+
         if (!mapContainer || !svg) {
             console.error('地图容器或SVG元素未找到');
             return;
@@ -50,16 +50,16 @@ async function initWorldMap() {
         // 获取容器尺寸
         let containerWidth = mapContainer.clientWidth;
         let containerHeight = mapContainer.clientHeight;
-        
+
         // 兜底尺寸：如果由于某种原因尺寸为0，使用窗口尺寸或默认比例
         if (containerWidth === 0 || containerHeight === 0) {
             console.warn('地图容器尺寸异常(0)，尝试使用视口尺寸兜底');
             containerWidth = window.innerWidth;
             containerHeight = window.innerHeight;
         }
-        
+
         console.log(`初始化地图尺寸: ${containerWidth}x${containerHeight}`);
-        
+
         // 设置SVG尺寸
         svg.setAttribute('width', containerWidth);
         svg.setAttribute('height', containerHeight);
@@ -71,26 +71,26 @@ async function initWorldMap() {
 
         // 先加载建筑物数据（需要在绘制网格前加载，以便网格能检测建筑物）
         await loadAndDrawBuildings(svg);
-        
+
         // 加载背景图片（需要在获取scroll_id后）
         await loadBackgroundImage(svg, containerWidth, containerHeight);
-        
+
         // 如果是session模式，加载时间显示（需要在获取worldSource后）
         if (isSessionMode) {
             loadTimeDisplay();
         }
-        
+
         // 绘制网格线（隐藏但保留用于调试）
         drawGridLines(svg, containerWidth, containerHeight, cellWidth, cellHeight);
-        
+
         // 绘制网格单元格（保留交互功能，会根据建筑物数据显示对应信息）
         // 注意：在session模式下，grid cells不应该阻止建筑物的点击事件
         drawGridCells(svg, containerWidth, containerHeight, cellWidth, cellHeight);
-        
+
         // 绘制建筑物（透明多边形，仅用于交互）
         // 必须在grid cells之后绘制，这样建筑物在上层，可以接收点击事件
         drawBuildings(svg);
-        
+
         // 如果是session模式，等待角色数据加载完成后绘制人物
         if (isSessionMode) {
             // 确保角色数据已加载
@@ -107,12 +107,12 @@ async function initWorldMap() {
 function loadTimeDisplay() {
     const timeText = document.getElementById('timeText');
     if (!timeText) return;
-    
+
     let timeString = '';
     if (worldSource === 'A_Dream_in_Red_Mansions') {
         // 红楼梦：古代时辰格式
-        const shichen = ['子时', '丑时', '寅时', '卯时', '辰时', '巳时', 
-                        '午时', '未时', '申时', '酉时', '戌时', '亥时'];
+        const shichen = ['子时', '丑时', '寅时', '卯时', '辰时', '巳时',
+            '午时', '未时', '申时', '酉时', '戌时', '亥时'];
         const randomShichen = shichen[Math.floor(Math.random() * shichen.length)];
         timeString = randomShichen;
     } else {
@@ -121,7 +121,7 @@ function loadTimeDisplay() {
         const minute = Math.floor(Math.random() * 60);
         timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
     }
-    
+
     timeText.textContent = timeString;
 }
 
@@ -131,21 +131,21 @@ async function loadBuildingCharacters() {
         console.warn('未找到session_id，无法加载角色数据');
         return;
     }
-    
+
     try {
         // 用于跟踪每个角色已经分配到的地点
         const roleToLocationMap = {}; // role_code -> building_code
-        
+
         // 为每个建筑物使用模拟角色数据
         for (const building of buildingsData) {
             const mockCharacters = getMockCharactersForBuilding(building.building_code);
             const assignedCharacters = [];
-            
+
             // 只分配尚未分配到其他地点的角色
             for (const char of mockCharacters) {
                 const roleCode = char.role_code || char.code;
                 if (!roleCode) continue;
-                
+
                 if (!roleToLocationMap[roleCode]) {
                     // 角色尚未分配，分配到当前地点
                     roleToLocationMap[roleCode] = building.building_code;
@@ -153,7 +153,7 @@ async function loadBuildingCharacters() {
                 }
                 // 如果角色已经分配到其他地点，则跳过
             }
-            
+
             buildingCharactersMap[building.building_code] = assignedCharacters;
         }
     } catch (error) {
@@ -192,11 +192,11 @@ function getMockCharactersForBuilding(buildingCode) {
             { role_code: 'JiaBaoyu-zh', role_name: '贾宝玉' }
         ]
     };
-    
+
     if (worldSource === 'A_Dream_in_Red_Mansions' && redMansionsCharacters[buildingCode]) {
         return redMansionsCharacters[buildingCode];
     }
-    
+
     // 其他世界：随机分配角色（这里需要根据实际角色列表来分配）
     // 暂时返回空数组，等后端API实现后再填充
     return [];
@@ -206,11 +206,11 @@ function getMockCharactersForBuilding(buildingCode) {
 function drawCharacters(svg) {
     const charactersGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     charactersGroup.setAttribute('class', 'characters-group');
-    
+
     buildingsData.forEach(building => {
         const characters = buildingCharactersMap[building.building_code] || [];
         if (characters.length === 0) return;
-        
+
         // 计算建筑物中心位置
         const coords = building.coordinates;
         const convertCoords = (userX, userY) => {
@@ -218,34 +218,34 @@ function drawCharacters(svg) {
             const svgY = (GRID_ROWS - userY) * cellHeight;
             return { x: svgX, y: svgY };
         };
-        
+
         const sw = convertCoords(coords.sw[0], coords.sw[1]);
         const se = convertCoords(coords.se[0], coords.se[1]);
         const ne = convertCoords(coords.ne[0], coords.ne[1]);
         const nw = convertCoords(coords.nw[0], coords.nw[1]);
-        
+
         const centerX = (sw.x + se.x + ne.x + nw.x) / 4;
         const centerY = (sw.y + se.y + ne.y + nw.y) / 4;
-        
+
         // 计算偏移位置（建筑物旁边）
         const offsetX = (se.x - sw.x) / 2 + 20; // 向右偏移
         const offsetY = 0;
-        
+
         // 圆形排列人物
         const radius = Math.max(30, characters.length * 8); // 根据人数调整半径
         const angleStep = (2 * Math.PI) / characters.length;
-        
+
         characters.forEach((char, index) => {
             const angle = index * angleStep;
             const x = centerX + offsetX + Math.cos(angle) * radius;
             const y = centerY + offsetY + Math.sin(angle) * radius;
-            
+
             // 创建人物组
             const charGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
             charGroup.setAttribute('class', 'character-marker');
             charGroup.setAttribute('data-role-code', char.role_code);
             charGroup.setAttribute('data-role-name', char.role_name);
-            
+
             // 创建头像圆圈
             const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
             circle.setAttribute('cx', x);
@@ -255,7 +255,7 @@ function drawCharacters(svg) {
             circle.setAttribute('stroke', '#8b4513');
             circle.setAttribute('stroke-width', '2');
             circle.setAttribute('class', 'character-circle');
-            
+
             // 创建头像图片
             const image = document.createElementNS('http://www.w3.org/2000/svg', 'image');
             image.setAttributeNS('http://www.w3.org/1999/xlink', 'href', '/frontend/assets/images/default-icon.jpg');
@@ -266,7 +266,7 @@ function drawCharacters(svg) {
             image.setAttribute('height', 24);
             image.setAttribute('clip-path', `circle(12px at ${x}px ${y}px)`);
             image.setAttribute('class', 'character-avatar');
-            
+
             // 添加悬停事件显示人名（但不响应点击）
             let nameTooltip = null;
             const showName = (e) => {
@@ -277,11 +277,11 @@ function drawCharacters(svg) {
                 nameTooltip.className = 'character-name-tooltip';
                 nameTooltip.textContent = char.role_name;
                 document.body.appendChild(nameTooltip);
-                
+
                 const rect = e.target.getBoundingClientRect();
                 const tooltipRect = nameTooltip.getBoundingClientRect();
                 const padding = 10;
-                
+
                 let left = rect.left + rect.width / 2;
                 let top = rect.top - 10;
                 let transformY = '-100%';
@@ -304,20 +304,20 @@ function drawCharacters(svg) {
                 nameTooltip.style.top = `${top}px`;
                 nameTooltip.style.transform = `translate(-50%, ${transformY})`;
             };
-            
+
             const hideName = () => {
                 if (nameTooltip) {
                     nameTooltip.remove();
                     nameTooltip = null;
                 }
             };
-            
+
             // 只添加悬停事件，不添加点击事件
             circle.addEventListener('mouseenter', showName);
             circle.addEventListener('mouseleave', hideName);
             image.addEventListener('mouseenter', showName);
             image.addEventListener('mouseleave', hideName);
-            
+
             // 确保点击时不会有任何反应
             circle.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -327,13 +327,13 @@ function drawCharacters(svg) {
                 e.stopPropagation();
                 // 不执行任何操作
             });
-            
+
             charGroup.appendChild(circle);
             charGroup.appendChild(image);
             charactersGroup.appendChild(charGroup);
         });
     });
-    
+
     svg.appendChild(charactersGroup);
 }
 
@@ -342,7 +342,7 @@ async function loadBackgroundImage(svg, width, height) {
     try {
         // 获取scroll_id（可能是从session_id获取）
         let currentScrollId = scrollId;
-        
+
         if (!currentScrollId && sessionId) {
             // 如果是session模式，尝试从session获取scroll_id
             // 测试模式：sessionId格式为 test_${scrollId}
@@ -375,7 +375,7 @@ async function loadBackgroundImage(svg, width, height) {
                 }
             }
         }
-        
+
         if (!currentScrollId) {
             console.error('无法确定书卷ID (scroll_id)，加载地图失败。SessionID:', sessionId);
             return;
@@ -398,17 +398,17 @@ async function loadBackgroundImage(svg, width, height) {
             console.error('获取书卷信息时出错:', error);
             return;
         }
-        
+
         // 根据source确定背景图片路径 - 从data/maps/{source}/background.png读取
         if (!source) {
             console.log('未找到source，不显示背景图片');
             return;
         }
-        
+
         // 构建背景图片路径：data/maps/{source}/background.png
         const backgroundImageUrl = `/data/maps/${source}/background.png`;
         console.log('背景图片URL:', backgroundImageUrl);
-        
+
         // 方法1: 使用CSS背景图片（更可靠）
         const mapContainer = document.getElementById('mapContainer');
         if (mapContainer) {
@@ -438,7 +438,7 @@ async function loadBackgroundImage(svg, width, height) {
 function addSVGBackgroundImage(svg, url, width, height) {
     const imageGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     imageGroup.setAttribute('class', 'background-image-group');
-    
+
     const image = document.createElementNS('http://www.w3.org/2000/svg', 'image');
     image.setAttributeNS('http://www.w3.org/1999/xlink', 'href', url);
     image.setAttribute('href', url); // 现代浏览器
@@ -447,9 +447,9 @@ function addSVGBackgroundImage(svg, url, width, height) {
     image.setAttribute('preserveAspectRatio', 'xMidYMid slice');
     image.setAttribute('opacity', '1');
     image.setAttribute('class', 'map-background-image');
-    
+
     imageGroup.appendChild(image);
-    
+
     // 插入到SVG的最前面（最底层）
     if (svg.firstChild) {
         svg.insertBefore(imageGroup, svg.firstChild);
@@ -463,7 +463,7 @@ async function loadAndDrawBuildings(svg) {
     try {
         // 获取scroll_id（可能是从session_id获取）
         let currentScrollId = scrollId;
-        
+
         if (!currentScrollId && sessionId) {
             // 如果是session模式，尝试从session获取scroll_id
             // 测试模式：sessionId格式为 test_${scrollId}
@@ -495,7 +495,7 @@ async function loadAndDrawBuildings(svg) {
                 }
             }
         }
-        
+
         if (!currentScrollId) {
             console.warn('未找到scroll_id参数');
             return;
@@ -510,9 +510,9 @@ async function loadAndDrawBuildings(svg) {
 
         const data = await response.json();
         buildingsData = data.buildings || [];
-        
+
         // 如果是session模式，加载建筑物位置的角色数据（在setupSessionMode中已经调用，这里不需要重复调用）
-        
+
         // 不在这里绘制建筑物，让initWorldMap统一处理
     } catch (error) {
         console.error('加载建筑物数据时出错:', error);
@@ -535,7 +535,7 @@ function drawBuildings(svg) {
 // 创建建筑物元素
 function createBuildingElement(building) {
     const { coordinates, building_name, description, color, icon } = building;
-    
+
     // 坐标转换：从用户坐标系（左下角为(1,1)）转换为SVG坐标系（左上角为(0,0)）
     const convertCoords = (userX, userY) => {
         const svgX = (userX - 1) * cellWidth;
@@ -563,7 +563,7 @@ function createBuildingElement(building) {
         `${ne.x},${ne.y}`,
         `${nw.x},${nw.y}`
     ].join(' ');
-    
+
     polygon.setAttribute('points', points);
     polygon.setAttribute('fill', 'transparent');
     polygon.setAttribute('fill-opacity', '0');
@@ -572,12 +572,12 @@ function createBuildingElement(building) {
     polygon.setAttribute('class', 'building-polygon');
     polygon.setAttribute('data-building-name', building_name);
     polygon.setAttribute('data-building-description', description);
-    
+
     // 添加悬停效果
     polygon.addEventListener('mouseenter', (e) => {
         showBuildingTooltip(e, building_name, description);
     });
-    
+
     polygon.addEventListener('mouseleave', () => {
         hideBuildingTooltip();
     });
@@ -599,7 +599,7 @@ function createBuildingElement(building) {
 // 处理建筑物点击
 function handleBuildingClick(building) {
     console.log('handleBuildingClick被调用:', building.building_name, 'isSessionMode:', isSessionMode);
-    
+
     if (isSessionMode) {
         // 进入世界模式：显示建筑物卡片（人物列表和操作按钮）
         console.log('准备显示建筑物模态框');
@@ -618,7 +618,7 @@ function showBuildingModal(building) {
     const title = document.getElementById('buildingModalTitle');
     const charactersList = document.getElementById('buildingCharactersList');
     const actionsSection = document.getElementById('actionsSection');
-    
+
     if (!modal || !title || !charactersList || !actionsSection) {
         console.error('建筑物模态框元素未找到', {
             modal: !!modal,
@@ -628,16 +628,16 @@ function showBuildingModal(building) {
         });
         return;
     }
-    
+
     console.log('模态框元素找到，准备显示');
-    
+
     // 设置标题
     title.textContent = building.building_name || '建筑物';
-    
+
     // 获取该建筑物位置的角色列表
     const characters = buildingCharactersMap[building.building_code] || [];
     console.log('建筑物角色列表:', building.building_code, characters);
-    
+
     // 清空并填充人物列表
     charactersList.innerHTML = '';
     if (characters.length === 0) {
@@ -656,7 +656,7 @@ function showBuildingModal(building) {
             charactersList.appendChild(charItem);
         });
     }
-    
+
     // 清空并填充操作按钮
     actionsSection.innerHTML = '';
     if (characters.length === 0) {
@@ -679,7 +679,7 @@ function showBuildingModal(building) {
             showCharacterSelectModal(characters);
         });
         actionsSection.appendChild(chatBtn);
-        
+
         const groupBtn = document.createElement('button');
         groupBtn.className = 'action-btn group-btn';
         groupBtn.innerHTML = '<i class="fas fa-users"></i> 群聊';
@@ -688,7 +688,7 @@ function showBuildingModal(building) {
         });
         actionsSection.appendChild(groupBtn);
     }
-    
+
     // 显示模态框
     modal.style.display = 'flex';
 }
@@ -705,15 +705,15 @@ function hideBuildingModal() {
 function showCharacterSelectModal(characters) {
     const modal = document.getElementById('characterSelectModal');
     const list = document.getElementById('characterSelectList');
-    
+
     if (!modal || !list) {
         console.error('角色选择模态框元素未找到');
         return;
     }
-    
+
     // 先关闭建筑物模态框
     hideBuildingModal();
-    
+
     // 清空并填充角色列表
     list.innerHTML = '';
     characters.forEach(char => {
@@ -738,7 +738,7 @@ function showCharacterSelectModal(characters) {
         });
         list.appendChild(charItem);
     });
-    
+
     // 显示模态框
     modal.style.display = 'flex';
 }
@@ -769,7 +769,7 @@ function startChat(roleCode) {
             console.warn('解析已选角色失败:', e);
         }
     }
-    
+
     // 跳转到私语页面，传递当前用户名
     const params = new URLSearchParams({
         scroll_id: scrollId,
@@ -785,10 +785,10 @@ function startGroupChat(characters, buildingCode) {
         console.error('缺少必要参数');
         return;
     }
-    
+
     // 获取角色代码列表
     const roleCodes = characters.map(char => char.role_code || char.code).join(',');
-    
+
     // 跳转到群聊页面（入卷玩法）
     // 直接进入游戏页面，传递建筑物代码和角色列表
     // URL格式：/game?scroll_id=xxx&mode=story&location=xxx&roles=xxx,xxx,xxx
@@ -798,7 +798,7 @@ function startGroupChat(characters, buildingCode) {
         location: buildingCode || '',
         roles: roleCodes
     });
-    
+
     window.location.href = `/game?${params.toString()}`;
 }
 
@@ -909,7 +909,7 @@ function drawGridCells(svg, width, height, cellWidth, cellHeight) {
             const cell = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
             const x = col * cellWidth;
             const y = row * cellHeight;
-            
+
             cell.setAttribute('x', x);
             cell.setAttribute('y', y);
             cell.setAttribute('width', cellWidth);
@@ -917,7 +917,7 @@ function drawGridCells(svg, width, height, cellWidth, cellHeight) {
             cell.setAttribute('class', 'grid-cell');
             cell.setAttribute('data-row', row);
             cell.setAttribute('data-col', col);
-            
+
             // 检查这个单元格是否属于某个建筑物
             const building = findBuildingAtCell(row, col);
             if (building) {
@@ -957,14 +957,14 @@ function findBuildingAtCell(row, col) {
     // 将SVG坐标转换为用户坐标
     const userRow = GRID_ROWS - row; // Y轴反转
     const userCol = col + 1; // X轴从1开始
-    
+
     for (const building of buildingsData) {
         const coords = building.coordinates;
         const minX = Math.min(coords.sw[0], coords.se[0], coords.ne[0], coords.nw[0]);
         const maxX = Math.max(coords.sw[0], coords.se[0], coords.ne[0], coords.nw[0]);
         const minY = Math.min(coords.sw[1], coords.se[1], coords.ne[1], coords.nw[1]);
         const maxY = Math.max(coords.sw[1], coords.se[1], coords.ne[1], coords.nw[1]);
-        
+
         if (userCol >= minX && userCol <= maxX && userRow >= minY && userRow <= maxY) {
             return building;
         }
@@ -998,7 +998,7 @@ function showCellTooltip(event, row, col) {
     const rect = event.target.getBoundingClientRect();
     const tooltipRect = cellTooltipElement.getBoundingClientRect();
     const padding = 10;
-    
+
     let left = rect.left + rect.width / 2;
     let top = rect.top - 10;
     let transformY = '-100%';
@@ -1020,7 +1020,7 @@ function showCellTooltip(event, row, col) {
     cellTooltipElement.style.left = `${left}px`;
     cellTooltipElement.style.top = `${top}px`;
     cellTooltipElement.style.transform = `translate(-50%, ${transformY})`;
-    
+
     // 单元格高亮
     const cell = event.target;
     cell.style.fill = 'rgba(139, 111, 71, 0.2)';
@@ -1033,7 +1033,7 @@ function hideCellTooltip() {
         cellTooltipElement.remove();
         cellTooltipElement = null;
     }
-    
+
     // 恢复单元格样式
     const cells = document.querySelectorAll('.grid-cell');
     cells.forEach(cell => {
@@ -1053,7 +1053,7 @@ function bindEventListeners() {
             }
         });
     }
-    
+
     // 建筑物模态框关闭
     const modalClose = document.getElementById('modalClose');
     const modalOverlay = document.getElementById('modalOverlay');
@@ -1063,7 +1063,7 @@ function bindEventListeners() {
     if (modalOverlay) {
         modalOverlay.addEventListener('click', hideBuildingModal);
     }
-    
+
     // 角色选择模态框关闭
     const characterSelectClose = document.getElementById('characterSelectClose');
     const characterSelectOverlay = document.getElementById('characterSelectOverlay');
@@ -1096,7 +1096,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const urlParams = new URLSearchParams(window.location.search);
     sessionId = urlParams.get('session_id');
     scrollId = urlParams.get('scroll_id');
-    
+
     if (sessionId) {
         // 进入世界模式
         isSessionMode = true;
@@ -1109,7 +1109,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.error('缺少必要参数：scroll_id 或 session_id');
         return;
     }
-    
+
     await initWorldMap();
     bindEventListeners();
 });
@@ -1123,7 +1123,7 @@ function setupSessionMode() {
         if (header) {
             header.style.display = 'none';
         }
-        
+
         // 显示顶部交互叠加层 (包含World Intro和时间)
         const topOverlay = document.getElementById('sessionTopOverlay');
         if (topOverlay) {
@@ -1139,7 +1139,7 @@ function setupSessionMode() {
             // 不阻塞主流程
             setTimeout(() => loadPlayerStatus(), 0);
         }
-        
+
         // 设置全屏样式
         const container = document.getElementById('worldViewContainer');
         if (container) {
@@ -1192,7 +1192,7 @@ function startWorldIntro() {
         const text = intros[index];
         const now = new Date();
         const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-        
+
         // 记录到历史
         eventHistory.unshift({
             time: timeStr,
@@ -1205,7 +1205,7 @@ function startWorldIntro() {
         introEl.offsetHeight; // 触发重绘
         introEl.textContent = text;
         introEl.style.animation = 'slideInOut 8s infinite';
-        
+
         index = (index + 1) % intros.length;
     };
 
@@ -1300,7 +1300,7 @@ function setupViewMode() {
     if (header) {
         header.style.display = 'flex';
     }
-    
+
     // 隐藏时间显示
     const timeDisplay = document.getElementById('timeDisplay');
     if (timeDisplay) {
