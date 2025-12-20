@@ -480,7 +480,13 @@ class Orchestrator:
         return references
 
     def find_location_name(self, code: str):
-        return self.locations_info[code]["location_name"]
+        """查找地点名称，如果代码不存在则返回代码本身"""
+        if code in self.locations_info:
+            return self.locations_info[code]["location_name"]
+        else:
+            # 如果地点代码不存在，返回代码本身作为后备方案
+            print(f"[Orchestrator] 警告: 地点代码 '{code}' 不存在于 locations_info 中，使用代码本身作为名称")
+            return code
               
     def _add_location(self, code: str, location_info: Dict[str, Any]):
         self.locations_info[code] = location_info
