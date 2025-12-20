@@ -897,109 +897,93 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                                     scene_mode=config["scene_mode"]
                                 )
                                 
-                                # 如果init消息中包含location和roles，直接设置角色位置
-                                if 'location' in first_message and 'roles' in first_message:
-                                    location_code = first_message.get('location')
+                                # 如果init消息中包含 roles，设置用户角色
+                                if 'roles' in first_message:
                                     role_codes = first_message.get('roles', [])
                                     if isinstance(role_codes, str):
                                         role_codes = [r.strip() for r in role_codes.split(',') if r.strip()]
                                     
-                                    print(f"[Init] 直接设置角色位置: location={location_code}, roles={role_codes}")
+                                    location_code = first_message.get('location')
+                                    print(f"[Init] 处理角色初始信息: roles={role_codes}, location={location_code}")
                                     
-                                    # 设置所有指定角色的位置
+                                    # 设置指定角色的位置和身份
                                     if hasattr(manager.scrollweaver, 'server') and manager.scrollweaver.server:
                                         server = manager.scrollweaver.server
-                                        if hasattr(server, 'performers') and hasattr(server, 'orchestrator'):
-                                            # 如果传入的location_code不在locations_info中，尝试查找匹配的地点代码
-                                            actual_location_code = location_code
-                                            if location_code and location_code not in server.orchestrator.locations_info:
-                                                print(f"[Init] 警告: 地点代码 '{location_code}' 不存在于 orchestrator.locations_info 中")
-                                                print(f"[Init] 可用地点代码: {list(server.orchestrator.locations_info.keys())}")
-                                                
-                                                # 尝试通过名称匹配（不区分大小写）
-                                                location_code_lower = location_code.lower()
-                                                for loc_code in server.orchestrator.locations_info.keys():
-                                                    if loc_code.lower() == location_code_lower:
-                                                        actual_location_code = loc_code
-                                                        print(f"[Init] 找到匹配的地点代码: '{location_code}' -> '{loc_code}'")
-                                                        break
-                                                
-                                                # 如果还是找不到，尝试通过地点名称匹配
-                                                if actual_location_code == location_code and actual_location_code not in server.orchestrator.locations_info:
-                                                    for loc_code, loc_info in server.orchestrator.locations_info.items():
-                                                        loc_name = loc_info.get('location_name', '')
-                                                        if loc_name and location_code.lower() in loc_name.lower():
-                                                            actual_location_code = loc_code
-                                                            print(f"[Init] 通过名称找到匹配的地点代码: '{location_code}' -> '{loc_code}' ({loc_name})")
-                                                            break
-                                                
-                                                # 如果仍然找不到，使用原代码（find_location_name会返回代码本身）
-                                                if actual_location_code == location_code and actual_location_code not in server.orchestrator.locations_info:
-                                                    print(f"[Init] 无法找到匹配的地点代码，将使用 '{location_code}' 作为地点代码")
-                                            
-                                            location_name = server.orchestrator.find_location_name(actual_location_code) if actual_location_code else None
-                                            # 更新location_code为实际的地点代码
-                                            location_code = actual_location_code
-                                            
+                                        if hasattr(server, 'performers'):
                                             # 过滤有效角色
                                             valid_role_codes = [code for code in role_codes if code in server.performers]
                                             
                                             if valid_role_codes:
-                                                # 更新角色范围，确保模拟只涉及这些角色
-                                                print(f"[Init] 限制模拟角色范围为: {valid_role_codes}")
-                                                server.role_codes = valid_role_codes
-                                                server.current_status['group'] = valid_role_codes
-                                                
-                                                # 更新所有子模块的引用
-                                                if hasattr(server, 'state_manager'):
-                                                    server.state_manager.role_codes = valid_role_codes
-                                                if hasattr(server, 'event_manager'):
-                                                    server.event_manager.role_codes = valid_role_codes
-                                                if hasattr(server, 'scene_manager'):
-                                                    server.scene_manager.role_codes = valid_role_codes
-                                                if hasattr(server, 'interaction_handler'):
-                                                    server.interaction_handler.role_codes = valid_role_codes
+                                                # 设置当前主角色
+                                                server.user_role_code = valid_role_codes[0]
                                                 if hasattr(server, 'simulator'):
-                                                    server.simulator.role_codes = valid_role_codes
+                                                    server.simulator.user_role_code = valid_role_codes[0]
+                                                print(f"[Init] 设置主角色 (user_role_code): {valid_role_codes[0]}")
+                                                
+                                                # 如果没有 location 信息，也需要创建一个 generator，以便后续 start 消息能工作
+                                                if not location_code:
+                                                    try:
+                                                        meta_info = server.continue_simulation_from_file(config.get("save_dir", ""))
+                                                        manager.scrollweaver.generator = server.simulate_generator(
+                                                            rounds=config.get("rounds", 10),
+                                                            save_dir=config.get("save_dir", ""),
+                                                            if_save=config.get("if_save", 0),
+                                                            mode=config.get("mode", "free"),
+                                                            scene_mode=config.get("scene_mode", 0),
+                                                            meta_info=meta_info
+                                                        )
+                                                        print(f"[Init] 无 location 模式下已创建 generator")
+                                                    except Exception as e:
+                                                        print(f"[Init] 创建无 location generator 失败: {e}")
+
+                                                # 如果有地点信息，设置位置并限制模拟范围
+                                                if location_code:
+                                                    actual_location_code = location_code
+                                                    if location_code not in server.orchestrator.locations_info:
+                                                        # 尝试匹配地点代码
+                                                        location_code_lower = location_code.lower()
+                                                        for loc_code in server.orchestrator.locations_info.keys():
+                                                            if loc_code.lower() == location_code_lower:
+                                                                actual_location_code = loc_code
+                                                                break
+                                                        
+                                                        if actual_location_code == location_code:
+                                                            for loc_code, loc_info in server.orchestrator.locations_info.items():
+                                                                loc_name = loc_info.get('location_name', '')
+                                                                if loc_name and location_code.lower() in loc_name.lower():
+                                                                    actual_location_code = loc_code
+                                                                    break
+                                                    
+                                                    location_name = server.orchestrator.find_location_name(actual_location_code)
+                                                    for role_code in valid_role_codes:
+                                                        server.performers[role_code].set_location(actual_location_code, location_name)
+                                                    
+                                                    # 限制模拟范围
+                                                    server.role_codes = valid_role_codes
+                                                    server.current_status['group'] = valid_role_codes
+                                                    if hasattr(server, 'state_manager'): server.state_manager.role_codes = valid_role_codes
+                                                    if hasattr(server, 'event_manager'): server.event_manager.role_codes = valid_role_codes
+                                                    if hasattr(server, 'scene_manager'): server.scene_manager.role_codes = valid_role_codes
+                                                    if hasattr(server, 'interaction_handler'): server.interaction_handler.role_codes = valid_role_codes
+                                                    if hasattr(server, 'simulator'): server.simulator.role_codes = valid_role_codes
+                                                    
+                                                    manager.client_locations[client_id] = actual_location_code
+                                                    manager.client_role_codes[client_id] = valid_role_codes
+                                                    
+                                                    try:
+                                                        meta_info = server.continue_simulation_from_file(config.get("save_dir", ""))
+                                                        meta_info["location_setted"] = True
+                                                        manager.scrollweaver.generator = server.simulate_generator(
+                                                            rounds=config.get("rounds", 10),
+                                                            save_dir=config.get("save_dir", ""),
+                                                            if_save=config.get("if_save", 0),
+                                                            mode=config.get("mode", "free"),
+                                                            scene_mode=config.get("scene_mode", 0),
+                                                            meta_info=meta_info
+                                                        )
+                                                    except: pass
                                             else:
                                                 print(f"[Init] 警告: 未找到任何有效的角色代码 in {role_codes}")
-                                            
-                                            # 只设置指定角色的位置
-                                            for role_code in valid_role_codes:
-                                                performer = server.performers[role_code]
-                                                if location_code and location_name:
-                                                    performer.set_location(location_code, location_name)
-                                                    print(f"[Init] 设置角色 {performer.role_name} ({role_code}) 位置为 {location_name} ({location_code})")
-                                                else:
-                                                    print(f"[Init] 警告: 无法设置角色 {role_code} 的位置，location_code={location_code}, location_name={location_name}")
-                                            
-                                            # 设置用户选择的角色（如果有角色列表，选择第一个）
-                                            if valid_role_codes:
-                                                manager.user_selected_roles[client_id] = valid_role_codes[0]
-                                                print(f"[Init] 设置用户选择角色: {valid_role_codes[0]}")
-                                            
-                                            # 存储客户端的位置和角色列表（用于群聊模式，只显示该地点的角色）
-                                            if location_code:
-                                                manager.client_locations[client_id] = location_code
-                                                manager.client_role_codes = getattr(manager, 'client_role_codes', {})
-                                                manager.client_role_codes[client_id] = valid_role_codes
-                                                print(f"[Init] 存储客户端位置: {location_code}, 角色列表: {valid_role_codes}")
-                                                
-                                                # 重新创建 generator，并标记位置已设置，避免 simulator 再次随机分配
-                                                try:
-                                                    meta_info = server.continue_simulation_from_file(config.get("save_dir", ""))
-                                                    meta_info["location_setted"] = True
-                                                    manager.scrollweaver.generator = server.simulate_generator(
-                                                        rounds=config.get("rounds", 10),
-                                                        save_dir=config.get("save_dir", ""),
-                                                        if_save=config.get("if_save", 0),
-                                                        mode=config.get("mode", "free"),
-                                                        scene_mode=config.get("scene_mode", 0),
-                                                        meta_info=meta_info
-                                                    )
-                                                    print(f"[Init] 已重新创建 generator 并标记 location_setted=True")
-                                                except Exception as e:
-                                                    print(f"[Init] 重新创建 generator 失败: {e}")
                                 print(f"Loaded scroll {client_scroll_id} for client {client_id}, preset_path: {preset_path}")
                             else:
                                 print(f"Warning: Scroll {client_scroll_id} preset_path not found or invalid: {preset_path}")
@@ -1230,6 +1214,17 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                         }
                     })
             
+            elif message['type'] == 'start':
+                # 直接处理 start 消息，为了兼容地图模式
+                print(f"Received start message for client {client_id}")
+                await manager.start_story(client_id)
+                try:
+                    await websocket.send_json({
+                        'type': 'story_started',
+                        'data': {'message': '故事已开始'}
+                    })
+                except: pass
+
             elif message['type'] == 'request_characters':
                 # 请求角色列表
                 all_characters = manager.scrollweaver.get_characters_info(use_selected=False)

@@ -1028,3 +1028,95 @@ body::before {
     }
 }
 
+/* 魂穿序章模式：背景模糊和暗化 */
+.world-view-container.intro-mode {
+    filter: blur(20px) brightness(0.4) grayscale(0.3);
+    pointer-events: none;
+    transition: filter 2s ease, opacity 0.5s ease;
+}
+
+/* 剧情焦点模态框 */
+.story-focus-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 10005;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+}
+
+.story-focus-modal .modal-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.3);
+}
+
+.story-focus-modal .modal-content {
+    position: relative;
+    background: url('../assets/images/ink-background.png'), #fffcf5;
+    background-size: cover;
+    border: 1px solid rgba(139, 111, 71, 0.2);
+    border-radius: 8px;
+    padding: 60px 80px;
+    max-width: 850px;
+    width: 90%;
+    max-height: 85vh;
+    overflow-y: auto;
+    box-shadow: 0 40px 100px rgba(0, 0, 0, 0.6);
+    animation: storyFocusIn 1.5s cubic-bezier(0.19, 1, 0.22, 1);
+    font-family: 'Noto Serif SC', serif;
+}
+
+@keyframes storyFocusIn {
+    from { opacity: 0; transform: scale(0.98) translateY(30px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.story-focus-modal .story-time {
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    color: #8b6f47;
+    text-align: center;
+    margin-bottom: 30px;
+    letter-spacing: 4px;
+    opacity: 0.7;
+}
+
+.story-focus-modal .story-text {
+    font-size: 22px;
+    line-height: 2;
+    color: #2c1810;
+    text-align: justify;
+    font-weight: 400;
+}
+
+.story-focus-modal .story-text p {
+    margin-bottom: 2em;
+    text-indent: 2.2em;
+}
+
+.story-focus-modal .modal-close {
+    position: absolute;
+    top: 30px;
+    right: 30px;
+    background: transparent;
+    border: none;
+    font-size: 36px;
+    color: #8b6f47;
+    cursor: pointer;
+    opacity: 0.5;
+    transition: all 0.3s ease;
+}
+
+.story-focus-modal .modal-close:hover {
+    opacity: 1;
+    transform: rotate(90deg);
+}
+
