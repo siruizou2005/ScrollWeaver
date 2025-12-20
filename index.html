@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -14,9 +15,12 @@
     <link rel="stylesheet" href="./frontend/css/right-section/scene-panel.css">
     <link rel="stylesheet" href="./frontend/css/right-section/preset-panel.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Inter:wght@400;600;700&display=swap"
+        rel="stylesheet">
     <script src="https://d3js.org/d3.v7.min.js"></script>
 </head>
+
 <body>
     <div class="main-container">
         <div class="left-section" id="leftSection">
@@ -30,12 +34,21 @@
                     <!-- 选中的角色将显示在这里 -->
                 </div>
             </div>
+            <!-- 地图区域 -->
+            <div class="map-section">
+                <h3 class="map-title" data-i18n="map">地图</h3>
+                <div id="map-container">
+                    <div id="map"></div>
+                </div>
+            </div>
             <div class="character-profiles">
                 <div class="profiles-header">
                     <h3 class="profiles-title" data-i18n="characterProfiles">角色档案</h3>
                     <div class="profiles-toggle" id="profilesViewToggle" role="group" aria-label="角色视图切换">
-                        <button class="toggle-btn" data-mode="runtime_current" data-i18n="viewCurrentScene">当幕角色</button>
-                        <button class="toggle-btn active" data-mode="runtime_all" data-i18n="viewAllCharacters">全部角色</button>
+                        <button class="toggle-btn" data-mode="runtime_current"
+                            data-i18n="viewCurrentScene">当幕角色</button>
+                        <button class="toggle-btn active" data-mode="runtime_all"
+                            data-i18n="viewAllCharacters">全部角色</button>
                     </div>
                 </div>
                 <div class="profiles-container">
@@ -105,14 +118,14 @@
                                 <!-- 事件内容将通过JS动态更新 -->
                             </div>
                         </div>
-                        
+
                         <div class="status-module" id="current-location">
                             <h3 data-i18n="currentLocation">当前地点</h3>
                             <div class="module-content">
                                 <!-- 地点内容将通过JS动态更新 -->
                             </div>
                         </div>
-                        
+
                         <div class="status-module" id="current-group">
                             <h3 data-i18n="currentGroup">当前分组</h3>
                             <div class="module-content">
@@ -134,7 +147,8 @@
                     <div class="scenes-container">
                         <div class="scenes-header">
                             <h3 data-i18n="scenesList">场景列表</h3>
-                            <button class="clear-selection-btn disabled" disabled data-i18n="backToRuntime">返回运行视图</button>
+                            <button class="clear-selection-btn disabled" disabled
+                                data-i18n="backToRuntime">返回运行视图</button>
                         </div>
                         <div class="scene-buttons">
                             <!-- 场景按钮将通过JS动态添加 -->
@@ -145,14 +159,14 @@
             </div>
         </div>
     </div>
-    
+
     <!-- 加载覆盖层 - 放在 body 最外层以确保全屏覆盖 -->
     <div class="loading-overlay" id="loadingOverlay">
         <div class="loading-spinner"></div>
         <div class="loading-text" id="loadingText">正在初始化...</div>
         <div class="loading-subtext" id="loadingSubtext">请稍候，这可能需要一些时间</div>
     </div>
-    
+
     <!-- 角色档案弹窗（点击聊天中的角色名打开） -->
     <div id="profile-modal" class="profile-modal hidden" aria-hidden="true">
         <div class="modal-overlay"></div>
@@ -174,7 +188,7 @@
             </div>
         </div>
     </div>
-    
+
     <!-- 角色选择模态框 -->
     <div id="role-select-modal" class="role-select-modal hidden" aria-hidden="true">
         <div class="modal-overlay"></div>
@@ -190,7 +204,7 @@
             </div>
         </div>
     </div>
-    
+
     <!-- 故事导出模态框 -->
     <div id="story-modal" class="story-modal hidden" aria-hidden="true">
         <div class="modal-overlay"></div>
@@ -210,7 +224,7 @@
             </div>
         </div>
     </div>
-    
+
     <!-- AI选项选择模态框 -->
     <div id="auto-options-modal" class="auto-options-modal hidden" aria-hidden="true">
         <div class="modal-overlay"></div>
@@ -240,33 +254,34 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             if (window.RightSection) {
-                 if (!window.rightSectionInstance) {
+                if (!window.rightSectionInstance) {
                     window.rightSectionInstance = new window.RightSection();
                     console.log('主界面右侧面板已初始化');
-                 }
+                }
             } else {
-                 console.error("RightSection class not found during initialization.");
+                console.error("RightSection class not found during initialization.");
             }
 
 
             setTimeout(() => {
                 if (window.APIPanel) {
-                    const apiPanelInstance = new window.APIPanel(); 
+                    const apiPanelInstance = new window.APIPanel();
                     // Check if the instance exists and if its listeners haven't been initialized yet
                     if (apiPanelInstance && !apiPanelInstance.initialized) {
                         console.log('APIPanel: Calling init() to attach listeners.');
                         apiPanelInstance.init();
                     } else if (apiPanelInstance && apiPanelInstance.initialized) {
-                         console.log('APIPanel: Instance found, listeners already initialized.');
+                        console.log('APIPanel: Instance found, listeners already initialized.');
                     } else if (!apiPanelInstance) {
-                         console.error('APIPanel: Failed to get instance within setTimeout.');
+                        console.error('APIPanel: Failed to get instance within setTimeout.');
                     }
                 } else {
                     console.error('APIPanel class not found within setTimeout!');
                 }
 
-            }, 500); 
+            }, 500);
         });
     </script>
 </body>
+
 </html>
