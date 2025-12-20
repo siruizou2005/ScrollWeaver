@@ -4301,5 +4301,113 @@ async def get_persona_models(current_user: dict = Depends(get_current_user)):
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
+# ==================== 穿越 API 端点 ====================
+
+@app.post("/api/crossworld/create-session")
+async def create_crossworld_session(request: Request, current_user: dict = Depends(get_current_user)):
+    """创建穿越世界会话"""
+    try:
+        data = await request.json()
+        scroll_id = data.get('scroll_id')
+        cross_type = data.get('cross_type') # 'self', 'character', 'soulverse'
+        character_code = data.get('character_code')
+        persona_model_id = data.get('persona_model_id')
+        
+        print(f"[CrossWorld] Creating session for scroll_id={scroll_id}, type={cross_type}, user={current_user.get('username')}")
+        
+        if not scroll_id:
+            raise HTTPException(status_code=400, detail="缺少scroll_id")
+        
+        # 验证书卷存在
+        scroll = db.get_scroll(scroll_id)
+        if not scroll:
+            print(f"[CrossWorld] Error: Scroll {scroll_id} not found")
+            raise HTTPException(status_code=404, detail="书卷不存在")
+        
+        # 创建故事会话 (O-P Mode)
+        session = session_manager.create_session(
+            mode=SessionMode.STORY,
+            scroll_id=scroll_id,
+            user_id=current_user['id']
+        )
+        
+        print(f"[CrossWorld] Session created: {session.session_id}")
+        
+        return {
+            "success": True,
+            "session_id": session.session_id,
+            "scroll_id": scroll_id,
+            "cross_type": cross_type,
+            "character_code": character_code,
+            "persona_model_id": persona_model_id
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/crossworld/session/{session_id}")
+async def get_crossworld_session(session_id: str, current_user: Optional[dict] = Depends(get_optional_user)):
+    """获取穿越会话详情"""
+    try:
+        print(f"[CrossWorld] Fetching session: {session_id}")
+        session = session_manager.get_session(session_id)
+        if not session:
+            print(f"[CrossWorld] Session {session_id} not found in memory")
+            # 兼容测试模式：如果以 test_ 开头，尝试提取 scroll_id
+            if session_id.startswith('test_'):
+                try:
+                    scroll_id = int(session_id.split('_')[1])
+                    return {
+                        "success": True,
+                        "session_id": session_id,
+                        "scroll_id": scroll_id,
+                        "is_test": True
+                    }
+                except:
+                    pass
+            raise HTTPException(status_code=404, detail="会话不存在")
+            
+        print(f"[CrossWorld] Session found: scroll_id={session.scroll_id}")
+        return {
+            "success": True,
+            "session_id": session.session_id,
+            "scroll_id": session.scroll_id,
+            "user_id": session.user_id,
+            "mode": session.mode.value
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/crossworld/list-scrolls")
+async def list_crossworld_scrolls(current_user: dict = Depends(get_current_user)):
+    """获取可穿越世界列表"""
+    try:
+        # 获取所有系统书卷和用户自己的书卷
+        system_scrolls = db.get_system_scrolls()
+        user_scrolls = db.get_user_scrolls(current_user['id'])
+        shared_scrolls = db.get_shared_scrolls(current_user['id'])
+        
+        return {
+            "success": True,
+            "scrolls": system_scrolls + user_scrolls + shared_scrolls
+        }
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/crossworld/{scroll_id}/characters")
+async def get_crossworld_characters(scroll_id: int, current_user: dict = Depends(get_current_user)):
+    """获取指定世界的角色列表"""
+    # 直接复用已有的接口逻辑
+    return await get_scroll_characters(scroll_id, current_user)
+
 if __name__ == "__main__":
     uvicorn.run("server:app", host="0.0.0.0", port=8000, reload=True)

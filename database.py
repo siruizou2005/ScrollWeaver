@@ -711,6 +711,26 @@ class Database:
             }
         return None
 
+    def get_system_scrolls(self) -> List[Dict]:
+        """获取所有系统预设书卷"""
+        conn = sqlite3.connect(self.db_path)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM scrolls WHERE scroll_type = 'system'")
+        rows = cursor.fetchall()
+        conn.close()
+        return [dict(row) for row in rows]
+
+    def get_user_scrolls(self, user_id: int) -> List[Dict]:
+        """获取用户自己创建的书卷列表"""
+        conn = sqlite3.connect(self.db_path)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM scrolls WHERE user_id = ? AND scroll_type = 'user'", (user_id,))
+        rows = cursor.fetchall()
+        conn.close()
+        return [dict(row) for row in rows]
+
 # 全局数据库实例
 db = Database()
 

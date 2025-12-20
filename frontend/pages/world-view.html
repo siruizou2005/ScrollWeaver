@@ -22,11 +22,26 @@
             </div>
         </header>
 
-        <!-- 时间显示（仅在进入世界模式显示） -->
-        <div class="time-display" id="timeDisplay" style="display: none;">
-            <div class="time-card">
-                <i class="fas fa-clock"></i>
-                <span id="timeText">--:--</span>
+        <!-- 顶部交互区域（仅在进入世界模式显示） -->
+        <div class="session-top-overlay" id="sessionTopOverlay" style="display: none;">
+            <!-- 世界动态消息栏 (World Intro) -->
+            <div class="world-intro-bar" id="worldIntroBar">
+                <div class="intro-icon">
+                    <i class="fas fa-bullhorn"></i>
+                </div>
+                <div class="intro-content">
+                    <div class="intro-text-wrapper" id="introTextWrapper">
+                        <span class="intro-text" id="introText">正在观测世界动态...</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 时间显示 -->
+            <div class="time-display" id="timeDisplay">
+                <div class="time-card">
+                    <i class="fas fa-clock"></i>
+                    <span id="timeText">--:--</span>
+                </div>
             </div>
         </div>
 
@@ -111,6 +126,24 @@
             <div class="character-select-body">
                 <div class="character-select-list" id="characterSelectList">
                     <!-- 角色列表将在这里动态生成 -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 世界事件历史模态框 -->
+    <div class="history-modal" id="worldHistoryModal" style="display: none;">
+        <div class="modal-overlay" id="worldHistoryOverlay"></div>
+        <div class="modal-content history-modal-content">
+            <button class="modal-close" id="worldHistoryClose">
+                <i class="fas fa-times"></i>
+            </button>
+            <div class="history-modal-header">
+                <h2><i class="fas fa-history"></i> 世界见闻录</h2>
+            </div>
+            <div class="history-modal-body">
+                <div class="history-list" id="worldHistoryList">
+                    <!-- 历史记录将在这里动态生成 -->
                 </div>
             </div>
         </div>

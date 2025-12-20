@@ -22,6 +22,18 @@ let sessionId = null;
 let scrollId = null;
 let worldSource = ''; // 世界source（用于判断时间格式）
 let buildingCharactersMap = {}; // 建筑物代码 -> 角色列表的映射
+const token = localStorage.getItem('token'); // 获取登录令牌
+
+// 通用 fetch 包装器，自动添加认证头
+async function authenticatedFetch(url, options = {}) {
+    if (token) {
+        options.headers = {
+            ...options.headers,
+            'Authorization': `Bearer ${token}`
+        };
+    }
+    return fetch(url, options);
+}
 
 // 初始化地图
 async function initWorldMap() {
@@ -121,9 +133,28 @@ async function loadBuildingCharacters() {
     }
     
     try {
+        // 用于跟踪每个角色已经分配到的地点
+        const roleToLocationMap = {}; // role_code -> building_code
+        
         // 为每个建筑物使用模拟角色数据
         for (const building of buildingsData) {
-            buildingCharactersMap[building.building_code] = getMockCharactersForBuilding(building.building_code);
+            const mockCharacters = getMockCharactersForBuilding(building.building_code);
+            const assignedCharacters = [];
+            
+            // 只分配尚未分配到其他地点的角色
+            for (const char of mockCharacters) {
+                const roleCode = char.role_code || char.code;
+                if (!roleCode) continue;
+                
+                if (!roleToLocationMap[roleCode]) {
+                    // 角色尚未分配，分配到当前地点
+                    roleToLocationMap[roleCode] = building.building_code;
+                    assignedCharacters.push(char);
+                }
+                // 如果角色已经分配到其他地点，则跳过
+            }
+            
+            buildingCharactersMap[building.building_code] = assignedCharacters;
         }
     } catch (error) {
         console.error('加载建筑物角色数据时出错:', error);
@@ -319,40 +350,41 @@ async function loadBackgroundImage(svg, width, height) {
                 currentScrollId = sessionId.replace('test_', '');
                 console.log('从测试sessionId提取scrollId:', currentScrollId);
             } else {
-                // 真实session模式：尝试从API获取
+                // 真实session模式：优先尝试从crossworld API获取（新版接口）
                 try {
-                    const sessionResponse = await fetch(`/api/world/${sessionId}/info`);
-                    if (sessionResponse.ok) {
-                        const sessionData = await sessionResponse.json();
-                        currentScrollId = sessionData.scroll_id;
-                        console.log('从session API获取scrollId:', currentScrollId);
+                    console.log('正在通过 API 获取会话信息:', sessionId);
+                    const crossworldResponse = await authenticatedFetch(`/api/crossworld/session/${sessionId}`);
+                    if (crossworldResponse.ok) {
+                        const crossworldData = await crossworldResponse.json();
+                        currentScrollId = crossworldData.scroll_id;
+                        console.log('从crossworld session获取scrollId成功:', currentScrollId);
+                    } else {
+                        console.warn(`获取 crossworld session 失败 (状态码: ${crossworldResponse.status})，尝试旧版接口...`);
+                        // 兜底：尝试旧版接口（如果存在）
+                        const sessionResponse = await authenticatedFetch(`/api/world/${sessionId}/info`);
+                        if (sessionResponse.ok) {
+                            const sessionData = await sessionResponse.json();
+                            currentScrollId = sessionData.scroll_id;
+                            console.log('从旧版 session API获取scrollId成功:', currentScrollId);
+                        } else {
+                            console.error(`所有会话获取接口均失败 (旧版状态码: ${sessionResponse.status})`);
+                        }
                     }
                 } catch (e) {
-                    console.warn('获取session信息失败:', e);
-                    // 如果API不存在，尝试从crossworld session获取
-                    try {
-                        const crossworldResponse = await fetch(`/api/crossworld/session/${sessionId}`);
-                        if (crossworldResponse.ok) {
-                            const crossworldData = await crossworldResponse.json();
-                            currentScrollId = crossworldData.scroll_id;
-                            console.log('从crossworld session获取scrollId:', currentScrollId);
-                        }
-                    } catch (e2) {
-                        console.warn('获取crossworld session信息失败:', e2);
-                    }
+                    console.error('获取会话信息时发生异常:', e);
                 }
             }
         }
         
         if (!currentScrollId) {
-            console.warn('未找到scroll_id参数，无法加载背景图片');
+            console.error('无法确定书卷ID (scroll_id)，加载地图失败。SessionID:', sessionId);
             return;
         }
 
         // 获取书卷信息以确定背景图片
         let source = '';
         try {
-            const response = await fetch(`/api/scroll/${currentScrollId}`);
+            const response = await authenticatedFetch(`/api/scroll/${currentScrollId}`);
             if (response.ok) {
                 const scrollData = await response.json();
                 source = scrollData.source || '';
@@ -440,29 +472,26 @@ async function loadAndDrawBuildings(svg) {
                 scrollId = currentScrollId; // 保存到全局变量
                 console.log('从测试sessionId提取scrollId:', currentScrollId);
             } else {
-                // 真实session模式：尝试从API获取
+                // 真实session模式：优先尝试从crossworld API获取（新版接口）
                 try {
-                    const sessionResponse = await fetch(`/api/world/${sessionId}/info`);
-                    if (sessionResponse.ok) {
-                        const sessionData = await sessionResponse.json();
-                        currentScrollId = sessionData.scroll_id;
+                    const crossworldResponse = await authenticatedFetch(`/api/crossworld/session/${sessionId}`);
+                    if (crossworldResponse.ok) {
+                        const crossworldData = await crossworldResponse.json();
+                        currentScrollId = crossworldData.scroll_id;
                         scrollId = currentScrollId; // 保存到全局变量
-                        console.log('从session API获取scrollId:', currentScrollId);
+                        console.log('从crossworld session获取scrollId:', currentScrollId);
+                    } else {
+                        // 兜底：尝试旧版接口（如果存在）
+                        const sessionResponse = await authenticatedFetch(`/api/world/${sessionId}/info`);
+                        if (sessionResponse.ok) {
+                            const sessionData = await sessionResponse.json();
+                            currentScrollId = sessionData.scroll_id;
+                            scrollId = currentScrollId; // 保存到全局变量
+                            console.log('从旧版 session API获取scrollId:', currentScrollId);
+                        }
                     }
                 } catch (e) {
                     console.warn('获取session信息失败:', e);
-                    // 如果API不存在，尝试从crossworld session获取
-                    try {
-                        const crossworldResponse = await fetch(`/api/crossworld/session/${sessionId}`);
-                        if (crossworldResponse.ok) {
-                            const crossworldData = await crossworldResponse.json();
-                            currentScrollId = crossworldData.scroll_id;
-                            scrollId = currentScrollId; // 保存到全局变量
-                            console.log('从crossworld session获取scrollId:', currentScrollId);
-                        }
-                    } catch (e2) {
-                        console.warn('获取crossworld session信息失败:', e2);
-                    }
                 }
             }
         }
@@ -473,7 +502,7 @@ async function loadAndDrawBuildings(svg) {
         }
 
         // 从API获取建筑物数据
-        const response = await fetch(`/api/scrolls/${currentScrollId}/map-buildings`);
+        const response = await authenticatedFetch(`/api/scrolls/${currentScrollId}/map-buildings`);
         if (!response.ok) {
             console.warn('获取建筑物数据失败:', response.statusText);
             return;
@@ -728,9 +757,26 @@ function startChat(roleCode) {
         console.error('缺少必要参数');
         return;
     }
+
+    // 获取当前玩家选择的角色信息（用于私语时告诉对方我是谁）
+    const savedRole = localStorage.getItem('selected_role');
+    let userName = '用户';
+    if (savedRole) {
+        try {
+            const role = JSON.parse(savedRole);
+            userName = role.name || role.nickname || '用户';
+        } catch (e) {
+            console.warn('解析已选角色失败:', e);
+        }
+    }
     
-    // 跳转到私语页面
-    window.location.href = `/frontend/pages/chat.html?scroll_id=${scrollId}&role_code=${roleCode}`;
+    // 跳转到私语页面，传递当前用户名
+    const params = new URLSearchParams({
+        scroll_id: scrollId,
+        role_code: roleCode,
+        user_name: userName
+    });
+    window.location.href = `/frontend/pages/chat.html?${params.toString()}`;
 }
 
 // 开始群聊
@@ -1078,10 +1124,11 @@ function setupSessionMode() {
             header.style.display = 'none';
         }
         
-        // 显示时间显示
-        const timeDisplay = document.getElementById('timeDisplay');
-        if (timeDisplay) {
-            timeDisplay.style.display = 'block';
+        // 显示顶部交互叠加层 (包含World Intro和时间)
+        const topOverlay = document.getElementById('sessionTopOverlay');
+        if (topOverlay) {
+            topOverlay.style.display = 'flex';
+            startWorldIntro();
         }
 
         // 显示玩家状态栏
@@ -1104,6 +1151,103 @@ function setupSessionMode() {
     }
 }
 
+// 世界动态消息逻辑
+let introTimer = null;
+const eventHistory = []; // 存储所有发生过的事件
+const worldIntros = {
+    'A_Dream_in_Red_Mansions': [
+        "大观园内微风拂过，潇湘馆的翠竹沙沙作响。",
+        "贾宝玉正从怡红院出门，往沁芳亭方向去了。",
+        "刘姥姥正在秋爽斋与众人说笑，引得贾母开怀大笑。",
+        "林黛玉倚在窗前，正对着残荷暗自垂泪。",
+        "王熙凤在藕香榭筹办螃蟹宴，园子里好生热闹。",
+        "宝钗在蘅芜苑静坐，细细品味着手中的香茶。",
+        "大观园的角门悄悄开启，不知是谁在月色下徘徊。"
+    ],
+    'A_Song_of_Ice_and_Fire': [
+        "临冬城的寒风凛冽，乌鸦在神木林上空盘旋。",
+        "守夜人发来急报，绝境长城外的阴影正在扩散。",
+        "君临城的宫廷里，权力游戏的棋子正在悄然移动。",
+        "丹妮莉丝的巨龙在大海上空咆哮，火光映红了云层。",
+        "史塔克家族的狼旗在风中猎猎作响，冬天即将来临。"
+    ],
+    'default': [
+        "世界正在缓缓转动，无数故事在角落悄然发生。",
+        "微风带来了远方的消息，新的冒险正在拉开序幕。",
+        "当地的居民们正在忙碌，生活一如既往地继续着。",
+        "阳光洒在地图的每一个角落，等待着探险者的脚步。"
+    ]
+};
+
+function startWorldIntro() {
+    const introBar = document.getElementById('worldIntroBar');
+    const introEl = document.getElementById('introText');
+    if (!introEl || !introBar) return;
+
+    const source = worldSource || 'default';
+    const intros = worldIntros[source] || worldIntros['default'];
+    let index = 0;
+
+    const updateIntro = () => {
+        const text = intros[index];
+        const now = new Date();
+        const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+        
+        // 记录到历史
+        eventHistory.unshift({
+            time: timeStr,
+            content: text
+        });
+        // 保持最近50条
+        if (eventHistory.length > 50) eventHistory.pop();
+
+        introEl.style.animation = 'none';
+        introEl.offsetHeight; // 触发重绘
+        introEl.textContent = text;
+        introEl.style.animation = 'slideInOut 8s infinite';
+        
+        index = (index + 1) % intros.length;
+    };
+
+    // 初始化点击事件查看历史
+    introBar.addEventListener('click', showWorldHistory);
+
+    updateIntro();
+    if (introTimer) clearInterval(introTimer);
+    introTimer = setInterval(updateIntro, 8000);
+}
+
+// 显示世界见闻历史
+function showWorldHistory() {
+    const modal = document.getElementById('worldHistoryModal');
+    const listEl = document.getElementById('worldHistoryList');
+    const closeBtn = document.getElementById('worldHistoryClose');
+    const overlay = document.getElementById('worldHistoryOverlay');
+
+    if (!modal || !listEl) return;
+
+    // 渲染历史记录
+    if (eventHistory.length === 0) {
+        listEl.innerHTML = '<div class="no-characters">暂无世界见闻记录</div>';
+    } else {
+        listEl.innerHTML = eventHistory.map(item => `
+            <div class="history-item">
+                <div class="history-item-time">${item.time}</div>
+                <div class="history-item-content">${item.content}</div>
+            </div>
+        `).join('');
+    }
+
+    modal.style.display = 'flex';
+
+    const closeModal = () => {
+        modal.style.display = 'none';
+    };
+
+    closeBtn.onclick = closeModal;
+    overlay.onclick = closeModal;
+}
+
 // 加载玩家状态
 async function loadPlayerStatus() {
     try {
@@ -1118,7 +1262,7 @@ async function loadPlayerStatus() {
             try {
                 const role = JSON.parse(savedRole);
                 if (playerNameEl) playerNameEl.textContent = role.name || role.nickname || '穿越者';
-                if (playerIdentityEl) playerIdentityEl.textContent = '已魂穿';
+                if (playerIdentityEl) playerIdentityEl.textContent = role.identity || '已魂穿';
                 if (playerAvatarEl && role.avatar) {
                     playerAvatarEl.innerHTML = `<img src="${role.avatar}" alt="玩家头像" onerror="this.src='../assets/images/default-icon.jpg'">`;
                 }

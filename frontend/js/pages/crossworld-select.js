@@ -8,8 +8,9 @@ const urlParams = new URLSearchParams(window.location.search);
 const scrollId = urlParams.get('scroll_id');
 const token = localStorage.getItem('token');
 
-// 当前选中的角色代码
+// 当前选中的角色代码和数据
 let selectedCharacterCode = null;
+let selectedCharacterData = null;
 
 // 页面加载时初始化
 document.addEventListener('DOMContentLoaded', async () => {
@@ -176,6 +177,7 @@ async function showCharacterDetail(roleCode, characterData) {
         // 显示模态框
         modal.style.display = 'flex';
         selectedCharacterCode = roleCode;
+        selectedCharacterData = characterData;
 
     } catch (error) {
         console.error('显示角色详情失败:', error);
@@ -343,6 +345,28 @@ async function createWorldSession(crossType, characterCode = null, personaModelI
 
         const data = await response.json();
         const sessionId = data.session_id;
+
+        // 如果是角色魂穿，保存角色信息到localStorage以便在世界界面显示
+        if (crossType === 'character' && selectedCharacterData) {
+            localStorage.setItem('selected_role', JSON.stringify({
+                code: selectedCharacterCode,
+                name: selectedCharacterData.name || selectedCharacterData.nickname,
+                nickname: selectedCharacterData.nickname,
+                avatar: selectedCharacterData.avatar
+            }));
+        } else if (crossType === 'self') {
+            localStorage.setItem('selected_role', JSON.stringify({
+                name: '真实自我',
+                identity: '本尊降临',
+                avatar: '../assets/images/default-icon.jpg'
+            }));
+        } else if (crossType === 'soulverse') {
+            localStorage.setItem('selected_role', JSON.stringify({
+                name: '数字孪生',
+                identity: 'Soulverse',
+                avatar: '../assets/images/default-icon.jpg'
+            }));
+        }
 
         // 跳转到世界界面
         window.location.href = `/frontend/pages/world-view.html?session_id=${sessionId}`;
