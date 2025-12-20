@@ -431,8 +431,8 @@ body::after {
     z-index: 1;
 }
 
-/* 四象阵容器 */
-.four-portals-container {
+/* 双模块容器 */
+.two-portals-container {
     width: 100%;
     height: calc(100vh - 80px);
     display: flex;
@@ -442,38 +442,19 @@ body::after {
     position: relative;
 }
 
-.four-portals-grid {
+.two-portals-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    grid-template-rows: 1fr 1fr;
-    gap: 3rem;
+    gap: 4rem;
     width: 100%;
     max-width: 1400px;
     height: 100%;
-    max-height: 800px;
+    max-height: 600px;
     position: relative;
 }
 
 /* 装饰性分隔符 - 屏风隔断 */
-.four-portals-grid::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 0;
-    right: 0;
-    height: 1px;
-    background: linear-gradient(
-        to right,
-        transparent,
-        rgba(212, 175, 55, 0.3) 20%,
-        rgba(212, 175, 55, 0.3) 80%,
-        transparent
-    );
-    z-index: 0;
-    pointer-events: none;
-}
-
-.four-portals-grid::after {
+.two-portals-grid::after {
     content: '';
     position: absolute;
     top: 0;
@@ -529,8 +510,6 @@ body::after {
 
 .portal-card:nth-child(1) { animation-delay: 0.1s; }
 .portal-card:nth-child(2) { animation-delay: 0.2s; }
-.portal-card:nth-child(3) { animation-delay: 0.3s; }
-.portal-card:nth-child(4) { animation-delay: 0.4s; }
 
 @keyframes cardEntrance {
     to {
@@ -614,55 +593,23 @@ body::after {
     background: radial-gradient(circle at center, rgba(212, 175, 55, 0.2) 0%, transparent 70%);
 }
 
-/* 雅集 - 朱红色，亭台楼阁/棋盘 */
-.gathering-card {
-    border-color: rgba(220, 38, 38, 0.4);
+/* 穿越 - 紫色，时空门/传送阵 */
+.crossworld-card {
+    border-color: rgba(139, 92, 246, 0.4);
     background: linear-gradient(135deg, 
-        rgba(220, 38, 38, 0.08) 0%, 
+        rgba(139, 92, 246, 0.08) 0%, 
         rgba(250, 248, 243, 0.7) 100%);
 }
 
-.gathering-card .gathering-illustration {
+.crossworld-card .crossworld-illustration {
     background-image: 
-        radial-gradient(ellipse at 40% 40%, rgba(220, 38, 38, 0.25) 0%, transparent 50%),
-        radial-gradient(ellipse at 60% 60%, rgba(185, 28, 28, 0.2) 0%, transparent 50%);
+        radial-gradient(ellipse at 40% 40%, rgba(139, 92, 246, 0.25) 0%, transparent 50%),
+        radial-gradient(ellipse at 60% 60%, rgba(124, 58, 237, 0.2) 0%, transparent 50%);
     opacity: 0.12;
 }
 
-.gathering-glow {
-    background: radial-gradient(circle at center, rgba(220, 38, 38, 0.2) 0%, transparent 70%);
-}
-
-/* 藏书阁 - 靛青色，书卷/书架 */
-.library-card {
-    border-color: rgba(30, 58, 138, 0.4);
-}
-
-.library-card .library-illustration {
-    background-image: 
-        radial-gradient(ellipse at 50% 50%, rgba(30, 58, 138, 0.2) 0%, transparent 50%),
-        repeating-linear-gradient(90deg, transparent, transparent 20px, rgba(30, 58, 138, 0.05) 20px, rgba(30, 58, 138, 0.05) 21px);
-    opacity: 0.1;
-}
-
-.library-glow {
-    background: radial-gradient(circle at center, rgba(30, 58, 138, 0.2) 0%, transparent 70%);
-}
-
-/* 阅卷 - 翠绿色，地图/罗盘 */
-.explore-card {
-    border-color: rgba(34, 197, 94, 0.4);
-}
-
-.explore-card .explore-illustration {
-    background-image: 
-        radial-gradient(circle at 50% 50%, rgba(34, 197, 94, 0.2) 0%, transparent 60%),
-        conic-gradient(from 0deg at 50% 50%, transparent 0deg, rgba(34, 197, 94, 0.1) 90deg, transparent 180deg);
-    opacity: 0.1;
-}
-
-.explore-glow {
-    background: radial-gradient(circle at center, rgba(34, 197, 94, 0.2) 0%, transparent 70%);
+.crossworld-glow {
+    background: radial-gradient(circle at center, rgba(139, 92, 246, 0.2) 0%, transparent 70%);
 }
 
 /* 卡片光晕效果 */
@@ -818,96 +765,117 @@ body::after {
     );
 }
 
-/* 雅集卡片 - 朱红微光 */
-.portal-card.gathering-card:hover {
-    border-color: rgba(220, 38, 38, 0.8);
+/* 穿越卡片 - 紫色微光 */
+.portal-card.crossworld-card:hover {
+    border-color: rgba(139, 92, 246, 0.8);
     box-shadow: 
         0 15px 40px rgba(107, 68, 35, 0.25),
-        0 0 35px rgba(220, 38, 38, 0.5),
+        0 0 35px rgba(139, 92, 246, 0.5),
         inset 0 2px 4px rgba(255, 255, 255, 0.4);
     background: linear-gradient(135deg, 
-        rgba(220, 38, 38, 0.12) 0%, 
+        rgba(139, 92, 246, 0.12) 0%, 
         rgba(250, 248, 243, 0.7) 100%);
 }
 
-.portal-card.gathering-card:hover .portal-title {
-    color: #dc2626;
+.portal-card.crossworld-card:hover .portal-title {
+    color: #8b5cf6;
     text-shadow: 
         3px 3px 6px rgba(107, 68, 35, 0.3),
-        0 0 20px rgba(220, 38, 38, 0.4);
+        0 0 20px rgba(139, 92, 246, 0.4);
 }
 
-.gathering-border-glow::before {
+.crossworld-border-glow::before {
     background: linear-gradient(
         90deg,
         transparent,
-        rgba(220, 38, 38, 0.8),
+        rgba(139, 92, 246, 0.8),
         transparent
     );
 }
 
-/* 藏书阁卡片 - 靛青微光 */
-.portal-card.library-card:hover {
-    border-color: rgba(30, 58, 138, 0.8);
-    box-shadow: 
-        0 15px 40px rgba(107, 68, 35, 0.25),
-        0 0 35px rgba(30, 58, 138, 0.5),
-        inset 0 2px 4px rgba(255, 255, 255, 0.4);
+/* 穿越选择弹窗专属样式 */
+.crossworld-selection-content {
+    max-width: 800px !important;
+    background: linear-gradient(135deg, #f3f0ff 0%, #faf8f3 100%) !important;
+    border-color: rgba(139, 92, 246, 0.5) !important;
 }
 
-.portal-card.library-card:hover .portal-title {
-    color: #1e3a8a;
-    text-shadow: 
-        3px 3px 6px rgba(107, 68, 35, 0.3),
-        0 0 20px rgba(30, 58, 138, 0.4);
+.crossworld-options-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    padding: 2rem;
 }
 
-.library-border-glow::before {
-    background: linear-gradient(
-        90deg,
-        transparent,
-        rgba(30, 58, 138, 0.8),
-        transparent
-    );
+.cross-option-card {
+    background: white;
+    border: 2px solid rgba(139, 92, 246, 0.2);
+    border-radius: 12px;
+    padding: 1.5rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
 }
 
-/* 阅卷卡片 - 翠绿微光 */
-.portal-card.explore-card:hover {
-    border-color: rgba(34, 197, 94, 0.8);
-    box-shadow: 
-        0 15px 40px rgba(107, 68, 35, 0.25),
-        0 0 35px rgba(34, 197, 94, 0.5),
-        inset 0 2px 4px rgba(255, 255, 255, 0.4);
+.cross-option-card:hover {
+    transform: translateY(-5px);
+    border-color: rgba(139, 92, 246, 0.6);
+    box-shadow: 0 8px 20px rgba(139, 92, 246, 0.15);
+    background: rgba(139, 92, 246, 0.05);
 }
 
-.portal-card.explore-card:hover .portal-title {
-    color: #22c55e;
-    text-shadow: 
-        3px 3px 6px rgba(107, 68, 35, 0.3),
-        0 0 20px rgba(34, 197, 94, 0.4);
+.option-icon {
+    width: 60px;
+    height: 60px;
+    background: rgba(139, 92, 246, 0.1);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: #7c3aed;
+    transition: all 0.3s ease;
 }
 
-.explore-border-glow::before {
-    background: linear-gradient(
-        90deg,
-        transparent,
-        rgba(34, 197, 94, 0.8),
-        transparent
-    );
+.cross-option-card:hover .option-icon {
+    background: #7c3aed;
+    color: white;
+    transform: rotate(360deg);
+}
+
+.option-info h3 {
+    font-family: 'Noto Serif SC', serif;
+    color: #3d2817;
+    margin-bottom: 0.5rem;
+}
+
+.option-info p {
+    font-size: 0.85rem;
+    color: #6b4423;
+    line-height: 1.4;
 }
 
 /* 响应式设计 */
 @media (max-width: 768px) {
-    .four-portals-grid {
+    .two-portals-grid {
         grid-template-columns: 1fr;
         grid-template-rows: auto;
         gap: 2rem;
     }
     
-    .four-portals-grid::before,
-    .four-portals-grid::after {
+    .two-portals-grid::after {
         display: none;
     }
+    
+    .crossworld-options-grid {
+        grid-template-columns: 1fr;
+        padding: 1rem;
+    }
+}
     
     .portal-card {
         min-height: 200px;

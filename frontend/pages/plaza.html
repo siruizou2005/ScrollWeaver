@@ -41,59 +41,70 @@
             </div>
         </header>
 
-        <!-- 四象阵区域 -->
-        <div class="four-portals-container">
-            <div class="four-portals-grid">
-                <!-- 左上：制卷 -->
+        <!-- 双模块区域 -->
+        <div class="two-portals-container">
+            <div class="two-portals-grid">
+                <!-- 左侧：天工 -->
                 <div class="portal-card creation-card" id="creationCard">
                     <div class="portal-background creation-bg">
                         <div class="card-illustration creation-illustration"></div>
                     </div>
                     <div class="portal-content">
                         <h2 class="portal-title calligraphy-text">天工</h2>
-                        <p class="portal-subtitle">创建属于你的书卷</p>
+                        <p class="portal-subtitle">创造属于你的世界</p>
                     </div>
                     <div class="card-glow creation-glow"></div>
                     <div class="border-glow creation-border-glow"></div>
                 </div>
                 
-                <!-- 右上：雅集 -->
-                <div class="portal-card gathering-card" id="gatheringCard">
-                    <div class="portal-background gathering-bg">
-                        <div class="card-illustration gathering-illustration"></div>
+                <!-- 右侧：穿越 -->
+                <div class="portal-card crossworld-card" id="crossworldCard">
+                    <div class="portal-background crossworld-bg">
+                        <div class="card-illustration crossworld-illustration"></div>
                     </div>
                     <div class="portal-content">
-                        <h2 class="portal-title calligraphy-text">雅集</h2>
-                        <p class="portal-subtitle">入卷同游与博弈游戏</p>
+                        <h2 class="portal-title calligraphy-text">穿越</h2>
+                        <p class="portal-subtitle">进入你创造的世界</p>
                     </div>
-                    <div class="card-glow gathering-glow"></div>
-                    <div class="border-glow gathering-border-glow"></div>
+                    <div class="card-glow crossworld-glow"></div>
+                    <div class="border-glow crossworld-border-glow"></div>
                 </div>
-                
-                <!-- 左下：藏书 -->
-                <div class="portal-card library-card" id="libraryCard">
-                    <div class="portal-background library-bg">
-                        <div class="card-illustration library-illustration"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 穿越方式二级选择弹窗 -->
+    <div class="modal" id="crossworldModal">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content crossworld-selection-content">
+            <div class="modal-header">
+                <h2 class="calligraphy-text">选择穿越之径</h2>
+                <span class="close" id="closeCrossworldModal">&times;</span>
+            </div>
+            <div class="crossworld-options-grid">
+                <!-- 藏书阁 -->
+                <div class="cross-option-card library-option" id="gotoLibrary">
+                    <div class="option-icon"><i class="fas fa-book-reader"></i></div>
+                    <div class="option-info">
+                        <h3>藏书阁</h3>
+                        <p>探访你亲手编织的世界</p>
                     </div>
-                    <div class="portal-content">
-                        <h2 class="portal-title calligraphy-text">藏书阁</h2>
-                        <p class="portal-subtitle">我的书卷 / 历史记录 / 收藏</p>
-                    </div>
-                    <div class="card-glow library-glow"></div>
-                    <div class="border-glow library-border-glow"></div>
                 </div>
-                
-                <!-- 右下：阅卷 -->
-                <div class="portal-card explore-card" id="exploreCard">
-                    <div class="portal-background explore-bg">
-                        <div class="card-illustration explore-illustration"></div>
+                <!-- 阅卷 -->
+                <div class="cross-option-card explore-option" id="gotoExplore">
+                    <div class="option-icon"><i class="fas fa-compass"></i></div>
+                    <div class="option-info">
+                        <h3>阅卷</h3>
+                        <p>步入他人共享的奇幻境遇</p>
                     </div>
-                    <div class="portal-content">
-                        <h2 class="portal-title calligraphy-text">阅卷</h2>
-                        <p class="portal-subtitle">浏览共享书卷</p>
+                </div>
+                <!-- 雅集 -->
+                <div class="cross-option-card gathering-option" id="gotoGathering">
+                    <div class="option-icon"><i class="fas fa-users"></i></div>
+                    <div class="option-info">
+                        <h3>雅集</h3>
+                        <p>在多人博弈中体验穿越</p>
                     </div>
-                    <div class="card-glow explore-glow"></div>
-                    <div class="border-glow explore-border-glow"></div>
                 </div>
             </div>
         </div>
