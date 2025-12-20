@@ -32,15 +32,16 @@ body::before {
 }
 
 .world-view-container {
-    max-width: 100%;
-    margin: 0 auto;
+    width: 100vw;
+    height: 100vh;
+    margin: 0;
     padding: 10px;
     position: relative;
     z-index: 1;
-    height: 100vh;
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    background: transparent;
 }
 
 /* 顶部导航 */
@@ -127,7 +128,6 @@ body::before {
     width: 100%;
     height: 100%;
     max-width: 100%;
-    aspect-ratio: 24 / 12;
     background: #fdfaf5;
     border-radius: 12px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1),
@@ -237,7 +237,7 @@ body::before {
     color: #3e2723;
     min-width: 200px;
     max-width: 300px;
-    z-index: 10000;
+    z-index: 10005; /* 确保在所有UI元素之上 */
     pointer-events: none;
     animation: fadeInTooltip 0.2s ease-out;
 }
@@ -245,11 +245,9 @@ body::before {
 @keyframes fadeInTooltip {
     from {
         opacity: 0;
-        transform: translate(-50%, -90%);
     }
     to {
         opacity: 1;
-        transform: translate(-50%, -100%);
     }
 }
 
@@ -299,7 +297,15 @@ body::before {
 
 .world-view-container.session-mode .map-section {
     padding: 0;
-    height: 100vh;
+    flex: 1;
+    height: 100%;
+}
+
+.world-view-container.session-mode .map-container {
+    border-radius: 0;
+    border: none;
+    aspect-ratio: auto;
+    height: 100%;
 }
 
 /* 时间显示 */
@@ -309,6 +315,131 @@ body::before {
     right: 20px;
     z-index: 1000;
 }
+
+/* 玩家状态栏 */
+.player-status-bar {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 2px solid rgba(139, 69, 19, 0.3);
+    border-radius: 16px;
+    padding: 12px;
+    box-shadow: 0 8px 32px rgba(107, 68, 35, 0.15);
+    width: 260px;
+    animation: fadeInLeft 0.6s ease-out;
+}
+
+@keyframes fadeInLeft {
+    from {
+        opacity: 0;
+        transform: translateX(-30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.player-info-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(139, 69, 19, 0.15);
+}
+
+.player-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: 2px solid #8b6f47;
+    overflow: hidden;
+    background: #fff;
+    flex-shrink: 0;
+}
+
+.player-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.player-details {
+    display: flex;
+    flex-direction: column;
+}
+
+.player-name {
+    font-size: 16px;
+    font-weight: 700;
+    color: #3d2817;
+}
+
+.player-identity {
+    font-size: 12px;
+    color: #8b6f47;
+    background: rgba(139, 111, 71, 0.1);
+    padding: 1px 6px;
+    border-radius: 4px;
+    display: inline-block;
+    margin-top: 2px;
+}
+
+.player-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.stat-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.stat-item i {
+    width: 16px;
+    font-size: 14px;
+}
+
+.stat-item i.fa-magic { color: #7e57c2; }
+.stat-item i.fa-heart { color: #e91e63; }
+.stat-item i.fa-bolt { color: #ffa000; }
+
+.stat-bar-container {
+    flex: 1;
+    height: 8px;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.stat-bar {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 1s ease-in-out;
+}
+
+.talent-bar { background: linear-gradient(90deg, #9575cd, #7e57c2); }
+.bond-bar { background: linear-gradient(90deg, #f06292, #e91e63); }
+.energy-bar { background: linear-gradient(90deg, #ffb74d, #ffa000); }
+
+.stat-item span {
+    font-size: 12px;
+    font-weight: 600;
+    color: #5d4037;
+    min-width: 24px;
+    text-align: right;
+}
+
+/* 时间显示 */
 
 .time-card {
     background: rgba(255, 255, 255, 0.95);
@@ -641,9 +772,21 @@ body::before {
 .character-select-item .character-avatar {
     width: 36px;
     height: 36px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
     border-radius: 50%;
-    object-fit: cover;
     border: 2px solid rgba(139, 69, 19, 0.2);
+    background: rgba(255, 255, 255, 0.5);
+}
+
+.character-select-item .character-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
 }
 
 .character-select-item .character-name {
