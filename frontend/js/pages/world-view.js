@@ -439,8 +439,15 @@ async function loadBackgroundImage(svg, width, height) {
             return;
         }
 
-        // 构建背景图片路径：data/maps/{source}/background.png
-        const backgroundImageUrl = `/data/maps/${source}/background.png`;
+        // 构建背景图片路径
+        // 三国演义相关地图使用根目录下的背景图
+        let backgroundImageUrl;
+        if (source === 'Romance_of_the_Three_Kingdoms' || source === 'Romance_of_the_Three_Kingdoms_Longzhong') {
+            backgroundImageUrl = '/三国演义背景图.png';
+        } else {
+            // 其他地图：data/maps/{source}/background.png
+            backgroundImageUrl = `/data/maps/${source}/background.png`;
+        }
         console.log('背景图片URL:', backgroundImageUrl);
 
         // 方法1: 使用CSS背景图片（更可靠）
