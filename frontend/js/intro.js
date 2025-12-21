@@ -754,86 +754,129 @@ async function loadMapPreview(scrollId, source) {
     if (!mapPreview || !mapPreviewContainer) return;
 
     try {
-        // 先设置背景图（如果存在）
-        if (source) {
-            const backgroundImageUrl = `/data/maps/${source}/background.png`;
-            const testImg = new Image();
-            testImg.onload = () => {
-                mapPreviewContainer.style.backgroundImage = `url(${backgroundImageUrl})`;
-                mapPreviewContainer.style.backgroundSize = 'cover';
-                mapPreviewContainer.style.backgroundPosition = 'center';
-                mapPreviewContainer.classList.add('has-background');
-            };
-            testImg.src = backgroundImageUrl;
-        }
-
-        const response = await fetch(`/api/scrolls/${scrollId}/map-buildings`, {
+        // 使用新 API 获取完整地图数据
+        const response = await fetch(`/api/scrolls/${scrollId}/map`, {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
         });
 
-        if (!response.ok) return;
-
-        const data = await response.json();
-        const buildings = data.buildings || [];
-        
-        // 获取容器尺寸
-        const width = mapPreviewContainer.clientWidth || 300;
-        const height = mapPreviewContainer.clientHeight || 200;
-        
-        const GRID_COLS = 24;
-        const GRID_ROWS = 12;
-        const cellWidth = width / GRID_COLS;
-        const cellHeight = height / GRID_ROWS;
-
-        // 设置SVG视口
-        mapPreview.setAttribute('viewBox', `0 0 ${width} ${height}`);
-        mapPreview.innerHTML = '';
-
-        if (buildings.length === 0) {
-            mapPreviewContainer.innerHTML = '<div class="map-empty"><i class="fas fa-map-marked"></i><p>暂无地图数据</p></div>';
+        if (!response.ok) {
+            console.warn('获取地图数据失败，尝试旧接口');
+            // 兜底逻辑
+            const oldResponse = await fetch(`/api/scrolls/${scrollId}/map-buildings`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (oldResponse.ok) {
+                const oldData = await oldResponse.json();
+                renderMapPreview(oldData.buildings || [], null);
+            }
             return;
         }
 
-        // 绘制建筑物预览
-        buildings.forEach(building => {
-            const { coordinates, color } = building;
-            if (!coordinates) return;
+        const mapData = await response.json();
+        const buildings = (mapData.locations || []).map(loc => ({
+            building_code: loc.code,
+            building_name: loc.name,
+            coordinates: loc.view_config,
+            color: loc.color
+        })).filter(b => b.coordinates && Object.keys(b.coordinates).length > 0);
 
-            const convert = (ux, uy) => ({
-                x: (ux - 1) * cellWidth,
-                y: (GRID_ROWS - uy) * cellHeight
-            });
-
-            const sw = convert(coordinates.sw[0], coordinates.sw[1]);
-            const se = convert(coordinates.se[0], coordinates.se[1]);
-            const ne = convert(coordinates.ne[0], coordinates.ne[1]);
-            const nw = convert(coordinates.nw[0], coordinates.nw[1]);
-
-            const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-            const points = [`${sw.x},${sw.y}`, `${se.x},${se.y}`, `${ne.x},${ne.y}`, `${nw.x},${nw.y}`].join(' ');
-            polygon.setAttribute('points', points);
-            
-            // 如果没有背景图，显示建筑物颜色（红楼梦和三国演义默认有背景图，不显示颜色块以免遮挡）
-            const worldsWithBackground = ['A_Dream_in_Red_Mansions', 'Romance_of_the_Three_Kingdoms', 'Romance_of_the_Three_Kingdoms_Longzhong'];
-            const showBuildingColor = !worldsWithBackground.includes(source);
-            
-            if (showBuildingColor && color) {
-                polygon.setAttribute('fill', color);
-                polygon.setAttribute('fill-opacity', '0.5');
-                polygon.setAttribute('stroke', color);
-                polygon.setAttribute('stroke-width', '1');
-            } else {
-                polygon.setAttribute('fill', 'transparent');
-                polygon.setAttribute('stroke', 'rgba(255,255,255,0.2)');
-                polygon.setAttribute('stroke-width', '0.5');
-            }
-            
-            mapPreview.appendChild(polygon);
-        });
+        const backgroundImageUrl = mapData.metadata ? mapData.metadata.background_url : null;
+        renderMapPreview(buildings, backgroundImageUrl, source);
 
     } catch (error) {
         console.error('加载地图预览失败:', error);
     }
+}
+
+/**
+ * 渲染地图预览
+ */
+function renderMapPreview(buildings, backgroundImageUrl, source) {
+    const mapPreview = document.getElementById('mapPreview');
+    const mapPreviewContainer = document.getElementById('mapPreviewContainer');
+    
+    if (!mapPreview || !mapPreviewContainer) return;
+
+    // 清空现有内容
+    mapPreview.innerHTML = '';
+    
+    // 默认显示“暂无数据”，如果后续有背景图或建筑物则移除
+    if (buildings.length === 0 && !backgroundImageUrl) {
+        mapPreviewContainer.innerHTML = '<div class="map-empty"><i class="fas fa-map-marked"></i><p>暂无地图数据</p></div>';
+        return;
+    } else {
+        // 先移除旧的空提示（如果有）
+        const oldEmpty = mapPreviewContainer.querySelector('.map-empty');
+        if (oldEmpty) oldEmpty.remove();
+    }
+
+    // 设置背景图
+    if (backgroundImageUrl) {
+        const testImg = new Image();
+        testImg.onload = () => {
+            mapPreviewContainer.style.backgroundImage = `url(${backgroundImageUrl})`;
+            mapPreviewContainer.style.backgroundSize = 'cover';
+            mapPreviewContainer.style.backgroundPosition = 'center';
+            mapPreviewContainer.classList.add('has-background');
+            // 加载成功后确保移除空提示
+            const emptyHint = mapPreviewContainer.querySelector('.map-empty');
+            if (emptyHint) emptyHint.remove();
+        };
+        testImg.src = backgroundImageUrl;
+    } else {
+        mapPreviewContainer.style.backgroundImage = 'none';
+        mapPreviewContainer.classList.remove('has-background');
+    }
+
+    if (buildings.length === 0) return;
+
+    // 获取容器尺寸
+    const width = mapPreviewContainer.clientWidth || 300;
+    const height = mapPreviewContainer.clientHeight || 200;
+    
+    const GRID_COLS = 24;
+    const GRID_ROWS = 12;
+    const cellWidth = width / GRID_COLS;
+    const cellHeight = height / GRID_ROWS;
+
+    // 设置SVG视口
+    mapPreview.setAttribute('viewBox', `0 0 ${width} ${height}`);
+
+    // 绘制建筑物预览
+    buildings.forEach(building => {
+        const { coordinates, color } = building;
+        if (!coordinates || Object.keys(coordinates).length === 0) return;
+
+        const convert = (ux, uy) => ({
+            x: (ux - 1) * cellWidth,
+            y: (GRID_ROWS - uy) * cellHeight
+        });
+
+        const sw = convert(coordinates.sw[0], coordinates.sw[1]);
+        const se = convert(coordinates.se[0], coordinates.se[1]);
+        const ne = convert(coordinates.ne[0], coordinates.ne[1]);
+        const nw = convert(coordinates.nw[0], coordinates.nw[1]);
+
+        const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+        const points = [`${sw.x},${sw.y}`, `${se.x},${se.y}`, `${ne.x},${ne.y}`, `${nw.x},${nw.y}`].join(' ');
+        polygon.setAttribute('points', points);
+        
+        // 如果是三国演义（隆中）或没有背景图，显示建筑物颜色
+        const showBuildingColor = source !== 'A_Dream_in_Red_Mansions';
+        
+        if (showBuildingColor && color) {
+            polygon.setAttribute('fill', color);
+            polygon.setAttribute('fill-opacity', '0.5');
+            polygon.setAttribute('stroke', color);
+            polygon.setAttribute('stroke-width', '1');
+        } else {
+            polygon.setAttribute('fill', 'transparent');
+            polygon.setAttribute('stroke', 'rgba(255,255,255,0.2)');
+            polygon.setAttribute('stroke-width', '0.5');
+        }
+        
+        mapPreview.appendChild(polygon);
+    });
 }

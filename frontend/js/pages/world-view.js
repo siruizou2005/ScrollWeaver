@@ -25,6 +25,7 @@ let buildingCharactersMap = {}; // 建筑物代码 -> 角色列表的映射
 const token = localStorage.getItem('token'); // 获取登录令牌
 let socket = null; // WebSocket 连接
 let messageHistory = []; // 存储收到的消息
+let isWorldPaused = true; // 世界是否已暂停（默认暂停，等待用户手动启动）
 
 // 通用 fetch 包装器，自动添加认证头
 async function authenticatedFetch(url, options = {}) {
@@ -56,8 +57,21 @@ async function initWorldMap() {
         // 兜底尺寸：如果由于某种原因尺寸为0，使用窗口尺寸或默认比例
         if (containerWidth === 0 || containerHeight === 0) {
             console.warn('地图容器尺寸异常(0)，尝试使用视口尺寸兜底');
-            containerWidth = window.innerWidth;
-            containerHeight = window.innerHeight;
+            // 如果是session模式，需要考虑顶部覆盖层和状态栏的高度
+            if (isSessionMode) {
+                containerWidth = window.innerWidth;
+                containerHeight = window.innerHeight;
+            } else {
+                containerWidth = window.innerWidth;
+                containerHeight = window.innerHeight;
+            }
+            
+            // 如果还是0，使用默认尺寸
+            if (containerWidth === 0 || containerHeight === 0) {
+                console.warn('视口尺寸也为0，使用默认尺寸');
+                containerWidth = 1920;
+                containerHeight = 1080;
+            }
         }
 
         console.log(`初始化地图尺寸: ${containerWidth}x${containerHeight}`);
@@ -76,6 +90,8 @@ async function initWorldMap() {
 
         // 先加载建筑物数据（需要在绘制网格前加载，以便网格能检测建筑物）
         await loadAndDrawBuildings(svg);
+        
+        console.log('[WorldView] 建筑物数据加载完成，准备绘制，当前 buildingsData 长度:', buildingsData.length);
 
         // 加载背景图片（需要在获取scroll_id后）
         await loadBackgroundImage(svg, containerWidth, containerHeight);
@@ -94,6 +110,7 @@ async function initWorldMap() {
 
         // 绘制建筑物（透明多边形，仅用于交互）
         // 必须在grid cells之后绘制，这样建筑物在上层，可以接收点击事件
+        console.log('[WorldView] 准备绘制建筑物，buildingsData 长度:', buildingsData.length);
         drawBuildings(svg);
 
         // 如果是session模式，等待角色数据加载完成后绘制人物
@@ -157,8 +174,8 @@ function loadTimeDisplay() {
 
 // 加载建筑物位置的角色数据
 async function loadBuildingCharacters() {
-    if (!sessionId) {
-        console.warn('未找到session_id，无法加载角色数据');
+    if (!sessionId && !scrollId) {
+        console.warn('未找到session_id或scroll_id，无法加载角色数据');
         return;
     }
 
@@ -166,9 +183,28 @@ async function loadBuildingCharacters() {
         // 用于跟踪每个角色已经分配到的地点
         const roleToLocationMap = {}; // role_code -> building_code
 
-        // 为每个建筑物使用模拟角色数据
+        // 尝试从后端API获取角色列表（如果可用）
+        let availableCharacters = [];
+        const currentScrollId = scrollId || (sessionId && sessionId.startsWith('test_') ? sessionId.replace('test_', '') : null);
+        
+        if (currentScrollId) {
+            try {
+                const response = await authenticatedFetch(`/api/scroll/${currentScrollId}/characters`);
+                if (response.ok) {
+                    const data = await response.json();
+                    availableCharacters = data.characters || [];
+                    console.log(`[WorldView] 从API获取到 ${availableCharacters.length} 个角色`);
+                }
+            } catch (e) {
+                console.warn('[WorldView] 获取角色列表失败，使用模拟数据:', e);
+            }
+        }
+
+        // 为每个建筑物分配角色
+        console.log('[WorldView] 开始分配角色，worldSource:', worldSource, '建筑物数量:', buildingsData.length);
         for (const building of buildingsData) {
             const mockCharacters = getMockCharactersForBuilding(building.building_code);
+            console.log(`[WorldView] 建筑物 ${building.building_code} (${building.building_name}) 的模拟角色:`, mockCharacters);
             const assignedCharacters = [];
 
             // 只分配尚未分配到其他地点的角色
@@ -176,16 +212,31 @@ async function loadBuildingCharacters() {
                 const roleCode = char.role_code || char.code;
                 if (!roleCode) continue;
 
-                if (!roleToLocationMap[roleCode]) {
-                    // 角色尚未分配，分配到当前地点
+                // 检查角色是否在可用角色列表中
+                const characterInfo = availableCharacters.find(c => c.code === roleCode);
+                if (characterInfo) {
+                    // 使用API返回的完整角色信息
+                    if (!roleToLocationMap[roleCode]) {
+                        roleToLocationMap[roleCode] = building.building_code;
+                        assignedCharacters.push({
+                            role_code: roleCode,
+                            role_name: characterInfo.name || char.role_name,
+                            avatar: characterInfo.avatar
+                        });
+                        console.log(`[WorldView] 分配角色 ${roleCode} (${characterInfo.name || char.role_name}) 到 ${building.building_code}`);
+                    }
+                } else if (!roleToLocationMap[roleCode]) {
+                    // 如果API中没有，使用模拟数据
                     roleToLocationMap[roleCode] = building.building_code;
                     assignedCharacters.push(char);
+                    console.log(`[WorldView] 分配角色 ${roleCode} (${char.role_name}) 到 ${building.building_code} (使用模拟数据)`);
                 }
-                // 如果角色已经分配到其他地点，则跳过
             }
 
             buildingCharactersMap[building.building_code] = assignedCharacters;
         }
+
+        console.log('[WorldView] 角色分配完成:', buildingCharactersMap);
     } catch (error) {
         console.error('加载建筑物角色数据时出错:', error);
     }
@@ -227,6 +278,44 @@ function getMockCharactersForBuilding(buildingCode) {
         return redMansionsCharacters[buildingCode];
     }
 
+    // 隆中场景角色分配（三顾茅庐）
+    // 根据《三国演义》第三十七回，刘备三顾茅庐的场景：
+    // - 诸葛亮在草堂（主要活动场所，会客）
+    // - 刘备在草堂（与诸葛亮会面）
+    // - 关羽、张飞在柴门附近（等待或守卫）
+    const longzhongCharacters = {
+        'Caotang': [
+            { role_code: 'zhugeliang-zh', role_name: '诸葛亮' },
+            { role_code: 'liubei-zh', role_name: '刘备' }
+        ],
+        'Chaimen': [
+            { role_code: 'guanyu-zh', role_name: '关羽' },
+            { role_code: 'zhangfei-zh', role_name: '张飞' }
+        ],
+        'HoutangQinshi': [
+            // 后堂寝室是诸葛亮的私人空间，通常不放置角色（除非特定剧情）
+        ],
+        'SongzhuLin': [
+            // 松竹林作为环境，通常不放置角色
+        ],
+        'Xiaoqiao': [
+            // 小桥是入口，可以有一些角色经过
+        ],
+        'WolongGang': [
+            // 卧龙岗作为背景，通常不放置角色
+        ]
+    };
+
+    if (worldSource === 'Romance_of_the_Three_Kingdoms_Longzhong' && longzhongCharacters[buildingCode]) {
+        console.log(`[WorldView] 为隆中场景的建筑物 ${buildingCode} 返回角色:`, longzhongCharacters[buildingCode]);
+        return longzhongCharacters[buildingCode];
+    }
+    
+    // 调试：如果没有匹配，记录日志
+    if (worldSource === 'Romance_of_the_Three_Kingdoms_Longzhong' && !longzhongCharacters[buildingCode]) {
+        console.log(`[WorldView] 隆中场景的建筑物 ${buildingCode} 没有定义角色`);
+    }
+
     // 其他世界：随机分配角色（这里需要根据实际角色列表来分配）
     // 暂时返回空数组，等后端API实现后再填充
     return [];
@@ -234,12 +323,16 @@ function getMockCharactersForBuilding(buildingCode) {
 
 // 绘制人物（建筑物旁边圆形排列）
 function drawCharacters(svg) {
+    console.log('[WorldView] 开始绘制角色，buildingsData长度:', buildingsData.length, 'buildingCharactersMap:', buildingCharactersMap);
     const charactersGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     charactersGroup.setAttribute('class', 'characters-group');
 
+    let totalCharacters = 0;
     buildingsData.forEach(building => {
         const characters = buildingCharactersMap[building.building_code] || [];
+        console.log(`[WorldView] 建筑物 ${building.building_code} (${building.building_name}) 有 ${characters.length} 个角色`);
         if (characters.length === 0) return;
+        totalCharacters += characters.length;
 
         // 计算建筑物中心位置
         const coords = building.coordinates;
@@ -368,6 +461,7 @@ function drawCharacters(svg) {
         });
     });
 
+    console.log(`[WorldView] 总共绘制了 ${totalCharacters} 个角色`);
     svg.appendChild(charactersGroup);
 }
 
@@ -417,37 +511,39 @@ async function loadBackgroundImage(svg, width, height) {
 
         // 获取书卷信息以确定背景图片
         let source = '';
-        try {
-            const response = await authenticatedFetch(`/api/scroll/${currentScrollId}`);
-            if (response.ok) {
-                const scrollData = await response.json();
-                source = scrollData.source || '';
-                worldSource = source; // 保存source用于时间格式判断
-                console.log('获取到的source:', source);
-            } else {
-                console.warn('获取书卷信息失败:', response.status);
+        let backgroundImageUrl = window.worldMapBackgroundUrl;
+
+        if (!backgroundImageUrl) {
+            try {
+                const response = await authenticatedFetch(`/api/scroll/${currentScrollId}`);
+                if (response.ok) {
+                    const scrollData = await response.json();
+                    source = scrollData.source || '';
+                    worldSource = source; // 保存source用于时间格式判断
+                    console.log('获取到的source:', source);
+                } else {
+                    console.warn('获取书卷信息失败:', response.status);
+                    return;
+                }
+            } catch (error) {
+                console.error('获取书卷信息时出错:', error);
                 return;
             }
-        } catch (error) {
-            console.error('获取书卷信息时出错:', error);
-            return;
-        }
 
-        // 根据source确定背景图片路径 - 从data/maps/{source}/background.png读取
-        if (!source) {
-            console.log('未找到source，不显示背景图片');
-            return;
-        }
+            // 根据source确定背景图片路径 - 从data/maps/{source}/background.png读取
+            if (!source) {
+                console.log('未找到source，不显示背景图片');
+                return;
+            }
 
-        // 构建背景图片路径
-        // 三国演义相关地图使用根目录下的背景图
-        let backgroundImageUrl;
-        if (source === 'Romance_of_the_Three_Kingdoms' || source === 'Romance_of_the_Three_Kingdoms_Longzhong') {
-            backgroundImageUrl = '/三国演义背景图.png';
-        } else {
-            // 其他地图：data/maps/{source}/background.png
-            backgroundImageUrl = `/data/maps/${source}/background.png`;
+            // 构建背景图片路径
+            if (source === 'Romance_of_the_Three_Kingdoms' || source === 'Romance_of_the_Three_Kingdoms_Longzhong') {
+                backgroundImageUrl = '/三国演义背景图.png';
+            } else {
+                backgroundImageUrl = `/data/maps/${source}/background.png`;
+            }
         }
+        
         console.log('背景图片URL:', backgroundImageUrl);
 
         // 方法1: 使用CSS背景图片（更可靠）
@@ -504,6 +600,8 @@ async function loadAndDrawBuildings(svg) {
     try {
         // 获取scroll_id（可能是从session_id获取）
         let currentScrollId = scrollId;
+        
+        console.log('[WorldView] loadAndDrawBuildings 开始，scrollId:', scrollId, 'sessionId:', sessionId);
 
         if (!currentScrollId && sessionId) {
             // 如果是session模式，尝试从session获取scroll_id
@@ -538,19 +636,69 @@ async function loadAndDrawBuildings(svg) {
         }
 
         if (!currentScrollId) {
-            console.warn('未找到scroll_id参数');
+            console.error('[WorldView] 未找到scroll_id参数，无法加载地图数据');
+            console.error('[WorldView] 当前状态 - scrollId:', scrollId, 'sessionId:', sessionId);
             return;
         }
 
-        // 从API获取建筑物数据
-        const response = await authenticatedFetch(`/api/scrolls/${currentScrollId}/map-buildings`);
+        console.log('[WorldView] 准备请求地图数据，scrollId:', currentScrollId);
+        
+        // 从新API获取完整地图数据
+        const response = await authenticatedFetch(`/api/scrolls/${currentScrollId}/map`);
+        console.log('[WorldView] API响应状态:', response.status, response.statusText);
+        
         if (!response.ok) {
-            console.warn('获取建筑物数据失败:', response.statusText);
+            console.warn('[WorldView] 获取地图数据失败，尝试旧接口:', response.statusText);
+            // 兜底尝试旧接口
+            const oldResponse = await authenticatedFetch(`/api/scrolls/${currentScrollId}/map-buildings`);
+            if (oldResponse.ok) {
+                const data = await oldResponse.json();
+                buildingsData = data.buildings || [];
+                console.log('[WorldView] 从旧接口获取到建筑物数据:', buildingsData.length, '个');
+            } else {
+                console.error('[WorldView] 旧接口也失败:', oldResponse.status, oldResponse.statusText);
+            }
             return;
         }
 
-        const data = await response.json();
-        buildingsData = data.buildings || [];
+        const mapData = await response.json();
+        
+        console.log('[WorldView] 获取到的地图数据:', mapData);
+        
+        // 从地图数据中获取source信息（必须在角色分配之前设置）
+        if (mapData.metadata && mapData.metadata.source) {
+            worldSource = mapData.metadata.source;
+            console.log('[WorldView] 从地图数据获取到worldSource:', worldSource);
+        } else {
+            console.warn('[WorldView] 警告：地图数据中没有source字段，worldSource未设置');
+        }
+        
+        // 转换新格式到旧的 buildingsData 格式以便原有逻辑正常运行
+        if (mapData.locations) {
+            buildingsData = mapData.locations.map(loc => ({
+                building_code: loc.code,
+                building_name: loc.name,
+                description: loc.description,
+                detail: loc.detail,
+                coordinates: loc.view_config,
+                adjacencies: loc.adjacencies
+            })).filter(b => {
+                const hasCoords = b.coordinates && Object.keys(b.coordinates).length > 0;
+                if (!hasCoords) {
+                    console.warn('[WorldView] 跳过没有坐标的建筑物:', b.building_name);
+                }
+                return hasCoords;
+            });
+            
+            console.log('[WorldView] 转换后的建筑物数据:', buildingsData);
+        }
+
+        // 保存元数据
+        if (mapData.metadata) {
+            if (mapData.metadata.background_url) {
+                window.worldMapBackgroundUrl = mapData.metadata.background_url;
+            }
+        }
 
         // 如果是session模式，加载建筑物位置的角色数据（在setupSessionMode中已经调用，这里不需要重复调用）
 
@@ -565,17 +713,30 @@ function drawBuildings(svg) {
     const buildingsGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     buildingsGroup.setAttribute('class', 'buildings-group');
 
+    console.log('[WorldView] 开始绘制建筑物，数量:', buildingsData.length);
+
     buildingsData.forEach(building => {
         const buildingElement = createBuildingElement(building);
-        buildingsGroup.appendChild(buildingElement);
+        if (buildingElement) {
+            buildingsGroup.appendChild(buildingElement);
+        } else {
+            console.warn('[WorldView] 跳过无效的建筑物:', building.building_name);
+        }
     });
 
     svg.appendChild(buildingsGroup);
+    console.log('[WorldView] 建筑物绘制完成');
 }
 
 // 创建建筑物元素
 function createBuildingElement(building) {
     const { coordinates, building_name, description, color, icon } = building;
+
+    // 检查坐标数据是否有效
+    if (!coordinates || !coordinates.sw || !coordinates.se || !coordinates.ne || !coordinates.nw) {
+        console.error('[WorldView] 建筑物坐标数据无效:', building_name, coordinates);
+        return null;
+    }
 
     // 坐标转换：从用户坐标系（左下角为(1,1)）转换为SVG坐标系（左上角为(0,0)）
     const convertCoords = (userX, userY) => {
@@ -610,11 +771,21 @@ function createBuildingElement(building) {
     // 如果是三国演义（隆中）或没有背景图，显示建筑物颜色
     const showBuildingColor = worldSource !== 'A_Dream_in_Red_Mansions';
     
-    if (showBuildingColor && color) {
-        polygon.setAttribute('fill', color);
+    // 为隆中地图添加默认颜色和样式
+    const defaultColor = worldSource === 'Romance_of_the_Three_Kingdoms_Longzhong' ? '#8b6f47' : null;
+    const buildingColor = color || defaultColor;
+    
+    if (showBuildingColor && buildingColor) {
+        polygon.setAttribute('fill', buildingColor);
         polygon.setAttribute('fill-opacity', '0.6');
-        polygon.setAttribute('stroke', color);
+        polygon.setAttribute('stroke', buildingColor);
         polygon.setAttribute('stroke-width', '2');
+    } else if (showBuildingColor && !buildingColor) {
+        // 即使没有颜色，也显示半透明的轮廓以便可见
+        polygon.setAttribute('fill', 'rgba(139, 111, 71, 0.3)');
+        polygon.setAttribute('fill-opacity', '0.3');
+        polygon.setAttribute('stroke', 'rgba(139, 111, 71, 0.8)');
+        polygon.setAttribute('stroke-width', '1.5');
     } else {
         polygon.setAttribute('fill', 'transparent');
         polygon.setAttribute('fill-opacity', '0');
@@ -1247,13 +1418,45 @@ function setupSessionMode(skipIntro = false) {
             if (skipIntro && !urlParams.get('chat_session_id')) {
                 container.classList.remove('intro-mode');
                 container.style.opacity = '1';
-                if (topOverlay) topOverlay.style.display = 'flex';
+                if (topOverlay) {
+                    topOverlay.style.display = 'flex';
+                    // 确保控制按钮也显示
+                    const controlsEl = document.getElementById('worldControls');
+                    if (controlsEl) {
+                        controlsEl.style.display = 'flex';
+                    }
+                }
                 if (playerStatusBar) playerStatusBar.style.display = 'flex';
+                
+                // 如果世界是暂停状态，显示提示
+                if (isWorldPaused) {
+                    const introText = document.getElementById('introText');
+                    if (introText) {
+                        introText.textContent = '⏸ 世界已暂停，点击播放按钮开始';
+                        setTimeout(() => {
+                            if (introText.textContent === '⏸ 世界已暂停，点击播放按钮开始') {
+                                introText.textContent = '';
+                            }
+                        }, 3000);
+                    }
+                }
+                
+                // 确保地图正确显示
+                setTimeout(() => {
+                    const mapContainer = document.getElementById('mapContainer');
+                    if (mapContainer && mapContainer.clientWidth === 0) {
+                        console.log('[WorldView] 地图容器尺寸为0，重新初始化地图');
+                        initWorldMap();
+                    }
+                }, 100);
             }
         }
 
         // 加载玩家数据备用
         loadPlayerStatus();
+
+        // 初始化暂停/播放控制按钮（在连接WebSocket之前设置初始状态）
+        setupWorldControls();
 
         // 连接 WebSocket 以获取实时世界动态
         connectWebSocket(skipIntro);
@@ -1317,22 +1520,27 @@ function connectWebSocket(skipStart = false) {
 
         socket.send(JSON.stringify(initMessage));
 
-        // 如果不是跳过模式，自动开始故事模拟以触发序章
-        if (!skipStart) {
-            setTimeout(() => {
-                socket.send(JSON.stringify({ type: 'start' }));
-                console.log('已发送 start 消息触发模拟');
-            }, 1000);
-        } else {
-            console.log('跳过 start 消息发送（已从聊天返回）');
+        // 默认不自动启动世界，等待用户手动点击播放按钮
+        // 确保初始状态为暂停（如果之前没有设置）
+        if (isWorldPaused === undefined) {
+            isWorldPaused = true;
         }
+        
+        // 更新按钮UI（确保按钮状态正确）
+        const pausePlayBtn = document.getElementById('pausePlayBtn');
+        if (pausePlayBtn) {
+            updatePauseButtonUI(isWorldPaused);
+        }
+        
+        console.log('WebSocket 初始化完成，世界默认暂停，等待用户手动启动');
     };
 
     socket.onmessage = function (event) {
         const message = JSON.parse(event.data);
-        console.log('收到 WebSocket 消息:', message.type, message);
+        console.log('[WorldView] 收到 WebSocket 消息:', message.type, message);
 
         if (message.type === 'message') {
+            console.log('[WorldView] 处理消息类型:', message.data?.type, '文本预览:', message.data?.text?.substring(0, 50));
             handleStoryMessage(message.data);
         } else if (message.type === 'initial_data') {
             // 处理初始数据更新（可能包含角色新位置）
@@ -1351,16 +1559,143 @@ function connectWebSocket(skipStart = false) {
                     handleStoryMessage(msg, true);
                 });
             }
+            
+            // 如果没有历史消息（包括序章），自动生成序章
+            const hasHistoryMessages = message.data.history_messages && message.data.history_messages.length > 0;
+            if (!hasHistoryMessages && socket && socket.readyState === WebSocket.OPEN) {
+                console.log('[WorldView] 没有历史消息，自动生成序章');
+                // 临时设置为非暂停状态，以便序章消息能够被处理
+                isWorldPaused = false;
+                
+                // 标记正在等待序章
+                window.waitingForPrologue = true;
+                
+                // 发送start消息生成序章
+                socket.send(JSON.stringify({ type: 'start' }));
+                console.log('[WorldView] 已发送start消息，等待序章生成...');
+                
+                // 设置一个较长的超时作为后备（10秒），如果还没收到序章就暂停
+                setTimeout(() => {
+                    if (window.waitingForPrologue && socket && socket.readyState === WebSocket.OPEN) {
+                        console.log('[WorldView] 超时，暂停世界（后备机制）');
+                        isWorldPaused = true;
+                        socket.send(JSON.stringify({
+                            type: 'control',
+                            action: 'pause'
+                        }));
+                        updatePauseButtonUI(true);
+                        window.waitingForPrologue = false;
+                    }
+                }, 10000); // 给足够的时间让序章生成（API调用可能需要几秒）
+            }
         }
     };
 
-    socket.onclose = function () {
-        console.log('WebSocket 连接已关闭');
+    socket.onclose = function (event) {
+        console.log('[WorldView] WebSocket 连接已关闭', {
+            code: event.code,
+            reason: event.reason,
+            wasClean: event.wasClean
+        });
+        // 如果正在等待序章，记录警告
+        if (window.waitingForPrologue) {
+            console.warn('[WorldView] 警告：在等待序章时连接关闭');
+            window.waitingForPrologue = false;
+        }
     };
 
     socket.onerror = function (error) {
-        console.error('WebSocket 错误:', error);
+        console.error('[WorldView] WebSocket 错误:', error);
+        // 如果正在等待序章，记录警告
+        if (window.waitingForPrologue) {
+            console.warn('[WorldView] 警告：在等待序章时连接出错');
+            window.waitingForPrologue = false;
+        }
     };
+}
+
+// 设置世界控制按钮
+function setupWorldControls() {
+    const controlsEl = document.getElementById('worldControls');
+    const pausePlayBtn = document.getElementById('pausePlayBtn');
+    
+    if (!controlsEl || !pausePlayBtn) {
+        console.warn('控制按钮元素未找到');
+        return;
+    }
+
+    // 显示控制按钮
+    controlsEl.style.display = 'flex';
+
+    // 绑定暂停/播放按钮事件
+    pausePlayBtn.addEventListener('click', function() {
+        toggleWorldPause();
+    });
+
+    // 初始状态：默认暂停（等待用户手动启动）
+    // 确保 isWorldPaused 为 true，按钮显示为播放图标
+    isWorldPaused = true;
+    updatePauseButtonUI(true);
+}
+
+// 切换世界暂停状态
+function toggleWorldPause() {
+    const wasPaused = isWorldPaused;
+    isWorldPaused = !isWorldPaused;
+    
+    if (socket && socket.readyState === WebSocket.OPEN) {
+        // 如果是从暂停状态切换到播放状态，且还没有历史消息（序章），先发送start消息生成序章
+        if (!isWorldPaused && eventHistory.length === 0) {
+            console.log('[WorldView] 首次启动，发送start消息生成序章');
+            // start消息会启动模拟器，生成序章，然后模拟器会继续运行
+            // 注意：在发送start消息之前，isWorldPaused已经是false了，所以序章消息不会被过滤
+            socket.send(JSON.stringify({ type: 'start' }));
+        } else {
+            // 已经有历史消息，使用control消息控制暂停/继续
+            const action = isWorldPaused ? 'pause' : 'start';
+            socket.send(JSON.stringify({
+                type: 'control',
+                action: action
+            }));
+            console.log(`[WorldView] 发送${isWorldPaused ? '暂停' : '继续'}控制消息`);
+        }
+    } else {
+        console.warn('[WorldView] WebSocket 未连接，无法发送控制消息');
+    }
+
+    updatePauseButtonUI(isWorldPaused);
+    
+    // 显示提示
+    const introBar = document.getElementById('worldIntroBar');
+    if (introBar) {
+        const introText = document.getElementById('introText');
+        if (introText) {
+            introText.textContent = isWorldPaused ? '⏸ 世界已暂停' : '▶ 世界继续发展';
+            setTimeout(() => {
+                if (introText.textContent === '⏸ 世界已暂停' || introText.textContent === '▶ 世界继续发展') {
+                    introText.textContent = '';
+                }
+            }, 2000);
+        }
+    }
+}
+
+// 更新暂停按钮UI
+function updatePauseButtonUI(paused) {
+    const pausePlayBtn = document.getElementById('pausePlayBtn');
+    const pausePlayIcon = document.getElementById('pausePlayIcon');
+    
+    if (!pausePlayBtn || !pausePlayIcon) return;
+
+    if (paused) {
+        pausePlayIcon.className = 'fas fa-play';
+        pausePlayBtn.title = '继续世界发展';
+        pausePlayBtn.classList.add('paused');
+    } else {
+        pausePlayIcon.className = 'fas fa-pause';
+        pausePlayBtn.title = '暂停世界发展';
+        pausePlayBtn.classList.remove('paused');
+    }
 }
 
 // 处理故事/世界消息
@@ -1368,7 +1703,32 @@ function handleStoryMessage(data, isSilent = false) {
     const text = data.text;
     if (!text) return;
 
-    console.log('处理故事消息:', data.type, text.substring(0, 30) + '...');
+    // 检查是否是序章消息（第一条world消息，或者是prologue类型，或者包含序章关键字）
+    const isFirstWorldMessage = data.type === 'world' && eventHistory.length === 0;
+    const hasPrologueKeywords = text.includes('序章') || text.includes('睁开眼') || text.includes('意识') || 
+                                text.includes('苏醒') || text.includes('发现自己') || text.includes('置身于');
+    const isPrologueMessage = isFirstWorldMessage || 
+                               data.act_type === 'prologue' ||
+                               (data.type === 'world' && hasPrologueKeywords);
+
+    console.log('[WorldView] 消息检查:', {
+        type: data.type,
+        isFirstWorldMessage,
+        hasPrologueKeywords,
+        isPrologueMessage,
+        isWorldPaused,
+        isSilent,
+        eventHistoryLength: eventHistory.length,
+        textPreview: text.substring(0, 50)
+    });
+
+    // 如果世界已暂停，不处理新的消息（除非是静默模式的历史消息或序章消息）
+    if (isWorldPaused && !isSilent && !isPrologueMessage) {
+        console.log('[WorldView] 世界已暂停，忽略新消息:', data.type);
+        return;
+    }
+
+    console.log('处理故事消息:', data.type, text.substring(0, 30) + '...', isPrologueMessage ? '(序章)' : '');
 
     const introEl = document.getElementById('introText');
     const introBar = document.getElementById('worldIntroBar');
@@ -1385,7 +1745,6 @@ function handleStoryMessage(data, isSilent = false) {
     };
 
     // 如果是序章（刚进入世界时的第一条 world 消息），先应用模糊背景
-    const isFirstWorldMessage = data.type === 'world' && eventHistory.length === 0;
     if (isFirstWorldMessage && !isSilent) {
         const container = document.getElementById('worldViewContainer');
         if (container) {
@@ -1424,11 +1783,32 @@ function handleStoryMessage(data, isSilent = false) {
     }
 
     // 如果是序章或重要剧情（type 为 world 且比较长，或者包含序章关键字），弹出模态框显示
-    const isPrologue = data.type === 'world' && (text.length > 50 || text.includes('序章') || text.includes('睁开眼'));
+    // 使用与前面相同的序章识别逻辑
+    const isPrologue = isPrologueMessage || (data.type === 'world' && text.length > 50);
     const isStorySummary = data.type === 'story';
 
+    // 如果是序章消息且这是第一条消息，确保世界是暂停的
+    if (isPrologueMessage && eventHistory.length === 0 && !isSilent) {
+        console.log('[WorldView] 收到序章消息，确保世界暂停');
+        // 清除等待序章的标志
+        window.waitingForPrologue = false;
+        
+        // 如果世界不是暂停状态，立即暂停
+        if (!isWorldPaused) {
+            isWorldPaused = true;
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({
+                    type: 'control',
+                    action: 'pause'
+                }));
+                console.log('[WorldView] 序章已收到，发送暂停消息');
+            }
+            updatePauseButtonUI(true);
+        }
+    }
+
     if (!isSilent && (isPrologue || isStorySummary)) {
-        console.log('触发剧情焦点模态框');
+        console.log('[WorldView] 触发剧情焦点模态框，isPrologue:', isPrologue, 'isStorySummary:', isStorySummary);
         showStoryFocusModal(historyItem);
     }
 }
@@ -1479,10 +1859,39 @@ function showStoryFocusModal(item) {
 
             // 显示游戏内 UI
             const topOverlay = document.getElementById('sessionTopOverlay');
-            if (topOverlay) topOverlay.style.display = 'flex';
+            if (topOverlay) {
+                topOverlay.style.display = 'flex';
+                // 确保控制按钮也显示
+                const controlsEl = document.getElementById('worldControls');
+                if (controlsEl) {
+                    controlsEl.style.display = 'flex';
+                }
+            }
 
             const playerStatusBar = document.getElementById('playerStatusBar');
             if (playerStatusBar) playerStatusBar.style.display = 'flex';
+            
+            // 如果世界是暂停状态，显示提示
+            if (isWorldPaused) {
+                const introText = document.getElementById('introText');
+                if (introText) {
+                    introText.textContent = '⏸ 世界已暂停，点击播放按钮开始';
+                    setTimeout(() => {
+                        if (introText.textContent === '⏸ 世界已暂停，点击播放按钮开始') {
+                            introText.textContent = '';
+                        }
+                    }, 3000);
+                }
+            }
+            
+            // 确保地图正确显示（延迟一下确保DOM更新完成）
+            setTimeout(() => {
+                const mapContainer = document.getElementById('mapContainer');
+                if (mapContainer && mapContainer.clientWidth === 0) {
+                    console.log('[WorldView] 地图容器尺寸为0，重新初始化地图');
+                    initWorldMap();
+                }
+            }, 100);
         };
 
         closeBtn.onclick = closeModal;
@@ -1688,7 +2097,36 @@ async function fetchChatSummary() {
             container.classList.remove('intro-mode');
             container.style.opacity = '1';
         }
-        if (topOverlay) topOverlay.style.display = 'flex';
+        if (topOverlay) {
+            topOverlay.style.display = 'flex';
+            // 确保控制按钮也显示
+            const controlsEl = document.getElementById('worldControls');
+            if (controlsEl) {
+                controlsEl.style.display = 'flex';
+            }
+        }
         if (playerStatusBar) playerStatusBar.style.display = 'flex';
+        
+        // 如果世界是暂停状态，显示提示
+        if (isWorldPaused) {
+            const introText = document.getElementById('introText');
+            if (introText) {
+                introText.textContent = '⏸ 世界已暂停，点击播放按钮开始';
+                setTimeout(() => {
+                    if (introText.textContent === '⏸ 世界已暂停，点击播放按钮开始') {
+                        introText.textContent = '';
+                    }
+                }, 3000);
+            }
+        }
+        
+        // 确保地图正确显示
+        setTimeout(() => {
+            const mapContainer = document.getElementById('mapContainer');
+            if (mapContainer && mapContainer.clientWidth === 0) {
+                console.log('[WorldView] 地图容器尺寸为0，重新初始化地图');
+                initWorldMap();
+            }
+        }, 100);
     }
 }
