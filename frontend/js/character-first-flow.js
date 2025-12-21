@@ -275,31 +275,44 @@
             return;
         }
 
-        // 尝试加载建筑物数据
+        // 尝试加载地图数据
         let buildings = [];
         let sourceName = urlParams.get('source');
+        let backgroundUrl = null;
         const scrollId = urlParams.get('scroll_id');
         const token = localStorage.getItem('token');
 
         if (scrollId) {
             try {
-                // 如果没有source，先获取scroll详情以确定source
-                if (!sourceName) {
-                    const scrollRes = await fetch(`/api/scrolls/${scrollId}`, {
-                        headers: { 'Authorization': `Bearer ${token}` }
-                    });
-                    if (scrollRes.ok) {
-                        const scrollData = await scrollRes.json();
-                        sourceName = scrollData.scroll?.source || scrollData.source;
-                    }
-                }
-
-                const response = await fetch(`/api/scrolls/${scrollId}/map-buildings`, {
+                // 使用新 API 获取完整地图数据
+                const response = await fetch(`/api/scrolls/${scrollId}/map`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
+                
                 if (response.ok) {
-                    const data = await response.json();
-                    buildings = data.buildings || [];
+                    const mapData = await response.json();
+                    sourceName = sourceName || (mapData.metadata ? mapData.metadata.source : null);
+                    backgroundUrl = mapData.metadata ? mapData.metadata.background_url : null;
+                    
+                    if (mapData.locations) {
+                        buildings = mapData.locations.map(loc => ({
+                            building_code: loc.code,
+                            building_name: loc.name,
+                            description: loc.description,
+                            coordinates: loc.view_config,
+                            color: loc.color,
+                            icon: loc.icon
+                        })).filter(b => b.coordinates && Object.keys(b.coordinates).length > 0);
+                    }
+                } else {
+                    // 兜底逻辑
+                    const buildingsRes = await fetch(`/api/scrolls/${scrollId}/map-buildings`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (buildingsRes.ok) {
+                        const data = await buildingsRes.json();
+                        buildings = data.buildings || [];
+                    }
                 }
             } catch (e) {
                 console.warn('[CharacterFirstFlow] 加载数据失败:', e);
@@ -326,19 +339,22 @@
         // 创建主容器
         const mainGroup = svg.append("g").attr("class", "main-zoom-group");
 
-        // 如果有建筑物数据，且没有背景图（或非特定世界），优先渲染网格地图
+        // 如果有建筑物数据，优先渲染网格地图
         const worldsWithBackground = ['A_Dream_in_Red_Mansions', 'Romance_of_the_Three_Kingdoms', 'Romance_of_the_Three_Kingdoms_Longzhong'];
-        const isStandardWorld = worldsWithBackground.includes(sourceName);
-        if (buildings.length > 0 && !isStandardWorld) {
-            renderGridMap(mainGroup, width, height, buildings, sourceName);
+        const isStandardWorld = worldsWithBackground.includes(sourceName) || backgroundUrl;
+        
+        if (buildings.length > 0 && isStandardWorld) {
+            renderGridMap(mainGroup, width, height, buildings, sourceName, backgroundUrl);
             return;
         }
 
         // 否则渲染传统的力导向图
         // 加载背景图
+        const actualBackgroundUrl = backgroundUrl || "./frontend/assets/images/universal-map-bg.png";
+        
         const bgImage = mainGroup.append("image")
             .attr("class", "map-background")
-            .attr("xlink:href", "./frontend/assets/images/universal-map-bg.png")
+            .attr("xlink:href", actualBackgroundUrl)
             .attr("width", width * 4)
             .attr("height", height * 4)
             .attr("x", -width * 1.5)
@@ -613,27 +629,28 @@
     }
 
     // 渲染网格地图 (用于展示建筑物)
-    function renderGridMap(container, width, height, buildings, source) {
+    function renderGridMap(container, width, height, buildings, source, backgroundUrl) {
         const GRID_COLS = 24;
         const GRID_ROWS = 12;
         const cellWidth = width / GRID_COLS;
         const cellHeight = height / GRID_ROWS;
 
         // 如果有背景图，尝试加载
-        if (source) {
-            const backgroundImageUrl = `/data/maps/${source}/background.png`;
+        const actualBackgroundUrl = backgroundUrl || (source ? `/data/maps/${source}/background.png` : null);
+        
+        if (actualBackgroundUrl) {
             const bgGroup = container.append("g").attr("class", "map-background-group");
             
             const img = new Image();
             img.onload = () => {
                 bgGroup.append("image")
-                    .attr("xlink:href", backgroundImageUrl)
+                    .attr("xlink:href", actualBackgroundUrl)
                     .attr("width", width)
                     .attr("height", height)
                     .attr("preserveAspectRatio", "xMidYMid slice")
                     .style("opacity", 0.8);
             };
-            img.src = backgroundImageUrl;
+            img.src = actualBackgroundUrl;
         }
 
         const buildingsGroup = container.append("g").attr("class", "buildings-group");
