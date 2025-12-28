@@ -202,10 +202,23 @@ def run_experiment(args):
     print(f"开始时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print("=" * 70)
     
+    # 加载配置并初始化 LLM
+    from modules.llm.Gemini import Gemini
+    from modules.utils import load_json_file
+    
+    project_config = load_json_file("config.json")
+    for key in ["GEMINI_API_KEY", "GOOGLE_API_KEY", "OPENAI_API_KEY", "OPENAI_API_BASE"]:
+        if key in project_config and project_config[key]:
+            os.environ[key] = project_config[key]
+            
+    role_llm_name = project_config.get("role_llm_name", "gemini-2.5-flash-lite")
+    llm = Gemini(model=role_llm_name, timeout=60)
+    print(f"已初始化 LLM: {role_llm_name}")
+    
     # 初始化
     runner = ExperimentRunner()
-    baseline_gen = BaselineGenerator(llm=None)  # 传入实际 LLM
-    persona_gen = PersonaForgeGenerator(llm=None)  # 传入实际 LLM
+    baseline_gen = BaselineGenerator(llm=llm)
+    persona_gen = PersonaForgeGenerator(llm=llm)
     
     # 选择角色
     all_characters = runner.list_characters()

@@ -58,6 +58,59 @@ def get_llm_by_name(model_name: str):
         raise ValueError(f"Unsupported model: {model_name}")
 
 
+def load_opensource_config():
+    """加载开源模型配置"""
+    # Try experiments/opensource_config.json first
+    config_path = os.path.join(os.path.dirname(__file__), "opensource_config.json")
+    if os.path.exists(config_path):
+        with open(config_path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    
+    # Fallback to main config.json
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    main_config_path = os.path.join(project_root, "config.json")
+    if os.path.exists(main_config_path):
+        with open(main_config_path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    
+    return {}
+
+
+def setup_api_keys(model_name: str, config: dict):
+    """根据模型类型设置 API Key 环境变量"""
+    if model_name.startswith("qwen"):
+        qwen_config = config.get("qwen", {})
+        api_key = qwen_config.get("api_key") or config.get("DASHSCOPE_API_KEY", "")
+        if api_key:
+            os.environ["DASHSCOPE_API_KEY"] = api_key
+            print(f"✓ DASHSCOPE_API_KEY loaded")
+        else:
+            print("⚠ DASHSCOPE_API_KEY not found in config, please set it in experiments/opensource_config.json")
+            return False
+    
+    elif model_name.startswith("deepseek"):
+        ds_config = config.get("deepseek", {})
+        api_key = ds_config.get("api_key") or config.get("DEEPSEEK_API_KEY", "")
+        if api_key:
+            os.environ["DEEPSEEK_API_KEY"] = api_key
+            print(f"✓ DEEPSEEK_API_KEY loaded")
+        else:
+            print("⚠ DEEPSEEK_API_KEY not found in config")
+            return False
+    
+    elif model_name.startswith("llama"):
+        or_config = config.get("openrouter", {})
+        api_key = or_config.get("api_key") or config.get("OPENROUTER_API_KEY", "")
+        if api_key:
+            os.environ["OPENROUTER_API_KEY"] = api_key
+            print(f"✓ OPENROUTER_API_KEY loaded")
+        else:
+            print("⚠ OPENROUTER_API_KEY not found in config")
+            return False
+    
+    return True
+
+
 def run_opensource_experiment(args):
     """运行开源模型对比实验"""
     print("=" * 70)
@@ -65,6 +118,12 @@ def run_opensource_experiment(args):
     print(f"Model: {args.model}")
     print(f"开始时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print("=" * 70)
+    
+    # 加载配置并设置 API Key
+    config = load_opensource_config()
+    if not setup_api_keys(args.model, config):
+        print("\n请在 experiments/opensource_config.json 中配置对应模型的 API Key")
+        return
     
     # 初始化 LLM
     try:
