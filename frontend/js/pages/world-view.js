@@ -241,33 +241,57 @@ function drawCharacters(svg) {
         if (characters.length === 0) return;
 
         // 计算建筑物中心位置
+        // 计算建筑物中心位置
+        // 注意：coordinates 存储的是角落格子的坐标(1-based grid index)
+        // 我们需要计算整个区域的几何中心
         const coords = building.coordinates;
-        const convertCoords = (userX, userY) => {
+
+        // 转换函数：获取格子的【左上角】像素坐标
+        const getCellTopLeft = (userX, userY) => {
             const svgX = (userX - 1) * cellWidth;
             const svgY = (GRID_ROWS - userY) * cellHeight;
             return { x: svgX, y: svgY };
         };
 
-        const sw = convertCoords(coords.sw[0], coords.sw[1]);
-        const se = convertCoords(coords.se[0], coords.se[1]);
-        const ne = convertCoords(coords.ne[0], coords.ne[1]);
-        const nw = convertCoords(coords.nw[0], coords.nw[1]);
+        // SW格子的左上角
+        const swTL = getCellTopLeft(coords.sw[0], coords.sw[1]);
+        // NE格子的左上角
+        const neTL = getCellTopLeft(coords.ne[0], coords.ne[1]);
 
-        const centerX = (sw.x + se.x + ne.x + nw.x) / 4 + cellWidth / 2;
-        const centerY = (sw.y + se.y + ne.y + nw.y) / 4 + cellHeight / 2;
+        // 区域左边缘 = SW格子左边缘
+        const boundLeft = swTL.x;
+        // 区域右边缘 = NE格子左边缘 + 1个格子宽
+        const boundRight = neTL.x + cellWidth;
+        // 区域上边缘 = NE格子左边缘Y (因为Y向上增大，GridRow小的是上面? 不，GRID_ROWS-userY. UserY越大越靠上. 
+        // UserY=1 -> Y=11H. UserY=Row -> Y=0.
+        // so NE (Top Right) usually has larger Y index.
+        // NE(14, 3). SW(11, 2).
+        // NE Y=3. Top of NE is (Rows-3)*H = 9H.
+        // SW Y=2. Top of SW is (Rows-2)*H = 10H.
+        // SW is below NE.
+        // Top bound = NE Top Edge = neTL.y
+        // Bottom bound = SW Bottom Edge = swTL.y + cellHeight.
+
+        const boundTop = neTL.y;
+        const boundBottom = swTL.y + cellHeight;
+
+        const centerX = (boundLeft + boundRight) / 2;
+        const centerY = (boundTop + boundBottom) / 2;
 
         // 计算中心位置点（基于建筑物几何中心）
         const offsetX = 0;
         const offsetY = 0;
 
         // 圆形排列人物
-        const radius = Math.max(40, characters.length * 12); // 增加半径以适应更大的头像
+        // 增加头像大小到 50px (r=25)
+        const avatarRadius = 25;
+        const orbitRadius = Math.max(50, characters.length * 14);
         const angleStep = (2 * Math.PI) / characters.length;
 
         characters.forEach((char, index) => {
             const angle = index * angleStep;
-            const x = centerX + offsetX + Math.cos(angle) * radius;
-            const y = centerY + offsetY + Math.sin(angle) * radius;
+            const x = centerX + offsetX + Math.cos(angle) * orbitRadius;
+            const y = centerY + offsetY + Math.sin(angle) * orbitRadius;
 
             // 创建人物组
             const charGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
@@ -279,7 +303,7 @@ function drawCharacters(svg) {
             const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
             circle.setAttribute('cx', x);
             circle.setAttribute('cy', y);
-            circle.setAttribute('r', 20);
+            circle.setAttribute('r', avatarRadius);
             circle.setAttribute('fill', '#fff');
             circle.setAttribute('stroke', '#8b4513');
             circle.setAttribute('stroke-width', '2');
@@ -293,10 +317,10 @@ function drawCharacters(svg) {
                 image.setAttributeNS('http://www.w3.org/1999/xlink', 'href', avatarUrl);
                 image.setAttribute('href', avatarUrl);
             }
-            image.setAttribute('x', x - 20);
-            image.setAttribute('y', y - 20);
-            image.setAttribute('width', 40);
-            image.setAttribute('height', 40);
+            image.setAttribute('x', x - avatarRadius);
+            image.setAttribute('y', y - avatarRadius);
+            image.setAttribute('width', avatarRadius * 2);
+            image.setAttribute('height', avatarRadius * 2);
             image.setAttribute('clip-path', 'url(#avatarClip)');
             image.setAttribute('class', 'character-avatar');
 
@@ -570,17 +594,28 @@ function createBuildingElement(building) {
     const { coordinates, building_name, description, color, icon } = building;
 
     // 坐标转换：从用户坐标系（左下角为(1,1)）转换为SVG坐标系（左上角为(0,0)）
-    const convertCoords = (userX, userY) => {
+    // 坐标转换：获取格子的【左上角】
+    const getCellTopLeft = (userX, userY) => {
         const svgX = (userX - 1) * cellWidth;
         const svgY = (GRID_ROWS - userY) * cellHeight;
         return { x: svgX, y: svgY };
     };
 
-    // 获取四个顶点的SVG坐标（按逆时针顺序：SW -> SE -> NE -> NW）
-    const sw = convertCoords(coordinates.sw[0], coordinates.sw[1]);
-    const se = convertCoords(coordinates.se[0], coordinates.se[1]);
-    const ne = convertCoords(coordinates.ne[0], coordinates.ne[1]);
-    const nw = convertCoords(coordinates.nw[0], coordinates.nw[1]);
+    // 获取四个顶点的格子左上角坐标
+    const swTL = getCellTopLeft(coordinates.sw[0], coordinates.sw[1]);
+    const seTL = getCellTopLeft(coordinates.se[0], coordinates.se[1]);
+    const neTL = getCellTopLeft(coordinates.ne[0], coordinates.ne[1]);
+    const nwTL = getCellTopLeft(coordinates.nw[0], coordinates.nw[1]);
+
+    // 计算 Polygon 的实际顶点坐标
+    // NW点: nw格子的左上角
+    const pNW = { x: nwTL.x, y: nwTL.y };
+    // NE点: ne格子的右上角 = ne左上角 X + W
+    const pNE = { x: neTL.x + cellWidth, y: neTL.y };
+    // SE点: se格子的右下角 = se左上角 X + W, Y + H
+    const pSE = { x: seTL.x + cellWidth, y: seTL.y + cellHeight };
+    // SW点: sw格子的左下角 = sw左上角 Y + H
+    const pSW = { x: swTL.x, y: swTL.y + cellHeight };
 
     // 创建建筑物组
     const buildingGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
@@ -591,10 +626,10 @@ function createBuildingElement(building) {
     // 创建建筑物多边形（完全透明，仅用于交互）
     const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
     const points = [
-        `${sw.x},${sw.y}`,
-        `${se.x},${se.y}`,
-        `${ne.x},${ne.y}`,
-        `${nw.x},${nw.y}`
+        `${pSW.x},${pSW.y}`,
+        `${pSE.x},${pSE.y}`,
+        `${pNE.x},${pNE.y}`,
+        `${pNW.x},${pNW.y}`
     ].join(' ');
 
     polygon.setAttribute('points', points);

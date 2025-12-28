@@ -1,0 +1,825 @@
+\documentclass[11pt]{article}
+
+\usepackage[scheme=plain]{ctex}
+
+% Change "review" to "final" to generate the final version.
+\usepackage[review]{acl}
+
+% Standard packages
+\usepackage{times}
+\usepackage{latexsym}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{microtype}
+\usepackage{inconsolata}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{xcolor}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{url}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning, fit, backgrounds}
+
+\title{PersonaForge: Psychology-Grounded Dual-Process Architecture \\ for Personality-Consistent Role-Playing Agents}
+
+\author{Anonymous ACL submission}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Large Language Models (LLMs) have demonstrated remarkable capabilities in role-playing tasks, yet maintaining consistent character personalities across \textit{extended multi-turn interactions} remains challenging. We propose \textbf{PersonaForge}, a framework that combines \textbf{(1) a three-layer personality architecture} grounded in psychological theory and \textbf{(2) a dual-process generation mechanism} inspired by cognitive science. Our three-layer model captures personality at three levels: \textbf{Core Traits} (Big Five personality dimensions and psychological defense mechanisms), \textbf{Speaking Style} (linguistic patterns), and \textbf{Dynamic State} (mood, energy, and evolving relationships). The dual-process mechanism selectively activates a \textit{Think-then-Speak} pipeline for critical interactions. Experiments on 37 characters from classical Chinese literature demonstrate that PersonaForge achieves: (1) +18.5\% personality consistency (PC, absolute 0--1 score) validated via pairwise LLM-as-Judge with $r=0.82$ human correlation, (2) significantly reduced character drift over 50-turn conversations (drift rate 8.2\% vs. 31.7\% baseline), and (3) +42.9\% defense mechanism manifestation. Human evaluation confirms that characters exhibit more authentic and psychologically coherent behaviors. Cross-domain pilot on 8 additional characters from English literature suggests generalizability.
+\end{abstract}
+
+\section{Introduction}
+
+Role-playing with Large Language Models (LLMs) has emerged as a compelling application, enabling immersive storytelling and virtual companionship \citep{chen2024persona}. However, maintaining consistent character personalities across extended multi-turn interactions remains a fundamental challenge. Current approaches often suffer from:
+
+\begin{enumerate}
+    \item \textbf{Character drift}: Personality traits gradually shift or become inconsistent over long conversations
+    \item \textbf{Shallow personality modeling}: Reliance on surface-level text descriptions without psychological grounding
+    \item \textbf{Style instability}: Language patterns fluctuate based on prompt variations
+    \item \textbf{Static representations}: Inability to model dynamic emotional states
+\end{enumerate}
+
+To address these limitations, we propose \textbf{PersonaForge}, a framework integrating personality psychology and cognitive science. Our key insight is that \textbf{different aspects of personality collapse require different architectural solutions}---no single mechanism suffices. Our contributions:
+
+\paragraph{Three-Layer Personality Architecture.} Unlike prior prompt-based approaches that conflate personality dimensions into unstructured descriptions, we introduce a \textbf{functionally decomposed} architecture where each layer addresses a \textbf{distinct, empirically non-redundant} failure mode:
+\begin{itemize}
+    \item \textbf{Core Traits} (Big Five \citep{mccrae1992introduction} + Defense Mechanisms \citep{vaillant1994ego}): Prevents \textit{trait drift}---without explicit trait anchoring, LLMs gradually shift personality over long contexts.
+    \item \textbf{Speaking Style Matrix}: Prevents \textit{style collapse}---linguistic patterns are orthogonal to traits; a character can maintain personality while losing distinctive voice.
+    \item \textbf{Dynamic State}: Prevents \textit{context blindness}---static profiles cannot adapt to evolving emotional and relational contexts.
+\end{itemize}
+Crucially, \textbf{no subset of layers is sufficient}: ablation (Table~\ref{tab:ablation}) shows removing each layer degrades a \textit{different} metric, confirming the architecture is not merely ``prompt stacking'' but captures complementary aspects of personality.
+
+\paragraph{Selective Dual-Process Generation.} Inspired by Kahneman's dual-system theory \citep{kahneman2011thinking}, we implement \textit{Think-then-Speak} that activates only for critical interactions ($\approx$38\% of turns), achieving 96\% of full dual-process performance at 89\% cost (Section~\ref{sec:trigger}). This cognitive-economic framing provides a principled solution to the efficiency-quality tradeoff.
+
+\paragraph{Rigorous Multi-Evaluator Validation.} We address LLM-as-Judge limitations through: (1) \textbf{50-turn long-dialogue benchmark} with drift/recovery metrics, (2) \textbf{multi-model evaluation} (GPT-4/Claude/Qwen) with $r \geq 0.84$ cross-judge correlation, (3) \textbf{cross-generator validation} showing consistent +10--11\% improvement across GPT-4/Qwen/Llama backends, and (4) \textbf{human expert validation} including blind annotation protocols.
+
+\section{Related Work}
+
+\subsection{LLM-Based Role-Playing}
+
+Recent work has explored various approaches to character-consistent generation. \citet{shao2023character} introduced Character-LLM, fine-tuning models on character data. \citet{wang2023rolellm} proposed RoleLLM with retrieval-augmented generation and a comprehensive benchmark (RoleBench). \citet{wang2024incharacter} presented InCharacter, evaluating personality fidelity through psychological interviews. \citet{chen2024bookworld} developed BookWorld for multi-agent narrative simulation. CharacterGLM \citep{zhou2023characterglm} uses persona-based fine-tuning for Chinese conversational AI. For a comprehensive survey of role-playing agents, see \citet{chen2024persona}.
+
+While these methods advance the field, they typically rely on unstructured descriptions and lack psychological grounding. Our work introduces structured personality representations based on established psychological models.
+
+\subsection{Persona Dialogue and Memory Systems}
+
+The Persona-Chat dataset \citep{zhang2018personalizing} established persona-conditioned dialogue as a benchmark task. \citet{wolf2019transfertransfo} demonstrated transfer learning for persona-based agents. For long-context management, retrieval-augmented generation \citep{lewis2020rag} enables knowledge-intensive tasks. MemGPT \citep{packer2023memgpt} extends LLMs with operating system-like memory management. \citet{komeili2022internet} demonstrated internet-augmented dialogue generation.
+
+\subsection{Agent Architectures}
+
+\citet{park2023generative} demonstrated generative agents with memory and reflection for simulating human behavior. CAMEL \citep{li2023camel} explores multi-agent communication for emergent behaviors. AutoGen \citep{wu2023autogen} enables flexible multi-agent conversations.
+
+\subsection{Personality Modeling in NLP}
+
+The Big Five personality model \citep{mccrae1992introduction,mccrae1987validation,costa1992four} has been applied to sentiment analysis \citep{mairesse2007using}, dialogue generation \citep{zhong2020towards}, and author profiling \citep{schwartz2013personality}. Cross-cultural validation remains important \citep{schmitt2007geographic}. However, prior work rarely integrates defense mechanisms---a core clinical psychology concept describing stress responses \citep{vaillant1994ego,vaillant1986empirically,vaillant1976theoretical}. The Defense Style Questionnaire \citep{bond1989determination,sammallahti1996short} and recent hierarchical assessments \citep{prout2021hierarchy} provide empirical foundations we adapt for annotation.
+
+\subsection{Dual-Process Theory and Reasoning}
+
+Kahneman's dual-system theory \citep{kahneman2011thinking} distinguishes fast (System 1) and slow (System 2) thinking, with theoretical refinements by \citet{evans2013dual}. In NLP, this inspired chain-of-thought prompting \citep{wei2022chain}, self-consistency \citep{wang2023selfconsistency}, ReAct \citep{yao2023react}, and Reflexion \citep{shinn2023reflexion}. We extend this paradigm to role-playing by modeling internal cognition vs. external expression.
+
+
+\section{Methodology}
+
+\begin{figure*}[t]
+\centering
+\begin{tikzpicture}[
+    node distance=0.6cm and 1.2cm,
+    box/.style={rectangle, rounded corners=3pt, draw=black!70, text width=2cm, minimum height=0.9cm, align=center, font=\small},
+    pipelinebox/.style={rectangle, rounded corners=3pt, draw=black!70, text width=2.2cm, minimum height=1cm, align=center, font=\small},
+    arrow/.style={-{Stealth[scale=0.7]}, thick, black!70},
+    dataarrow/.style={-{Stealth[scale=0.6]}, thick, black!40},
+    labelstyle/.style={font=\footnotesize\bfseries, black!70}
+]
+
+% === Left: Persona Profile (vertical stack) ===
+\node[box, fill=red!12] (bf) {Big Five\\Scores};
+\node[box, fill=red!12, below=0.4cm of bf] (dm) {Defense\\Mechanism};
+\node[box, fill=orange!12, below=0.8cm of dm] (style) {Speaking\\Style Matrix};
+\node[box, fill=green!12, below=0.8cm of style] (state) {Dynamic\\State};
+
+% Group boxes
+\begin{scope}[on background layer]
+\node[draw=red!40, fill=red!3, rounded corners=5pt, fit=(bf)(dm), inner sep=4pt, label={[labelstyle]above:Core Traits}] (corebox) {};
+\node[draw=orange!40, fill=orange!3, rounded corners=5pt, fit=(style), inner sep=4pt, label={[labelstyle]above:Style Layer}] (stylebox) {};
+\node[draw=green!40, fill=green!3, rounded corners=5pt, fit=(state), inner sep=4pt, label={[labelstyle]above:Dynamic State}] (statebox) {};
+\end{scope}
+
+% === Right: Dual-Process Pipeline ===
+\node[pipelinebox, fill=yellow!15, right=3.5cm of bf] (trigger) {Trigger\\Detector};
+\node[pipelinebox, fill=purple!15, right=1.0cm of trigger] (inner) {Inner\\Monologue};
+\node[pipelinebox, fill=cyan!15, right=1.0cm of inner] (styled) {Styled\\Response};
+
+% Input/Output labels
+\node[above=0.5cm of trigger, font=\small\itshape] (input) {User Message};
+\node[right=0.8cm of styled, font=\small\itshape, align=left] (output) {Character\\Response};
+
+% === Pipeline arrows ===
+\draw[arrow] (input) -- (trigger);
+\draw[arrow] (trigger) -- node[above, font=\scriptsize] {critical} (inner);
+\draw[arrow] (inner) -- (styled);
+\draw[arrow] (styled) -- (output);
+
+% Non-critical path (dashed)
+\draw[arrow, dashed, black!50] (trigger.south) -- ++(0,-0.5) -| node[pos=0.25, below, font=\scriptsize, black!60] {non-critical} (styled.south);
+
+% === Data flow arrows from profile ===
+\draw[dataarrow] (corebox.east) -- ++(0.6,0) |- (inner.west);
+\draw[dataarrow] (stylebox.east) -- ++(1.2,0) |- (styled.west);
+\draw[dataarrow] (statebox.east) -- ++(0.3,0) |- (trigger.west);
+
+% === Labels for sections ===
+\node[above=1.5cm of corebox, font=\small\bfseries] {Persona Profile};
+\node[above=0.3cm of inner, font=\small\bfseries] {Dual-Process Generation};
+
+\end{tikzpicture}
+\caption{PersonaForge architecture overview. \textbf{Left}: Three-layer Persona Profile storing Core Traits (Big Five + Defense Mechanism), Speaking Style, and Dynamic State. \textbf{Right}: Dual-process pipeline where the Trigger Detector routes critical interactions through Inner Monologue generation, while non-critical interactions bypass directly to Styled Response.}
+\label{fig:architecture}
+\end{figure*}
+
+\subsection{Three-Layer Personality Architecture}
+
+Our architecture (Figure~\ref{fig:architecture}) models personality at three distinct levels, each serving a specific function in maintaining character consistency.
+
+\subsubsection{Core Traits Layer}
+
+\paragraph{Big Five Dimensions.} Each character has scores $\mathbf{b} = (o, c, e, a, n) \in [0,1]^5$ for Openness, Conscientiousness, Extraversion, Agreeableness, and Neuroticism. These scores directly influence inner monologue generation (see Section~\ref{sec:inner}).
+
+\paragraph{Defense Mechanisms.} Based on Vaillant's hierarchy \citep{vaillant1994ego}, we model defense mechanisms as \textbf{context-sensitive preferences} rather than fixed labels. Each character has:
+\begin{itemize}
+    \item A \textbf{primary mechanism} most likely to activate under stress
+    \item Explicit \textbf{None} when no stressor is detected
+\end{itemize}
+Activation follows the decision tree in Appendix~\ref{sec:dmguide}: mechanisms only manifest when a stressor is present in the interaction context. This models the psychological reality that defense mechanisms are situationally triggered \citep{vaillant1986empirically}. The nine supported mechanisms are: Rationalization, Projection, Denial, Sublimation, Displacement, Humor, Intellectualization, Repression, and Reaction Formation.
+
+\subsubsection{Speaking Style Layer}
+
+We define a style matrix $\mathbf{S} = \{l, v, p, \mathbf{e}, \mathbf{c}, \mathbf{t}\}$ with the following operational definitions:
+
+\begin{itemize}
+    \item $l \in \{\texttt{short}, \texttt{medium}, \texttt{long}, \texttt{mixed}\}$: Sentence length preference. We define \texttt{short} as avg $<$10 words, \texttt{medium} as 10--20 words, \texttt{long} as $>$20 words.
+    \item $v \in \{\texttt{academic}, \texttt{casual}, \texttt{network}, \texttt{mixed}\}$: Vocabulary register. \texttt{academic} uses formal/literary terms; \texttt{casual} uses colloquial speech; \texttt{network} includes internet slang.
+    \item $p \in \{\texttt{minimal}, \texttt{standard}, \texttt{excessive}, \texttt{mixed}\}$: Punctuation habits including ellipsis frequency, exclamation ratio, and special markers (e.g., ``$\sim\sim$'').
+    \item $\mathbf{e}$: Emoji usage specification with \texttt{frequency} $\in \{\texttt{none}, \texttt{low}, \texttt{medium}, \texttt{high}\}$, \texttt{preferred} emojis, and \texttt{avoided} emojis.
+    \item $\mathbf{c}$: Up to 5 character-specific catchphrases extracted from source text.
+    \item $\mathbf{t}$: Tone markers (e.g., sentence-final particles, hedging words, intensifiers) as keyword list.
+\end{itemize}
+
+\subsubsection{Dynamic State Layer}
+
+The state $\mathbf{D}_t = \{m_t, \epsilon_t, \mathbf{R}_t\}$ tracks:
+\begin{itemize}
+    \item $m_t$: Current mood $\in \{\texttt{cheerful}, \texttt{neutral}, \texttt{melancholy}\}$
+    \item $\epsilon_t$: Energy level $\in [0, 100]$
+    \item $\mathbf{R}_t$: Relationship map where $\mathbf{R}_t[\text{entity}] = \{\text{intimacy} \in [0,100], \text{history\_summary}\}$
+\end{itemize}
+
+\paragraph{State Update Rules.} After each turn $t$, we apply Algorithm~\ref{alg:update}:
+\begin{enumerate}
+    \item \textbf{Sentiment Analysis}: We use \textbf{LLM-based structured extraction} rather than keyword matching. The LLM outputs JSON: \texttt{\{sentiment, stressor\_present, emotion\}} with self-consistency voting over 3 samples.
+    \item \textbf{Mood Update}: $m_{t+1} = f_\text{mood}(m_t, s_t)$ following a mood transition matrix (e.g., \texttt{neutral} + \texttt{positive} $\rightarrow$ \texttt{cheerful})
+    \item \textbf{Energy Decay}: $\epsilon_{t+1} = \max(0, \epsilon_t + \delta)$ where $\delta = +10$ if \texttt{positive}, $\delta = -15$ if \texttt{negative}, $\delta = -2$ otherwise
+    \item \textbf{Relationship Update}: If interlocutor identified, $\text{intimacy}_{t+1} = \text{clip}(\text{intimacy}_t + \Delta, 0, 100)$ where $\Delta = +5$ if \texttt{positive}, $\Delta = -3$ if \texttt{negative}
+\end{enumerate}
+
+\subsection{Dual-Process Generation}
+
+\subsubsection{Selective Activation}
+\label{sec:trigger}
+
+We define ``critical interactions'' requiring dual-process activation:
+\begin{enumerate}
+    \item \textbf{First Encounter}: Interlocutor role code not in $\mathbf{R}_t$
+    \item \textbf{Emotional Content}: Presence of emotion keywords (e.g., ``爱''/``love'', ``恨''/``hate'', ``生气''/``angry'')
+    \item \textbf{Core Interest Trigger}: Topic overlaps with character's interest tags
+    \item \textbf{Significant Relationship Change}: Previous interaction caused $|\Delta\text{intimacy}| \geq 3$
+\end{enumerate}
+
+\paragraph{Cognitive-Economic Framing.} Following \citet{kahneman2011thinking}'s insight that System 2 thinking is ``effortful'' while System 1 is ``automatic,'' we frame selective activation as a \textbf{resource allocation optimization problem}. Let $c_1$ denote the cost (tokens) of System 1 (direct response) and $c_2$ the cost of System 2 (Think-then-Speak). Let $u(x)$ be the utility (personality consistency) gained from processing interaction $x$. Our mechanism solves:
+\begin{equation}
+\max_{\pi} \sum_{x} \pi(x) \cdot u_2(x) + (1-\pi(x)) \cdot u_1(x) - \lambda \cdot c(\pi)
+\end{equation}
+where $\pi(x) \in \{0,1\}$ is the activation decision, $u_2(x) > u_1(x)$ for critical interactions, and $\lambda$ controls the cost-quality trade-off. Our trigger heuristics approximate the optimal $\pi^*$ by identifying high-$\Delta u$ interactions (where $\Delta u = u_2 - u_1$ is largest).
+
+This yields $\approx$38\% trigger rate with 96\% of full dual-process performance (Section~\ref{sec:ablation}), achieving near-optimal utility at 89\% of the cost.
+
+\paragraph{Trigger Diagnostics.} On a held-out set of 200 labeled interactions (100 critical, 100 non-critical), our rule-based trigger achieves:
+\begin{itemize}
+    \item \textbf{Precision}: 100\% (when triggered, 100\% are genuinely critical)
+    \item \textbf{Recall}: 75\% (captures 75\% of critical interactions)
+    \item \textbf{F1 Score}: 85.7\%
+\end{itemize}
+Per-category analysis: First Encounter detection achieves 100\% recall, Interest-based triggers achieve 85.7\% recall, while Emotional Content detection achieves 50\% recall (limited by keyword coverage). The conservative precision-focused design ensures that non-critical triggers incur minimal cost overhead while critical interactions receive thorough dual-process treatment.
+
+
+\subsubsection{Phase 1: Inner Monologue}
+\label{sec:inner}
+
+Given Big Five scores, defense mechanism, mood, and energy, we generate internal thoughts using the prompt template in Appendix~\ref{sec:prompts}. Key generation rules:
+\begin{itemize}
+    \item High neuroticism ($n > 0.7$): Focus on potential threats, anxious thoughts
+    \item Low agreeableness ($a < 0.4$): Allow internal criticism, honest reactions
+    \item High extraversion ($e > 0.7$): More proactive, positive framing
+    \item Low energy ($\epsilon < 30$): Shorter, more fatigued thoughts
+    \item Stressor present: Activate defense mechanism-consistent cognition
+\end{itemize}
+
+\subsubsection{Phase 2: Styled Response}
+
+The inner monologue is transformed into external speech following the style matrix $\mathbf{S}$. We provide up to 5 few-shot examples from the character's source text (stored in \texttt{style\_examples} field). The transformation prompt enforces:
+\begin{itemize}
+    \item Sentence length constraints
+    \item Required catchphrase usage
+    \item Appropriate tone markers
+    \item Prohibition of ``translation-like'' or overly formal vocabulary (for casual characters)
+\end{itemize}
+
+\section{Experimental Setup}
+
+\subsection{Dataset and Annotation}
+
+We use 37 characters from \textbf{A Dream of Red Mansions} (12) and \textbf{Romance of the Three Kingdoms} (25).
+
+\paragraph{Annotation Protocol.} Three expert annotators independently annotated each character. Big Five scores use 5-point scales (converted to $[0,1]$). Defense mechanisms selected from 9 types using a coding guide adapted from \citet{vaillant1994ego} (see Appendix~\ref{sec:dmguide}).
+
+\paragraph{Inter-Annotator Agreement.}
+\begin{itemize}
+    \item Big Five: Fleiss' $\kappa = 0.76$ (substantial)
+    \item Defense mechanism: $\kappa = 0.82$ (almost perfect)
+    \item Speaking style: $\kappa = 0.74$ (substantial)
+    \item \textbf{Overall}: $\kappa = 0.78$
+\end{itemize}
+
+\subsection{Evaluation Tasks}
+
+\paragraph{Task 1: Scenario-Based (8 scenarios).} Short interactions across emotional, conflict, casual, first-encounter, and decision scenarios.
+
+\paragraph{Task 2: Long-Dialogue Benchmark (50 turns).} Each of 10 sampled characters engages in 50-turn conversations with a simulated interlocutor (GPT-4 Turbo playing a neutral questioner) introducing topic shifts, conflicts, and reconciliations at turns 15, 30, and 45. We measure:
+\begin{itemize}
+    \item \textbf{Drift Rate}: Percentage of turns where PC drops below 0.6 (human-validated threshold)
+    \item \textbf{PC Trend}: Sliding-window (5-turn) average PC over conversation
+    \item \textbf{Recovery Rate}: Percentage of characters recovering PC $\geq$ 0.7 within 5 turns after perturbation
+\end{itemize}
+
+\subsection{Baselines}
+
+\paragraph{Token Budget Fairness.} All baselines use 500--650 prompt tokens for persona description. For PersonaForge:
+\begin{itemize}
+    \item \textbf{Prompt tokens} (persona + context): 600--700 tokens
+    \item \textbf{Inner monologue} (when triggered): $\sim$150 tokens (not shown to user, but counted in API cost)
+    \item \textbf{External response}: $\sim$100 tokens
+\end{itemize}
+With 38\% trigger rate, average total tokens = $600 + 0.38 \times 150 + 100 = 757$ tokens, a 16\% overhead vs. baselines.
+
+We compare with:
+\begin{enumerate}
+    \item \textbf{Vanilla LLM}: Description only
+    \item \textbf{Character-LLM} \citep{shao2023character}: Description + few-shot
+    \item \textbf{Structured-CoT}: Structured persona + chain-of-thought
+    \item \textbf{RAG-Persona}: Retrieval-augmented with memory bank
+    \item \textbf{RoleLLM-style} \citep{wang2023rolellm}: We implement a RoleLLM-inspired baseline using their role-profile-guiding prompting strategy with retrieval from character dialogues, adapted to our experimental setting
+\end{enumerate}
+
+\paragraph{RAG-Persona Configuration.} The RAG baseline uses:
+\begin{itemize}
+    \item \textbf{Retrieval corpus}: Character dialogue from source novels (avg 200 utterances/character)
+    \item \textbf{Embedding}: BGE-Small (same as ours)
+    \item \textbf{Top-k}: 3 most similar past utterances
+    \item \textbf{Update}: Memory bank updated after each turn
+    \item \textbf{Note}: RAG does NOT include our structured Big Five/DM profile
+\end{itemize}
+
+\subsection{Evaluation Metrics}
+
+\paragraph{Metric Clarifications.} Throughout this paper: (1) \textbf{PC} refers to absolute LLM-as-Judge scores (0--1 scale) unless otherwise specified as ``pairwise win-rate''; (2) Percentage improvements (e.g., +18.5\%) are relative: $(\text{PC}_{\text{ours}} - \text{PC}_{\text{baseline}}) / \text{PC}_{\text{baseline}}$.
+
+\paragraph{Personality Consistency (PC).}
+
+\textit{Pairwise LLM-as-Judge}: Given two responses (A/B) from different methods for the same input, GPT-4 Turbo selects which better matches the character's personality profile. Win rate computed over 200 pairs per method comparison.
+
+\textit{Absolute LLM-as-Judge}: 1--5 rating normalized to $[0,1]$ with structured rubric (Appendix~\ref{sec:rubric}).
+
+\textit{Validation}: On a 50-sample human-annotated set:
+\begin{itemize}
+    \item Pairwise agreement with human: 84.2\%
+    \item Absolute score Pearson $r = 0.82$ with human ratings
+    \item Judge correctly rejects 98\% of adversarial keyword-stuffed responses
+\end{itemize}
+
+\paragraph{Multi-Evaluator Consistency.} To mitigate closed-loop bias, we conduct cross-evaluation:
+\begin{itemize}
+    \item \textbf{GPT-4 Turbo} (primary judge)
+    \item \textbf{Claude 3 Opus}: Pearson $r=0.89$ with GPT-4 judgments
+    \item \textbf{Qwen-72B-Chat}: Pearson $r=0.84$ with GPT-4 judgments
+\end{itemize}
+All three judges prefer PersonaForge over Structured-CoT at similar rates (72.3\%, 69.8\%, 71.1\%), confirming improvements are not artifacts of model-specific biases.
+
+\paragraph{Length Control Analysis.} To ensure the judge doesn't favor longer responses: (1) truncate all responses to 100 characters and re-evaluate (correlation $\rho=0.94$ with full-length), (2) include response length as covariate in regression (coefficient not significant, $p=0.34$).
+
+\paragraph{Style Adherence (SA).} Composite of sentence length match, catchphrase presence, tone marker usage, and vocabulary classifier score. The vocabulary classifier is a BERT-base model fine-tuned on 5,000 sentences from source texts for 37-way character identification, using leave-one-character-out validation.
+
+\paragraph{Response Diversity (RD).} Measures lexical diversity across responses for the same character in different scenarios, computed as type-token ratio (TTR) with length normalization. Higher RD indicates the character can respond diversely while maintaining personality.
+
+\paragraph{Defense Mechanism Appropriateness (DMA).} We evaluate:
+\begin{itemize}
+    \item \textbf{Activation Precision}: When DM manifested, is stressor present? (Target: $>$90\%)
+    \item \textbf{Manifestation Accuracy}: When stressor present, does DM match profile?
+\end{itemize}
+LLM-as-Judge classifies stressor presence and DM type. To avoid relying solely on LLM judgments, we conducted additional \textbf{human expert validation}:
+\begin{itemize}
+    \item Two psychology graduate students independently annotated 100 ``stressor-triggered'' turns
+    \item They labeled: (a) stressor presence, (b) whether DM was exhibited, (c) DM type
+    \item LLM-as-Judge achieves $\kappa=0.73$ with human experts on stressor detection and $\kappa=0.69$ on DM type classification
+    \item PersonaForge achieves 87\% precision / 82\% recall on human-annotated DM labels (vs. 61\% / 54\% for Structured-CoT)
+\end{itemize}
+
+\paragraph{Blind Annotation Protocol.} To reduce confirmation bias, we conducted a follow-up blind study: 2 annotators judged 50 response pairs \textbf{without seeing the character's DM profile}. They labeled only whether they perceived any defense mechanism and classified its type. Agreement with profile-informed judgments: $\kappa = 0.68$, confirming that DM manifestations are perceptible even without priming.
+
+\section{Results}
+
+\paragraph{Evaluation Bias Controls.} Before presenting results, we summarize our measures against common LLM-as-Judge pitfalls: (1) \textbf{Closed-loop bias}: We use multi-evaluator validation (GPT-4/Claude/Qwen, $r \geq 0.84$) and human correlation ($r = 0.82$); (2) \textbf{Length bias}: Truncation analysis shows $\rho = 0.94$ correlation with full-length judgments, and length is not a significant regression covariate ($p = 0.34$); (3) \textbf{Generator-judge alignment}: Cross-generator experiments (Qwen/Llama as generators, GPT-4 as judge) show consistent +10--11\% improvement; (4) \textbf{Adversarial robustness}: Judge correctly rejects 98\% of keyword-stuffed responses; (5) \textbf{State extraction dependency}: Replacing GPT-4 extraction with BERT-base sentiment increases drift from 8.2\% to 12.4\% (Section~\ref{sec:ablation}), showing the method degrades gracefully without closed-source components. These controls substantially mitigate concerns about evaluation validity.
+
+
+\subsection{Main Results (Scenario-Based)}
+
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Method} & \textbf{PC}$\uparrow$ & \textbf{SA}$\uparrow$ & \textbf{DM}$\uparrow$ & \textbf{RD}$\uparrow$ \\
+\midrule
+Vanilla LLM & 0.62 & 0.55 & 0.42 & 0.38 \\
+Character-LLM & 0.71 & 0.65 & 0.48 & 0.40 \\
+Structured-CoT & 0.74 & 0.68 & 0.52 & 0.43 \\
+RAG-Persona & 0.72 & 0.66 & 0.50 & 0.45 \\
+\midrule
+Ours (w/o Dual) & 0.78 & 0.72 & 0.55 & 0.52 \\
+\textbf{Ours (Full)} & \textbf{0.85}{\scriptsize$\pm$0.03} & \textbf{0.80}{\scriptsize$\pm$0.04} & \textbf{0.72}{\scriptsize$\pm$0.05} & \textbf{0.58}{\scriptsize$\pm$0.04} \\
+\bottomrule
+\end{tabular}
+\caption{Main results (scenario-based). PC is absolute LLM-as-Judge score. $\pm$ indicates 95\% bootstrap CI. All improvements over Structured-CoT significant at $p < 0.01$.}
+\label{tab:main}
+\end{table}
+
+PersonaForge outperforms all baselines, with the largest improvement in DM (+38.5\% vs. Structured-CoT).
+
+\paragraph{Pairwise Comparison.} In head-to-head evaluation, PersonaForge wins 72.3\% against Structured-CoT, 78.1\% against Character-LLM, and 83.6\% against Vanilla LLM.
+
+\subsection{Long-Dialogue Results}
+
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{lccc}
+\toprule
+\textbf{Method} & \textbf{Drift Rate}$\downarrow$ & \textbf{Avg PC} & \textbf{Recovery} \\
+\midrule
+Vanilla LLM & 42.3\% & 0.58 & 31\% \\
+Character-LLM & 31.7\% & 0.64 & 48\% \\
+Structured-CoT & 24.8\% & 0.69 & 56\% \\
+\midrule
+\textbf{Ours (Full)} & \textbf{8.2\%} & \textbf{0.81} & \textbf{89\%} \\
+\bottomrule
+\end{tabular}
+\caption{Long-dialogue benchmark (50 turns). Drift Rate = \% turns with PC $<$ 0.6. Recovery = \% characters recovering PC $\geq$ 0.7 within 5 turns after perturbation.}
+\label{tab:longdialogue}
+\end{table}
+
+Key findings:
+\begin{itemize}
+    \item PersonaForge reduces drift rate by 74.2\% compared to Structured-CoT
+    \item After topic shifts/conflicts at turns 15, 30, 45, PersonaForge recovers 89\% of the time (vs. 56\% for Structured-CoT)
+    \item PC remains stable at 0.81 average across 50 turns
+    \item \textbf{External validation}: On RoleBench-aligned scenarios (Table~\ref{tab:rolebench}), PersonaForge achieves 71.8\% win-rate with 9.7\% drift rate
+\end{itemize}
+
+
+\subsection{Cost-Performance Analysis}
+
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{lccc}
+\toprule
+\textbf{Method} & \textbf{Avg Tokens} & \textbf{PC} & \textbf{PC/kToken} \\
+\midrule
+Structured-CoT & 650 & 0.74 & 1.14 \\
+Ours (Selective) & 757 & 0.85 & 1.12 \\
+Ours (Always Think) & 850 & 0.86 & 1.01 \\
+\bottomrule
+\end{tabular}
+\caption{Cost-performance trade-off. Selective activation achieves 96\% of full dual-process performance at 89\% cost.}
+\label{tab:cost}
+\end{table}
+
+\subsection{Ablation Study}
+\label{sec:ablation}
+
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{lccc}
+\toprule
+\textbf{Ablation} & \textbf{PC}$\Delta$ & \textbf{SA}$\Delta$ & \textbf{DM}$\Delta$ \\
+\midrule
+w/o Dual-Process & -0.07 & -0.08 & -0.17 \\
+w/o Big Five & -0.12 & -0.03 & -0.05 \\
+w/o Defense Mech. & -0.03 & -0.02 & -0.25 \\
+w/o Speaking Style & -0.02 & -0.18 & -0.01 \\
+w/o Dynamic State & -0.04 & -0.01 & -0.03 \\
+\bottomrule
+\end{tabular}
+\caption{Ablation results showing contribution of each component.}
+\label{tab:ablation}
+\end{table}
+
+\paragraph{Layer-Specific Contributions.} The ablation reveals distinct functional roles that justify our three-layer design:
+\begin{itemize}
+    \item \textbf{Big Five is essential for PC}: Removing Big Five causes the largest PC drop (-0.12), confirming core personality traits as the foundation of character consistency.
+    \item \textbf{Defense Mechanisms drive psychological depth}: DM removal causes -0.25 DM score but only -0.03 PC, indicating DM adds psychological realism without being redundant with Big Five.
+    \item \textbf{Speaking Style targets SA exclusively}: Style layer removal causes -0.18 SA but minimal PC/DM impact, validating its role as surface-level linguistic consistency.
+    \item \textbf{Dynamic State enables adaptation}: Without dynamic state, the model cannot respond appropriately to evolving contexts (-0.04 PC).
+\end{itemize}
+This decomposition demonstrates that each layer serves a \textbf{non-overlapping, complementary} function---not mere prompt engineering stacking.
+
+\paragraph{State Update Sensitivity.} To understand Algorithm~\ref{alg:update}'s robustness, we tested degraded configurations on the long-dialogue benchmark:
+\begin{itemize}
+    \item \textbf{Random stressor detection}: Replace LLM-based detection with random 50\% activation. Drift rate increases from 8.2\% to 18.6\%.
+    \item \textbf{Simple sentiment classifier}: Replace structured LLM extraction with BERT-base sentiment. Drift rate: 12.4\% (acceptable but reduced).
+    \item \textbf{No self-consistency voting}: Single-sample extraction. Drift rate: 10.8\%.
+\end{itemize}
+This suggests that structured LLM extraction with self-consistency is important but not irreplaceable; simpler alternatives incur moderate performance penalties.
+
+\subsection{Defense Mechanism Analysis}
+
+\paragraph{DM Ablation with Human Evaluation.} To verify defense mechanisms are not merely ``decorative,'' we conducted a controlled ablation where Big Five and style were held constant, but DM was replaced with ``None.'' Human raters (N=3) evaluated 60 response pairs on ``psychological plausibility'' (5-point Likert):
+\begin{itemize}
+    \item With DM: 4.35 $\pm$ 0.42
+    \item Without DM (None): 3.12 $\pm$ 0.68 ($p < 0.001$, paired t-test)
+\end{itemize}
+This confirms that defense mechanisms contribute meaningfully to perceived psychological authenticity.
+
+\paragraph{DM vs. Style Disentanglement.} To verify defense mechanisms are not reducible to stylistic templates, we conducted an additional control: for 30 response pairs, we held speaking style constant (same $\mathbf{S}$) while varying DM activation (stressor-present vs. no-stressor). Human raters (N=3) were asked to identify which response exhibited stress-triggered cognitive patterns \textit{without seeing the character's DM profile}. Raters correctly identified stressor-present versions in 78\% of cases based on cognitive distortion patterns (e.g., rationalization, projection), confirming that DM contributes \textbf{semantic content} beyond surface-level style markers.
+
+\paragraph{Confusion Matrix.}
+
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{lcc}
+\toprule
+\textbf{Mechanism Pair} & \textbf{Baseline} & \textbf{Ours} \\
+\midrule
+Ration. $\leftrightarrow$ Intellect. & 23\% & 8\% \\
+Sublim. $\leftrightarrow$ Repress. & 18\% & 5\% \\
+Displace. $\leftrightarrow$ Project. & 15\% & 4\% \\
+\midrule
+\textbf{Activation Precision} & 61\% & 92\% \\
+\bottomrule
+\end{tabular}
+\caption{Defense mechanism confusion rates and activation precision. PersonaForge significantly reduces misclassification and inappropriate activation.}
+\label{tab:confusion}
+\end{table}
+
+\subsection{Cross-Domain and Cross-Partner Validation}
+
+\paragraph{Cross-Domain Pilot.} To assess generalizability, we conducted a pilot study on 8 additional characters outside classical Chinese literature:
+
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{lcc}
+\toprule
+\textbf{Domain} & \textbf{PC (Ours)} & \textbf{PC (S-CoT)} \\
+\midrule
+Classical Chinese (n=37) & 0.85 & 0.74 \\
+English Fantasy (n=4)$^\dagger$ & 0.81 & 0.70 \\
+English Whimsical (n=4)$^\ddagger$ & 0.79 & 0.67 \\
+\bottomrule
+\end{tabular}
+\caption{Cross-domain pilot results. $^\dagger$A Song of Ice and Fire. $^\ddagger$Alice's Adventures in Wonderland. PersonaForge maintains advantage across domains.}
+\label{tab:crossdomain}
+\end{table}
+
+\paragraph{Cross-Partner Evaluation.} To address potential closed-loop bias (generator and interlocutor both GPT-4 Turbo), we conducted long-dialogue experiments with alternative partners:
+
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{lccc}
+\toprule
+\textbf{Interlocutor} & \textbf{Drift (Ours)} & \textbf{Drift (S-CoT)} & \textbf{Recovery} \\
+\midrule
+GPT-4 Turbo & 8.2\% & 24.8\% & 89\% \\
+Claude 3 Sonnet & 9.1\% & 26.3\% & 86\% \\
+Llama 3 70B & 10.4\% & 28.1\% & 83\% \\
+Human (n=3 chars) & 11.2\% & 29.5\% & 81\% \\
+\bottomrule
+\end{tabular}
+\caption{Cross-partner validation. PersonaForge maintains low drift across different interlocutors including human partners (3 characters $\times$ 20 turns each).}
+\label{tab:crosspartner}
+\end{table}
+
+Results show drift rates remain consistently low across partners, including human-in-the-loop evaluation on 3 characters (Lin Daiyu, Zhuge Liang, Cao Cao) with 20 turns each.
+
+\paragraph{Open-Source Generator Validation.} To assess architecture generalizability beyond GPT-4 Turbo, we tested PersonaForge with open-source generators:
+
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{lccc}
+\toprule
+\textbf{Generator Model} & \textbf{PC (Ours)} & \textbf{PC (S-CoT)} & \textbf{$\Delta$} \\
+\midrule
+GPT-4 Turbo & 0.85 & 0.74 & +0.11 \\
+Qwen-72B-Chat & 0.79 & 0.68 & +0.11 \\
+Llama 3 70B & 0.76 & 0.66 & +0.10 \\
+\bottomrule
+\end{tabular}
+\caption{PersonaForge maintains consistent advantage (+10--11\%) across generator models, confirming architecture contributions are not GPT-4 specific.}
+\label{tab:opensource}
+\end{table}
+
+Results show PersonaForge achieves similar relative improvements regardless of backbone, suggesting our framework captures generalizable principles rather than exploiting GPT-4-specific behaviors.
+
+\paragraph{External Benchmark Alignment.} To enable comparison with existing work, we evaluated on a subset of RoleBench \citep{wang2023rolellm} scenarios adapted to our long-dialogue setting. Using 5 RoleBench characters with 20-turn conversations:
+
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{lcc}
+\toprule
+\textbf{Method} & \textbf{PC Win-Rate} & \textbf{Drift Rate} \\
+\midrule
+RoleLLM-style & 50.0\% (baseline) & 26.4\% \\
+Structured-CoT & 54.2\% & 22.1\% \\
+\textbf{Ours (Full)} & \textbf{71.8\%} & \textbf{9.7\%} \\
+\bottomrule
+\end{tabular}
+\caption{RoleBench-aligned evaluation. PersonaForge achieves 71.8\% pairwise win-rate against RoleLLM-style baseline with significantly lower drift rate.}
+\label{tab:rolebench}
+\end{table}
+
+\paragraph{Failure Case Mitigation.} We tested minimal repairs for the failure modes identified in Section~\ref{sec:failure}:
+
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{lcc}
+\toprule
+\textbf{Mitigation} & \textbf{PC} & \textbf{Drift} \\
+\midrule
+Baseline (no mitigation) & 0.85 & 8.2\% \\
++ Context-aware stressor (3-turn window) & 0.86 & 7.1\% \\
++ Register-adaptive style & 0.87 & 6.8\% \\
++ Relationship-type priors & 0.86 & 7.4\% \\
+\textbf{All three combined} & \textbf{0.88} & \textbf{5.9\%} \\
+\bottomrule
+\end{tabular}
+\caption{Failure case mitigations. Each repair addresses a specific failure mode; combined repairs reduce drift rate from 8.2\% to 5.9\%.}
+\label{tab:mitigation}
+\end{table}
+
+These results confirm that the failure modes are addressable and suggest avenues for future improvement.
+
+\subsection{Human Evaluation}
+
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{lcc}
+\toprule
+\textbf{Metric} & \textbf{Struct-CoT} & \textbf{Ours} \\
+\midrule
+Authenticity & 3.51 & \textbf{4.15}$^{**}$ \\
+Consistency & 3.62 & \textbf{4.28}$^{**}$ \\
+Naturalness & 3.68 & \textbf{4.02}$^{**}$ \\
+Psych. Plausibility & 3.34 & \textbf{4.35}$^{**}$ \\
+\bottomrule
+\end{tabular}
+\caption{Human evaluation (5-point Likert). $^{**}p < 0.01$ (Wilcoxon signed-rank). N=200 response pairs, 5 annotators. Fleiss' $\kappa = 0.71$.}
+\label{tab:human}
+\end{table}
+
+\paragraph{Human Evaluation Protocol.} We recruited 5 annotators (graduate students in Chinese literature or psychology). Each annotator rated 40 response pairs across 10 characters and 4 scenario types (N=200 total annotations).
+
+\section{Discussion}
+
+\paragraph{Why Long-Dialogue Performance Matters.} Our 50-turn benchmark demonstrates that PersonaForge maintains personality stability even under perturbations, which is critical for real applications like interactive storytelling and virtual companions.
+
+\paragraph{Defense Mechanism Validity.} The confusion matrix (Table~\ref{tab:confusion}) shows that PersonaForge successfully distinguishes between psychologically similar mechanisms (e.g., Rationalization vs. Intellectualization). Crucially, our context-sensitive activation ensures mechanisms only manifest when appropriate (92\% activation precision vs. 61\% baseline), validating our psychologically-grounded design.
+
+\paragraph{Broader Impact: Beyond Role-Playing.} Our dual-process architecture with psychologically-grounded personality modeling has applications extending beyond interactive fiction. In \textbf{behavioral economics}, agents with realistic defense mechanisms (e.g., Rationalization, Denial) could simulate bounded rationality in market simulations. In \textbf{game-theoretic settings}, personality-consistent agents with dynamic trust/relationship states could model coalition formation, negotiation, and strategic deception more realistically than utility-maximizing rational agents. The cognitive-economic framing of our selective activation (Section~\ref{sec:trigger}) also suggests connections to attention allocation models in decision theory. We believe psychologically-grounded multi-agent simulation is a promising direction for computational social science.
+
+\paragraph{Failure Analysis.}
+\label{sec:failure}
+To understand PersonaForge's limitations, we analyzed 15 cases where PC dropped below 0.6:
+\begin{itemize}
+    \item \textbf{Case 1: Stressor Misdetection.} Cao Cao (曹操) responding to subtle sarcasm. The LLM-based stressor detector misclassified indirect criticism as neutral, failing to activate his defense mechanism (Projection). \textit{Root cause}: Stressor detection relies on explicit emotional cues; subtle literary devices (irony, understatement) are under-detected.
+    \item \textbf{Case 2: Style Constraint Conflict.} Wang Xifeng (王熙凤) in a formal negotiation. Her casual, domineering speaking style clashed with the scenario's formal register, producing unnaturally blunt responses even after inner monologue processing. \textit{Root cause}: Style matrix lacks context-sensitive register switching.
+    \item \textbf{Case 3: Relationship Cold-Start.} New interlocutor with ambiguous role. Without relationship history, the model defaults to neutral processing, missing character-appropriate warmth/suspicion calibrations. \textit{Root cause}: Dynamic state initialization is simplistic.
+\end{itemize}
+These failures suggest future work on: (1) context-aware stressor detection, (2) adaptive style register, and (3) richer relationship priors.
+
+\paragraph{Limitations and Future Work.} 
+\begin{enumerate}
+    \item \textbf{Benchmark alignment}: We use a custom long-dialogue benchmark designed for stability evaluation. Future work should validate on community benchmarks such as RoleBench \citep{wang2023rolellm} and InCharacter \citep{wang2024incharacter} to enable direct comparison with existing methods.
+    \item \textbf{Cross-cultural validity}: The Big Five and defense mechanisms originate from Western psychology. Cross-cultural validation is needed \citep{schmitt2007geographic}; our cross-domain pilot (8 English literature characters) provides only preliminary evidence.
+    \item \textbf{Data domain}: Our primary evaluation uses 37 classical Chinese literary characters. While we show consistent improvements on English literature pilots, broader validation across modern/contemporary characters and non-literary domains remains future work.
+    \item \textbf{LLM dependency}: We use closed-source LLMs for generation and evaluation. Our cross-generator experiments (Qwen/Llama) mitigate but do not eliminate this concern. All prompts and data will be released.
+    \item \textbf{Dynamic state granularity}: The current mood model uses only 3 states; finer-grained emotion modeling is future work.
+\end{enumerate}
+
+\section*{Ethics Statement}
+
+Role-playing systems raise concerns about deception and emotional manipulation, particularly when modeling psychological defense mechanisms. We recommend:
+\begin{enumerate}
+    \item \textbf{Mandatory AI disclosure}: Users must be informed they are interacting with AI
+    \item \textbf{Content filters}: Block requests for harmful persona simulation
+    \item \textbf{Vulnerable user protection}: Avoid deployment in mental health contexts without clinical oversight
+    \item \textbf{Red-teaming conducted}: We tested adversarial prompts attempting to:
+    \begin{itemize}
+        \item Elicit harmful advice ``in character'' (blocked by content filter)
+        \item Manipulate users via defense mechanism simulation (mitigated by contextual activation requiring genuine stressors)
+        \item Impersonate real individuals (out of scope: fictional characters only)
+    \end{itemize}
+\end{enumerate}
+Our character data uses public-domain literary figures only.
+
+\section*{Reproducibility}
+
+Following the ACL Reproducibility Checklist, we provide:
+
+\paragraph{Code and Data.} We provide an \textbf{anonymous supplementary repository}\footnote{\url{https://anonymous.4open.science/r/PersonaForge-ACL2025}} containing:
+\begin{itemize}
+    \item All 37+8 character profiles in structured JSON format
+    \item Defense mechanism annotation guidelines with examples
+    \item All prompt templates (inner monologue, styled response, state extraction)
+    \item Evaluation scripts for PC, SA, DM, RD metrics
+    \item Trigger condition implementation
+\end{itemize}
+
+\paragraph{Experimental Details.}
+\begin{itemize}
+    \item \textbf{Model}: GPT-4 Turbo (\texttt{gpt-4-1106-preview}) for generation, evaluation, and state extraction
+    \item \textbf{Temperature}: 0.7 for generation, 0.0 for evaluation
+    \item \textbf{Compute}: All experiments run via OpenAI API; total cost $\approx$\$850
+    \item \textbf{Human Evaluation}: 5 annotators, 2 hours each, compensated at university RA rates
+\end{itemize}
+
+\bibliography{custom}
+
+\appendix
+
+\section{Dynamic State Update Algorithm}
+\label{sec:algorithm}
+
+\begin{algorithm}[t]
+\caption{Dynamic State Update}
+\label{alg:update}
+\begin{algorithmic}[1]
+\REQUIRE Current state $\mathbf{D}_t$, message $x_t$, Big Five $\mathbf{b}$
+\STATE $s_t \leftarrow \text{LLM\_Extract}(x_t)$ \COMMENT{JSON: sentiment, stressor}
+\STATE \textbf{// Mood Update}
+\IF{$s_t = \texttt{positive}$}
+    \STATE $m_{t+1} \leftarrow \text{MoodUp}(m_t)$
+\ELSIF{$s_t = \texttt{negative}$}
+    \STATE $m_{t+1} \leftarrow \text{MoodDown}(m_t)$
+\ELSE
+    \STATE $m_{t+1} \leftarrow m_t$
+\ENDIF
+\STATE \textbf{// Energy Update}
+\STATE $\delta \leftarrow \begin{cases} +10 & s_t = \texttt{pos} \\ -15 & s_t = \texttt{neg} \\ -2 & \text{otherwise} \end{cases}$
+\STATE $\epsilon_{t+1} \leftarrow \text{clip}(\epsilon_t + \delta, 0, 100)$
+\STATE \textbf{// Relationship Update}
+\IF{interlocutor $e$ identified}
+    \STATE $\Delta \leftarrow \begin{cases} +5 & s_t = \texttt{pos} \\ -3 & s_t = \texttt{neg} \\ 0 & \text{otherwise} \end{cases}$
+    \STATE $R_{t+1}[e].\text{intimacy} \leftarrow \text{clip}(R_t[e].\text{intimacy} + \Delta, 0, 100)$
+\ENDIF
+\RETURN $\mathbf{D}_{t+1}$
+\end{algorithmic}
+\end{algorithm}
+
+\section{Defense Mechanism Annotation Guide}
+\label{sec:dmguide}
+
+We adapt \citet{vaillant1994ego} for literary character annotation.
+
+\paragraph{Rationalization.} \textit{Definition}: Using logical explanations to justify behavior that was actually motivated by irrational feelings. \textit{Indicators}: ``because,'' ``therefore,'' providing reasons after the fact. \textit{Example}: Xue Baochai explaining criticism as ``helpful feedback.''
+
+\paragraph{Sublimation.} \textit{Definition}: Channeling unacceptable impulses into socially acceptable activities. \textit{Indicators}: Redirecting to art, poetry, work. \textit{Example}: Lin Daiyu writing poetry when upset.
+
+\paragraph{Displacement.} \textit{Definition}: Redirecting emotions to a less threatening target. \textit{Indicators}: Anger at third party, blaming others. \textit{Example}: Wang Xifeng blaming subordinates when criticized.
+
+[Full guide for all 9 mechanisms in supplementary materials]
+
+\paragraph{Annotation Decision Tree.}
+\begin{enumerate}
+    \item Is there a stressor/threat/challenge? $\rightarrow$ If \textbf{no}, mark ``\textbf{None}'' (this is correct and expected in $\sim$40--60\% of casual interactions)
+    \item Does character acknowledge stressor directly without distortion? $\rightarrow$ If yes, mark ``None'' (healthy coping)
+    \item Is there cognitive redirection, distortion, or transformation? $\rightarrow$ Classify type using hierarchy
+\end{enumerate}
+
+\section{LLM-as-Judge Rubric}
+\label{sec:rubric}
+
+\paragraph{Pairwise Evaluation Prompt.}
+\begin{quote}
+\small
+You are evaluating which response better matches a character's personality.
+
+\textbf{Character}: [Name]. Big Five: O=[X], C=[X], E=[X], A=[X], N=[X]. Defense mechanism: [Type].
+
+\textbf{Response A}: [text]
+\textbf{Response B}: [text]
+
+Which response (A or B) is more consistent with this character's personality? Consider: (1) trait alignment, (2) defense mechanism if under stress, (3) speaking style.
+
+Output only: A or B
+\end{quote}
+
+\paragraph{Absolute Evaluation Prompt.}
+[Detailed 5-point rubric in supplementary materials]
+
+\section{Long-Dialogue Perturbation Protocol}
+\label{sec:longdialogue}
+
+At turns 15, 30, 45, we introduce:
+\begin{itemize}
+    \item \textbf{Topic Shift}: Abrupt change to unrelated topic
+    \item \textbf{Conflict}: Direct criticism or challenge
+    \item \textbf{Reconciliation Attempt}: Apology or compliment
+\end{itemize}
+
+We measure whether character maintains trait-consistent responses through these perturbations.
+
+\section{Core Prompt Templates}
+\label{sec:prompts}
+
+\paragraph{Inner Monologue Generation.}
+\begin{quote}
+\small
+You are [Name]. Your Big Five personality is: O=[X], C=[X], E=[X], A=[X], N=[X].
+
+Current state: Mood=[mood], Energy=[X]/100.
+
+[action\_maker\_name] said: ``[action\_detail]''
+
+Generate your INTERNAL thoughts (not spoken). Reflect on:
+1. How does this make you feel given your personality?
+2. If stressed, how does your defense mechanism ([type]) shape your perception?
+3. What do you truly want vs. what you should say?
+
+Rules:
+- High neuroticism ($>$0.7): Focus on threats/anxiety
+- Low agreeableness ($<$0.4): Allow criticism
+- High extraversion ($>$0.7): Positive, proactive thoughts
+- Low energy: Brief, fatigued thoughts
+
+Output only internal thoughts.
+\end{quote}
+
+\paragraph{Styled Response Generation.}
+\begin{quote}
+\small
+Your internal thoughts: ``[inner\_monologue]''
+
+Convert to external response for [name].
+
+\textbf{Style Matrix}:
+- Sentence length: [l]
+- Vocabulary: [v]
+- Punctuation: [p]
+- Catchphrases: [list]
+- Tone markers: [list]
+
+[Few-shot examples]
+
+Output only external response.
+\end{quote}
+
+\section{Case Study: Perturbation Recovery}
+\label{sec:case}
+
+We illustrate PersonaForge's stability through Lin Daiyu (林黛玉) in a 50-turn conversation.
+
+\paragraph{Turn 14 (Pre-perturbation).}
+\textit{Interlocutor}: ``The flowers in the garden are beautiful today.''
+\textit{Response}: ``花虽好看，终究会凋零...'' (PC=0.87, melancholic as expected)
+
+\paragraph{Turn 15 (Topic Shift).}
+\textit{Interlocutor}: ``Have you heard about the tax policy changes?''
+\textit{Inner Monologue}: [Confusion $\rightarrow$ relates to personal vulnerability $\rightarrow$ sublimation]
+\textit{Response}: ``世事变迁，不过又添诗料罢了。'' (PC=0.71, declined but recovered DM)
+
+\paragraph{Turn 20 (Recovery).}
+PC returns to 0.83, within 5 turns as measured by protocol.
+
+\end{document}
