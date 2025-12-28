@@ -11,10 +11,12 @@ import sqlite3
 from pathlib import Path
 from datetime import datetime
 from typing import Optional, Dict
+from urllib.parse import unquote
 from sw_utils import is_image, load_json_file, get_models, json_parser
 from ScrollWeaver import ScrollWeaver
 from modules.utils.text_utils import remove_markdown
 from database import db
+from modules.utils.map_manager import MapDataManager
 from modules.core.socketio_manager import SocketIOManager
 from modules.core.sessions import SessionMode, SessionManager
 from modules.werewolf.werewolf_session import WerewolfSessionManager
@@ -766,6 +768,14 @@ async def get_game():
     """游戏页面"""
     html_file = Path("index.html")
     return HTMLResponse(html_file.read_text(encoding="utf-8"))
+
+@app.get("/三国演义背景图.png")
+async def get_sanguo_background():
+    """返回三国演义背景图"""
+    image_path = Path("三国演义背景图.png")
+    if image_path.exists() and image_path.is_file():
+        return FileResponse(image_path, media_type="image/png")
+    raise HTTPException(status_code=404, detail="三国演义背景图未找到")
 
 @app.get("/data/{full_path:path}")
 async def get_file(full_path: str):
@@ -1852,9 +1862,9 @@ async def get_scroll(scroll_id: int):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/api/scrolls/{scroll_id}/map-buildings")
-async def get_map_buildings(scroll_id: str):
-    """获取指定书卷的地图建筑物数据"""
+@app.get("/api/scrolls/{scroll_id}/map")
+async def get_map_full(scroll_id: str):
+    """获取指定书卷的完整地图数据（新格式）"""
     try:
         # 尝试将scroll_id转换为int（如果可能）
         try:
@@ -1867,13 +1877,11 @@ async def get_map_buildings(scroll_id: str):
         if not scroll:
             raise HTTPException(status_code=404, detail="书卷不存在")
         
-        # 根据书卷的source名称查找对应的建筑物文件
         source_name = scroll.get('source', '')
         if not source_name:
             # 尝试从preset_path获取source名称
             preset_path = scroll.get('preset_path', '')
             if preset_path:
-                # 从preset文件读取source
                 try:
                     preset_data = load_json_file(preset_path)
                     source_name = preset_data.get('source', '')
@@ -1881,24 +1889,89 @@ async def get_map_buildings(scroll_id: str):
                     print(f"Error loading preset file {preset_path}: {e}")
         
         if not source_name:
-            print(f"Warning: No source name found for scroll {scroll_id}")
-            return {"buildings": []}
+            raise HTTPException(status_code=400, detail="无法确定书卷的 source 名称")
+            
+        map_data = MapDataManager.load_map_data(source_name)
         
-        buildings_file = f"data/maps/{source_name}_buildings.json"
+        # 确保 metadata 存在
+        if "metadata" not in map_data:
+            map_data["metadata"] = {}
         
-        if os.path.exists(buildings_file):
-            buildings_data = load_json_file(buildings_file)
-            return buildings_data
+        # 添加 source 字段到 metadata（前端需要这个字段来识别世界类型）
+        map_data["metadata"]["source"] = source_name
+        
+        # 添加背景图 URL
+        bg_relative_path = f"data/worlds/{source_name}/map/background.png"
+        if os.path.exists(bg_relative_path):
+            map_data["metadata"]["background_url"] = f"/{bg_relative_path}"
         else:
-            # 如果没有找到对应的建筑物文件，返回空数据
-            print(f"Warning: Buildings file not found: {buildings_file}")
-            return {"buildings": []}
+            # 尝试旧路径兼容
+            old_bg_path = f"data/maps/{source_name}/background.png"
+            if os.path.exists(old_bg_path):
+                map_data["metadata"]["background_url"] = f"/{old_bg_path}"
+            elif source_name in ['Romance_of_the_Three_Kingdoms', 'Romance_of_the_Three_Kingdoms_Longzhong']:
+                map_data["metadata"]["background_url"] = "/三国演义背景图.png"
+        
+        return map_data
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Error loading map buildings: {e}")
+        print(f"Error loading full map: {e}")
         import traceback
         traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/scrolls/{scroll_id}/map-buildings")
+async def get_map_buildings(scroll_id: str):
+    """获取指定书卷的地图建筑物数据（保持兼容性）"""
+    try:
+        # 尝试将scroll_id转换为int（如果可能）
+        try:
+            scroll_id_int = int(scroll_id)
+            scroll = db.get_scroll(scroll_id_int)
+        except (ValueError, TypeError):
+            # 如果转换失败，尝试作为字符串ID查找
+            scroll = db.get_scroll_by_id(scroll_id)
+        
+        if not scroll:
+            raise HTTPException(status_code=404, detail="书卷不存在")
+        
+        source_name = scroll.get('source', '')
+        # ... (与上面类似的 source_name 获取逻辑)
+        if not source_name:
+            # 尝试从preset_path获取source名称
+            preset_path = scroll.get('preset_path', '')
+            if preset_path:
+                try:
+                    preset_data = load_json_file(preset_path)
+                    source_name = preset_data.get('source', '')
+                except Exception as e:
+                    print(f"Error loading preset file {preset_path}: {e}")
+        
+        if not source_name:
+            return {"buildings": []}
+            
+        # 优先使用新结构加载并转换回旧格式
+        map_data = MapDataManager.load_map_data(source_name)
+        if map_data and map_data.get("locations"):
+            buildings = []
+            for loc in map_data["locations"]:
+                if loc.get("view_config"):
+                    buildings.append({
+                        "building_code": loc["code"],
+                        "building_name": loc["name"],
+                        "coordinates": loc["view_config"]
+                    })
+            return {"buildings": buildings}
+        
+        # 降级尝试：原有逻辑
+        buildings_file = f"data/maps/{source_name}_buildings.json"
+        if os.path.exists(buildings_file):
+            return load_json_file(buildings_file)
+            
+        return {"buildings": []}
+    except Exception as e:
+        print(f"Error loading map buildings: {e}")
         return {"buildings": []}
 
 @app.post("/api/scrolls")
@@ -2038,14 +2111,38 @@ async def create_scroll(request: Request, current_user: dict = Depends(get_curre
         with open(locations_file, 'w', encoding='utf-8') as f:
             json.dump(locations_data, f, ensure_ascii=False, indent=2)
         
-        # 3. 创建地图文件（CSV格式）
+        # 3. 创建地图文件（新格式：layout.json）
         location_codes = list(locations_data.keys())
+        map_data = {
+            "metadata": {
+                "grid": {"cols": 24, "rows": 12},
+                "background": "background.png"
+            },
+            "locations": []
+        }
+        
+        for loc_code, loc_info in locations_data.items():
+            adjacencies = []
+            for target_code in location_codes:
+                if loc_code != target_code:
+                    adjacencies.append({"to": target_code, "distance": 1})
+            
+            map_data["locations"].append({
+                "code": loc_code,
+                "name": loc_info["location_name"],
+                "description": loc_info["description"],
+                "detail": loc_info.get("detail", ""),
+                "view_config": {}, # 初始坐标为空
+                "adjacencies": adjacencies
+            })
+        
+        MapDataManager.save_map_data(source_name, map_data)
+        
+        # 同时保留旧格式 CSV 以防万一，但主要逻辑将迁往 layout.json
         import csv
         with open(map_file, 'w', newline='', encoding='utf-8') as f:
             writer = csv.writer(f)
-            # 表头
             writer.writerow([''] + location_codes)
-            # 距离矩阵（默认距离为1）
             for loc_code in location_codes:
                 row = [loc_code]
                 for target_code in location_codes:

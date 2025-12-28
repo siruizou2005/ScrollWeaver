@@ -4,6 +4,7 @@ import csv
 from typing import Any, Dict, List, Optional, Literal
 from sw_utils import *
 from modules.embedding import get_embedding_model
+from modules.utils.map_manager import MapDataManager
 
 class Orchestrator:
     # Init
@@ -49,6 +50,26 @@ class Orchestrator:
                            embedding = embedding)
         
     def init_from_file(self, map_file_path: str, location_file_path: str, default_distance: int = 1):
+        source = self.world_info.get("source")
+        if source:
+            # 尝试通过 MapDataManager 加载新格式
+            map_data = MapDataManager.load_map_data(source)
+            if map_data and map_data.get("locations"):
+                print(f"[Orchestrator] Loading map from new format for source: {source}")
+                for loc_data in map_data["locations"]:
+                    code = loc_data["code"]
+                    self.locations_info[code] = {
+                        "location_code": code,
+                        "location_name": loc_data.get("name", code),
+                        "description": loc_data.get("description", ""),
+                        "detail": loc_data.get("detail", "")
+                    }
+                    self.locations.append(code)
+                    for adj in loc_data.get("adjacencies", []):
+                        self._add_edge(code, adj["to"], adj["distance"])
+                return
+
+        # 降级到原有的 CSV/JSON 加载逻辑
         if map_file_path and os.path.exists(map_file_path):
             valid_locations = load_json_file(location_file_path) if "locations" not in load_json_file(location_file_path) else load_json_file(location_file_path)["locations"]
             with open(map_file_path, mode='r',encoding="utf-8") as file:

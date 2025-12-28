@@ -259,7 +259,7 @@
     }
 
     // 渲染全屏地图
-    function renderFullscreenMap() {
+    async function renderFullscreenMap() {
         if (!fullscreenMapContainer) return;
 
         // 清空容器
@@ -273,6 +273,50 @@
             // 容器尚未显示，延迟渲染
             setTimeout(renderFullscreenMap, 100);
             return;
+        }
+
+        // 尝试加载地图数据
+        let buildings = [];
+        let sourceName = urlParams.get('source');
+        let backgroundUrl = null;
+        const scrollId = urlParams.get('scroll_id');
+        const token = localStorage.getItem('token');
+
+        if (scrollId) {
+            try {
+                // 使用新 API 获取完整地图数据
+                const response = await fetch(`/api/scrolls/${scrollId}/map`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (response.ok) {
+                    const mapData = await response.json();
+                    sourceName = sourceName || (mapData.metadata ? mapData.metadata.source : null);
+                    backgroundUrl = mapData.metadata ? mapData.metadata.background_url : null;
+                    
+                    if (mapData.locations) {
+                        buildings = mapData.locations.map(loc => ({
+                            building_code: loc.code,
+                            building_name: loc.name,
+                            description: loc.description,
+                            coordinates: loc.view_config,
+                            color: loc.color,
+                            icon: loc.icon
+                        })).filter(b => b.coordinates && Object.keys(b.coordinates).length > 0);
+                    }
+                } else {
+                    // 兜底逻辑
+                    const buildingsRes = await fetch(`/api/scrolls/${scrollId}/map-buildings`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (buildingsRes.ok) {
+                        const data = await buildingsRes.json();
+                        buildings = data.buildings || [];
+                    }
+                }
+            } catch (e) {
+                console.warn('[CharacterFirstFlow] 加载数据失败:', e);
+            }
         }
 
         // 创建 SVG
@@ -295,10 +339,22 @@
         // 创建主容器
         const mainGroup = svg.append("g").attr("class", "main-zoom-group");
 
+        // 如果有建筑物数据，优先渲染网格地图
+        const worldsWithBackground = ['A_Dream_in_Red_Mansions', 'Romance_of_the_Three_Kingdoms', 'Romance_of_the_Three_Kingdoms_Longzhong'];
+        const isStandardWorld = worldsWithBackground.includes(sourceName) || backgroundUrl;
+        
+        if (buildings.length > 0 && isStandardWorld) {
+            renderGridMap(mainGroup, width, height, buildings, sourceName, backgroundUrl);
+            return;
+        }
+
+        // 否则渲染传统的力导向图
         // 加载背景图
+        const actualBackgroundUrl = backgroundUrl || "./frontend/assets/images/universal-map-bg.png";
+        
         const bgImage = mainGroup.append("image")
             .attr("class", "map-background")
-            .attr("xlink:href", "./frontend/assets/images/universal-map-bg.png")
+            .attr("xlink:href", actualBackgroundUrl)
             .attr("width", width * 4)
             .attr("height", height * 4)
             .attr("x", -width * 1.5)
@@ -570,6 +626,140 @@
         if (typeof showSelectedCharacter === 'function') {
             showSelectedCharacter(selectedCharacter);
         }
+    }
+
+    // 渲染网格地图 (用于展示建筑物)
+    function renderGridMap(container, width, height, buildings, source, backgroundUrl) {
+        const GRID_COLS = 24;
+        const GRID_ROWS = 12;
+        const cellWidth = width / GRID_COLS;
+        const cellHeight = height / GRID_ROWS;
+
+        // 如果有背景图，尝试加载
+        const actualBackgroundUrl = backgroundUrl || (source ? `/data/maps/${source}/background.png` : null);
+        
+        if (actualBackgroundUrl) {
+            const bgGroup = container.append("g").attr("class", "map-background-group");
+            
+            const img = new Image();
+            img.onload = () => {
+                bgGroup.append("image")
+                    .attr("xlink:href", actualBackgroundUrl)
+                    .attr("width", width)
+                    .attr("height", height)
+                    .attr("preserveAspectRatio", "xMidYMid slice")
+                    .style("opacity", 0.8);
+            };
+            img.src = actualBackgroundUrl;
+        }
+
+        const buildingsGroup = container.append("g").attr("class", "buildings-group");
+
+        buildings.forEach(building => {
+            const { coordinates, color, building_name, icon } = building;
+            if (!coordinates) return;
+
+            const convert = (ux, uy) => ({
+                x: (ux - 1) * cellWidth,
+                y: (GRID_ROWS - uy) * cellHeight
+            });
+
+            const sw = convert(coordinates.sw[0], coordinates.sw[1]);
+            const se = convert(coordinates.se[0], coordinates.se[1]);
+            const ne = convert(coordinates.ne[0], coordinates.ne[1]);
+            const nw = convert(coordinates.nw[0], coordinates.nw[1]);
+
+            const points = [`${sw.x},${sw.y}`, `${se.x},${se.y}`, `${ne.x},${ne.y}`, `${nw.x},${nw.y}`].join(' ');
+
+            const bGroup = buildingsGroup.append("g")
+                .attr("class", "building-node")
+                .style("cursor", "pointer")
+                .on("click", (event) => {
+                    console.log('[CharacterFirstFlow] 点击了建筑物:', building_name);
+                    handleLocationSelection(building_name);
+                });
+
+            // 建筑物形状
+            const worldsWithBackground = ['A_Dream_in_Red_Mansions', 'Romance_of_the_Three_Kingdoms', 'Romance_of_the_Three_Kingdoms_Longzhong'];
+            const hasBackground = worldsWithBackground.includes(source);
+            
+            bGroup.append("polygon")
+                .attr("points", points)
+                .attr("fill", hasBackground ? "transparent" : (color || "#8b6f47"))
+                .attr("fill-opacity", hasBackground ? 0 : 0.6)
+                .attr("stroke", hasBackground ? "transparent" : (color || "#8b6f47"))
+                .attr("stroke-width", hasBackground ? 0 : 2)
+                .on("mouseenter", function() {
+                    if (!hasBackground) d3.select(this).attr("fill-opacity", 0.8);
+                    else d3.select(this).attr("fill", "rgba(255,255,255,0.2)").attr("fill-opacity", 0.3);
+                })
+                .on("mouseleave", function() {
+                    if (!hasBackground) d3.select(this).attr("fill-opacity", 0.6);
+                    else d3.select(this).attr("fill", "transparent").attr("fill-opacity", 0);
+                });
+
+            // 中心点
+            const centerX = (sw.x + se.x + ne.x + nw.x) / 4;
+            const centerY = (sw.y + se.y + ne.y + nw.y) / 4;
+
+            // 图标
+            if (icon) {
+                bGroup.append("text")
+                    .attr("x", centerX)
+                    .attr("y", centerY - 10)
+                    .attr("text-anchor", "middle")
+                    .attr("dominant-baseline", "middle")
+                    .attr("font-size", "24")
+                    .text(icon)
+                    .style("pointer-events", "none");
+            }
+
+            // 名称
+            bGroup.append("text")
+                .attr("x", centerX)
+                .attr("y", centerY + 20)
+                .attr("text-anchor", "middle")
+                .attr("dominant-baseline", "middle")
+                .attr("font-size", "14")
+                .attr("font-weight", "bold")
+                .attr("fill", "#3d2817")
+                .text(building_name)
+                .style("pointer-events", "none");
+
+            // 添加角色头像
+            const buildingChars = allCharacters.filter(c => c.location === building_name);
+            if (buildingChars.length > 0) {
+                const avatarRadius = 15;
+                buildingChars.forEach((char, i) => {
+                    const offset = (i - (buildingChars.length - 1) / 2) * 35;
+                    const avatarGroup = bGroup.append("g")
+                        .attr("transform", `translate(${centerX + offset}, ${centerY + 50})`);
+
+                    avatarGroup.append("circle")
+                        .attr("r", avatarRadius)
+                        .attr("fill", "#fff")
+                        .attr("stroke", "#8b4513")
+                        .attr("stroke-width", 1.5);
+
+                    const charIcon = char.icon || char.avatar || './frontend/assets/images/default-icon.jpg';
+                    const clipId = `clip-grid-avatar-${building_name.replace(/\s/g, '-')}-${i}`;
+                    
+                    avatarGroup.append("clipPath")
+                        .attr("id", clipId)
+                        .append("circle")
+                        .attr("r", avatarRadius - 1);
+
+                    avatarGroup.append("image")
+                        .attr("xlink:href", charIcon)
+                        .attr("width", avatarRadius * 2)
+                        .attr("height", avatarRadius * 2)
+                        .attr("x", -avatarRadius)
+                        .attr("y", -avatarRadius)
+                        .attr("clip-path", `url(#${clipId})`)
+                        .attr("preserveAspectRatio", "xMidYMid slice");
+                });
+            }
+        });
     }
 
     // 隐藏全屏地图遮罩层

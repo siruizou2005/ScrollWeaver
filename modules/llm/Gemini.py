@@ -42,7 +42,7 @@ class Gemini(BaseLLM):
         self.messages = []
         self.system_instruction = None
         self.timeout = timeout
-        self.max_retries = 1  # 最大重试次数（最多重试一次）
+        self.max_retries = 3  # 最大重试次数（对于网络错误，最多重试3次）
 
         # 配置 API Key（支持多个 key 轮换）
         self.api_keys: List[str] = self._load_api_keys()
@@ -301,17 +301,37 @@ class Gemini(BaseLLM):
             except Exception as e:
                 last_exception = e
                 error_msg = str(e).lower()
+                error_type = type(e).__name__.lower()
+                
                 # 检查是否是网络错误或可重试的错误
-                retryable_errors = ['timeout', 'connection', 'network', 'rate limit', '429', '503', '502', '500']
-                is_retryable = any(keyword in error_msg for keyword in retryable_errors)
+                # 包括：连接重置、超时、网络错误、服务器错误等
+                retryable_errors = [
+                    'timeout', 'connection', 'network', 'rate limit', 
+                    '429', '503', '502', '500', '504',
+                    'reset', 'peer', 'refused', 'unreachable',
+                    'connecterror', 'httpxerror', 'httperror'
+                ]
+                
+                # 检查错误消息和错误类型
+                is_retryable = (
+                    any(keyword in error_msg for keyword in retryable_errors) or
+                    any(keyword in error_type for keyword in retryable_errors) or
+                    'errno 54' in error_msg or  # Connection reset by peer
+                    'errno 61' in error_msg or  # Connection refused
+                    'errno 51' in error_msg     # Network unreachable
+                )
                 
                 if is_retryable and attempt < self.max_retries - 1:
-                    print(f"Gemini API 调用错误（尝试 {attempt + 1}/{self.max_retries}）: {e}")
-                    wait_time = (attempt + 1) * 2
-                    print(f"等待 {wait_time} 秒后重试...")
+                    print(f"[Gemini] API 调用错误（尝试 {attempt + 1}/{self.max_retries}）: {e}")
+                    print(f"[Gemini] 错误类型: {error_type}, 错误消息: {error_msg[:200]}")
+                    wait_time = (attempt + 1) * 2  # 递增等待时间：2秒、4秒、6秒
+                    print(f"[Gemini] 等待 {wait_time} 秒后重试...")
                     time.sleep(wait_time)
                 else:
-                    print(f"Gemini API 调用错误: {e}")
+                    print(f"[Gemini] API 调用错误: {e}")
+                    print(f"[Gemini] 错误类型: {error_type}")
+                    if not is_retryable:
+                        print(f"[Gemini] 此错误不可重试，直接抛出")
                     import traceback
                     traceback.print_exc()
                     raise
