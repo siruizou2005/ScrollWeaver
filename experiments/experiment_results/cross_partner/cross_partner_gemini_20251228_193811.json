@@ -1,0 +1,7 @@
+{
+ "config": {
+  "partner_model": "gemini",
+  "num_turns": 10
+ },
+ "results": []
+}

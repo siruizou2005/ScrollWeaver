@@ -356,10 +356,12 @@ class ExperimentRunner:
     """
     
     def __init__(self, 
-                 data_dir: str = "./data/roles",
-                 output_dir: str = "./experiment_results"):
-        self.data_dir = data_dir
-        self.output_dir = output_dir
+                 data_dir: str = None,
+                 output_dir: str = None):
+        # Compute paths relative to project root
+        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        self.data_dir = data_dir or os.path.join(project_root, "data", "roles")
+        self.output_dir = output_dir or os.path.join(project_root, "experiment_results")
         
         # 初始化评估器
         self.pc_evaluator = PersonalityConsistencyEvaluator()
