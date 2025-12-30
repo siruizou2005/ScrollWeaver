@@ -48,11 +48,11 @@
    ]
   },
   "dynamic_state": {
-   "current_mood": "cheerful",
-   "energy_level": 7,
+   "current_mood": "melancholy",
+   "energy_level": 0,
    "relationship_map": {
     "User": {
-     "intimacy": 29,
+     "intimacy": 94,
      "history_summary": "与用户进行了交流"
     }
    }
