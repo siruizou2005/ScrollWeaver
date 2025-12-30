@@ -37,7 +37,7 @@ from modules.utils import load_json_file, save_json_file
 def run_main_experiment(
     num_characters: int = 10,
     all_methods: bool = True,
-    output_dir: str = "experiment_results/main"
+    output_dir: str = "experiments/experiment_results/main"
 ):
     """
     运行主实验
@@ -47,6 +47,10 @@ def run_main_experiment(
         all_methods: 是否测试所有方法
         output_dir: 输出目录
     """
+    # Change to project root so relative paths work correctly
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    os.chdir(project_root)
+    
     print("=" * 70)
     print("PersonaForge Main Experiment (Scenario-Based)")
     print(f"Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
@@ -62,35 +66,51 @@ def run_main_experiment(
     llm = Gemini(model=role_llm_name, timeout=60)
     
     # 2. Initialize
-    runner = ExperimentRunner()
+    runner = ExperimentRunner(llm=llm)
     
     # Generators
     persona_gen = PersonaForgeGenerator(llm=llm)
     baseline_gen = BaselineGenerator(llm=llm)
     
-    # 3. Select characters
+    # 3. Select characters (with personality_profile validation)
     all_characters = runner.list_characters()
     # Filter to main Chinese sources
     chinese_sources = ["A_Dream_in_Red_Mansions", "Romance_of_the_Three_Kingdoms"]
     chinese_chars = [(s, r) for s, r in all_characters if s in chinese_sources]
     
-    if num_characters > 0 and num_characters < len(chinese_chars):
-        selected_chars = random.sample(chinese_chars, num_characters)
+    # Validate characters have personality_profile with big_five
+    valid_chars = []
+    for source, role_code in chinese_chars:
+        role_data = runner.load_character(source, role_code)
+        if role_data:
+            personality_profile = role_data.get("personality_profile", {})
+            big_five = personality_profile.get("core_traits", {}).get("big_five", {})
+            if big_five and len(big_five) >= 5:
+                valid_chars.append((source, role_code))
+            else:
+                print(f"  Skipping {role_code}: missing personality_profile or big_five")
+    
+    print(f"\nFound {len(valid_chars)} valid characters (with personality_profile)")
+    
+    if num_characters > 0 and num_characters < len(valid_chars):
+        selected_chars = random.sample(valid_chars, num_characters)
     else:
-        selected_chars = chinese_chars
+        selected_chars = valid_chars
         
-    print(f"\nSelected {len(selected_chars)} characters for evaluation")
+    print(f"Selected {len(selected_chars)} characters for evaluation")
     
     # 4. Results storage
     results = {
         "vanilla": [],
         "character_llm": [],
         "structured_cot": [],
+        "rag_persona": [],
+        "role_llm": [],
         "ours_no_dual": [],
         "ours": []
     }
     
-    methods_to_run = list(results.keys()) if all_methods else ["structured_cot", "ours"]
+    methods_to_run = list(results.keys()) if all_methods else ["structured_cot", "role_llm", "ours"]
     
     # 5. Run experiments
     total_tests = len(selected_chars) * len(runner.scenarios) * len(methods_to_run)
@@ -118,8 +138,16 @@ def run_main_experiment(
                         response = baseline_gen.generate_character_llm(role_data, scenario)
                         inner_mono = None
                     elif method == "structured_cot":
-                        # Structured-CoT: structured persona + CoT without three-layer decomposition
-                        response = persona_gen.generate_without_dual_process(role_data, scenario)
+                        # Structured-CoT: 使用 CoT 但不使用心理学框架（与 ours_no_dual 区分）
+                        response = baseline_gen.generate_structured_cot(role_data, scenario)
+                        inner_mono = None
+                    elif method == "rag_persona":
+                        # RAG-Persona: 检索增强
+                        response = baseline_gen.generate_rag_persona(role_data, scenario)
+                        inner_mono = None
+                    elif method == "role_llm":
+                        # RoleLLM: Imitation
+                        response = baseline_gen.generate_role_llm(role_data, scenario)
                         inner_mono = None
                     elif method == "ours_no_dual":
                         response = persona_gen.generate_without_dual_process(role_data, scenario)
@@ -191,7 +219,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="PersonaForge Main Experiment")
     parser.add_argument("--num_characters", type=int, default=10, help="Number of characters to test")
     parser.add_argument("--all_methods", action="store_true", help="Test all methods")
-    parser.add_argument("--output_dir", type=str, default="experiment_results/main")
+    parser.add_argument("--output_dir", type=str, default="experiments/experiment_results/main")
     
     args = parser.parse_args()
     run_main_experiment(

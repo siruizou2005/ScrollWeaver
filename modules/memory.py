@@ -90,7 +90,7 @@ class RoleMemory:
     
     def add_record(self,text):
         self.idx += 1
-        self.db.add(text, str(self.idx), db_name=self.db_name)
+        self.db.add(text, db_name=self.db_name)
     
     def search(self,query,top_k):
         return self.db.search(query, top_k,self.db_name)

@@ -25,6 +25,8 @@ from experiments.evaluation_framework import (
     EvaluationResult,
     EvaluationScenario
 )
+from modules.dual_process_agent import DualProcessAgent
+from modules.personality_model import PersonalityProfile
 
 
 class BaselineGenerator:
@@ -35,153 +37,257 @@ class BaselineGenerator:
     
     def generate_vanilla(self, role_data: Dict, scenario: EvaluationScenario) -> str:
         """
-        Vanilla LLM 基线：直接使用角色描述生成
+        Vanilla LLM 基线：最简单的 prompt，只给角色名
+        不提供任何人格信息，让 LLM 凭自己理解生成
         """
-        prompt = f"""你是{role_data.get('role_name', '一个角色')}。
-
-角色描述：{role_data.get('profile', '')}
+        role_name = role_data.get('role_name', '一个角色')
+        
+        prompt = f"""你是{role_name}。
 
 场景：{scenario.context}
 
 {scenario.trigger_role}说："{scenario.trigger}"
 
-请以{role_data.get('role_name')}的身份回复："""
+请回复："""
         
         if self.llm:
             return self.llm.chat(prompt)
         else:
-            # Mock response for testing
-            return f"[Vanilla] 这是{role_data.get('role_name')}的回复。"
+            return f"[Vanilla] 这是{role_name}的回复。"
     
     def generate_character_llm(self, role_data: Dict, scenario: EvaluationScenario) -> str:
         """
-        Character-LLM 基线：使用详细角色描述 + 少量示例
+        Character-LLM 基线：使用角色描述，但不使用心理学框架
+        只提供基础描述和示例
         """
+        role_name = role_data.get('role_name', '一个角色')
+        profile = role_data.get('profile', '')
+        
+        # 只使用1个示例
         style_examples = role_data.get('style_examples', [])
         examples_text = ""
         if style_examples:
-            examples_text = "\n\n参考示例：\n"
-            for ex in style_examples[:2]:
-                examples_text += f"场景：{ex.get('context', '')}\n回复：{ex.get('response', '')}\n\n"
+            ex = style_examples[0]
+            examples_text = f"\n\n参考：{ex.get('response', '')[:100]}..."
         
-        prompt = f"""你是{role_data.get('role_name', '一个角色')}。
+        prompt = f"""你是{role_name}。
 
-【角色描述】
-{role_data.get('profile', '')}
-
-【身份】
-{', '.join(role_data.get('identity', []))}
+{profile}
 {examples_text}
-【当前场景】{scenario.context}
+
+场景：{scenario.context}
 
 {scenario.trigger_role}说："{scenario.trigger}"
 
-请以{role_data.get('role_name')}的身份，用符合角色风格的方式回复："""
+请以{role_name}的身份回复："""
         
         if self.llm:
             return self.llm.chat(prompt)
         else:
-            return f"[CharacterLLM] 这是{role_data.get('role_name')}的回复。"
+            return f"[CharacterLLM] 这是{role_name}的回复。"
+    
+    def generate_structured_cot(self, role_data: Dict, scenario: EvaluationScenario) -> str:
+        """
+        Structured-CoT 基线：使用 CoT 但不使用心理学框架
+        只让模型"思考"，但没有大五人格等结构化人格信息
+        """
+        role_name = role_data.get('role_name', '一个角色')
+        profile = role_data.get('profile', '')
+        
+        prompt = f"""你是{role_name}。
+
+【角色描述】
+{profile}
+
+【思考步骤】
+1. 考虑{role_name}会如何理解这个情况
+2. 考虑{role_name}的可能反应
+3. 生成符合{role_name}的回复
+
+【场景】{scenario.context}
+
+{scenario.trigger_role}说："{scenario.trigger}"
+
+请先思考，然后以{role_name}的身份回复："""
+        
+        if self.llm:
+            return self.llm.chat(prompt)
+        else:
+            return f"[StructuredCoT] 这是{role_name}的回复。"
+
+    def generate_rag_persona(self, role_data: Dict, scenario: EvaluationScenario) -> str:
+        """
+        RAG-Persona 基线：检索增强的 Prompting
+        模拟 RAG 过程：根据当前场景检索最相关的记忆/示例
+        """
+        role_name = role_data.get('role_name', '一个角色')
+        profile = role_data.get('profile', '')
+        style_examples = role_data.get('style_examples', [])
+        
+        # 简单的基于文本重叠的模拟检索
+        # 在真实 RAG 中这里会用向量相似度
+        relevant_examples = []
+        if style_examples:
+            # 计算简单的相似度（共有词数量）
+            query_set = set(scenario.trigger)
+            scored_examples = []
+            for ex in style_examples:
+                ex_text = ex.get('action', '') + ex.get('response', '')
+                score = len(set(ex_text) & query_set)
+                scored_examples.append((score, ex))
+            
+            # 取前3个最相关的
+            scored_examples.sort(key=lambda x: x[0], reverse=True)
+            relevant_examples = [x[1] for x in scored_examples[:3]]
+        
+        examples_text = ""
+        if relevant_examples:
+            examples_text = "\n【参考回忆】\n"
+            for i, ex in enumerate(relevant_examples, 1):
+                examples_text += f"回忆{i}: 当被问到\"{ex.get('action', '')}\"时，我回答：\"{ex.get('response', '')}\"\n"
+        
+        prompt = f"""你是{role_name}。
+
+{profile}
+
+{examples_text}
+场景：{scenario.context}
+
+{scenario.trigger_role}说："{scenario.trigger}"
+
+请参考上述回忆（如果相关），以{role_name}的身份回复："""
+        
+        if self.llm:
+            return self.llm.chat(prompt)
+        else:
+            return f"[RAG-Persona] 这是{role_name}的回复。"
+
+    def generate_role_llm(self, role_data: Dict, scenario: EvaluationScenario) -> str:
+        """
+        RoleLLM 基线：Imitation Learning + Retrieval
+        (Wang et al., 2023) 提出的 retrieve-then-generate 范式
+        """
+        role_name = role_data.get('role_name', '一个角色')
+        profile = role_data.get('profile', '')
+        style_examples = role_data.get('style_examples', [])
+        
+        # 模拟检索：基于 trigger 的语义相似度检索最相关的对话
+        # 实际 RoleLLM 使用 BGE-Small 检索
+        retrieved_dialogues = []
+        if style_examples:
+            # 简单模拟：计算关键词重叠
+            query_tokens = set(scenario.trigger)
+            scored_ex = []
+            for ex in style_examples:
+                # 假设 context 越相似，example 越相关
+                ex_tokens = set(ex.get('action', ''))
+                score = len(query_tokens & ex_tokens)
+                scored_ex.append((score, ex))
+            
+            # 取前 5 个 (RoleLLM 原文 top-5)
+            scored_ex.sort(key=lambda x: x[0], reverse=True)
+            retrieved_dialogues = [x[1] for x in scored_ex[:5]]
+            
+        dialogue_text = ""
+        if retrieved_dialogues:
+            dialogue_text = "\\n【相关历史对话】\\n"
+            for i, d in enumerate(retrieved_dialogues, 1):
+                try:
+                    dialogue_text += f"{i}. Q: {d.get('action', '')} A: {d.get('response', '')}\\n"
+                except:
+                    continue
+        
+        prompt = f"""Role Profile: {role_name}
+        
+Description: {profile}
+
+{dialogue_text}
+
+Instruction: Reply to the following message as {role_name}. consistent with the style above.
+
+Input: {scenario.trigger_role}: "{scenario.trigger}"
+Response: """
+
+        if self.llm:
+            return self.llm.chat(prompt)
+        else:
+            return f"[RoleLLM] 这是{role_name}的回复。"
 
 
 class PersonaForgeGenerator:
-    """PersonaForge 方法生成器"""
+    """PersonaForge 方法生成器 - 使用项目核心模块"""
     
     def __init__(self, llm=None):
         self.llm = llm
+        self.dual_process_agent = DualProcessAgent(llm=llm, language="zh")
+        print("✓ PersonaForgeGenerator initialized with DualProcessAgent from modules.dual_process_agent")
+    
+    def _build_personality_profile(self, role_data: Dict) -> PersonalityProfile:
+        """从 role_data 构建 PersonalityProfile 对象"""
+        pp_data = role_data.get("personality_profile", {})
+        if not pp_data:
+            # Fallback removed: strict mode requires personality_profile
+            return None
+        return PersonalityProfile.from_dict(pp_data)
     
     def generate_with_dual_process(self, role_data: Dict, scenario: EvaluationScenario) -> tuple:
         """
-        PersonaForge 完整方法：三层人格模型 + 双重思维链
+        PersonaForge 完整方法：使用项目核心模块的 DualProcessAgent
         
         Returns:
             (response, inner_monologue)
         """
-        personality_profile = role_data.get("personality_profile", {})
-        core_traits = personality_profile.get("core_traits", {})
-        speaking_style = personality_profile.get("speaking_style", {})
-        dynamic_state = personality_profile.get("dynamic_state", {})
+        # 构建 PersonalityProfile 对象
+        profile = self._build_personality_profile(role_data)
+        if profile is None:
+            raise ValueError(f"Character {role_data.get('role_name', 'unknown')} missing personality_profile.")
+            
+        style_examples = role_data.get("style_examples", profile.style_examples)
         
-        # Phase 1: 生成内心独白
-        big_five = core_traits.get("big_five", {})
-        big_five_desc = ", ".join([f"{k}: {v:.2f}" for k, v in big_five.items()])
+        # 使用核心模块生成内心独白
+        inner_monologue = self.dual_process_agent.generate_inner_monologue(
+            personality_profile=profile,
+            action_detail=scenario.trigger,
+            action_maker_name=scenario.trigger_role,
+            history=""
+        )
         
-        inner_prompt = f"""你是{role_data.get('role_name')}，{core_traits.get('mbti', 'INFP')}类型的人。
-
-你的大五人格是：{big_five_desc}
-你的防御机制是：{core_traits.get('defense_mechanism', '')}
-你的价值观：{', '.join(core_traits.get('values', []))}
-当前心情：{dynamic_state.get('current_mood', 'neutral')}
-能量值：{dynamic_state.get('energy_level', 50)}/100
-
-场景：{scenario.context}
-{scenario.trigger_role}对你说："{scenario.trigger}"
-
-请根据你的性格生成一段**内心独白**（不展示给用户）：
-
-规则：
-1. 如果神经质(neuroticism)高(>0.7)，多关注潜在威胁或焦虑
-2. 如果宜人性(agreeableness)低(<0.4)，可以内心吐槽
-3. 根据防御机制，在压力下有相应心理反应
-4. 能量低时想法简短消极，能量高时想法丰富积极
-
-只输出内心独白："""
-
-        if self.llm:
-            inner_monologue = self.llm.chat(inner_prompt)
-        else:
-            inner_monologue = f"[内心独白] {role_data.get('role_name')}正在思考..."
-        
-        # Phase 2: 生成风格化回复
-        response_prompt = f"""你的内心想法是：
-"{inner_monologue}"
-
-现在将其转化为回复给{scenario.trigger_role}。
-
-**严格遵守以下语言风格**:
-- 句长: {speaking_style.get('sentence_length', 'medium')}
-- 词汇等级: {speaking_style.get('vocabulary_level', 'casual')}
-- 标点习惯: {speaking_style.get('punctuation_habit', 'standard')}
-- 语气词: {', '.join(speaking_style.get('tone_markers', []))}
-- 口头禅: {', '.join(speaking_style.get('catchphrases', []))}
-
-当前上下文：
-场景：{scenario.context}
-{scenario.trigger_role}说："{scenario.trigger}"
-
-请生成符合上述风格的回复，只输出回复内容："""
-
-        if self.llm:
-            response = self.llm.chat(response_prompt)
-        else:
-            response = f"[PersonaForge] 这是{role_data.get('role_name')}的风格化回复。"
+        # 使用核心模块生成风格化回复
+        response = self.dual_process_agent.generate_styled_response(
+            inner_monologue=inner_monologue,
+            personality_profile=profile,
+            style_examples=style_examples,
+            action_detail=scenario.trigger,
+            action_maker_name=scenario.trigger_role,
+            history=""
+        )
         
         return response, inner_monologue
     
     def generate_without_dual_process(self, role_data: Dict, scenario: EvaluationScenario) -> str:
         """
-        消融实验：只用三层人格模型，不用双重思维链
+        Structured-CoT 基线：只用三层人格模型，不用双重思维链
+        直接生成回复，不经过内心独白阶段
         """
-        personality_profile = role_data.get("personality_profile", {})
-        core_traits = personality_profile.get("core_traits", {})
-        speaking_style = personality_profile.get("speaking_style", {})
+        profile = self._build_personality_profile(role_data)
+        if profile is None:
+            raise ValueError(f"Character {role_data.get('role_name', 'unknown')} missing personality_profile.")
         
-        big_five = core_traits.get("big_five", {})
-        big_five_desc = ", ".join([f"{k}: {v:.2f}" for k, v in big_five.items()])
+        big_five_desc = ", ".join([f"{k}: {v:.2f}" for k, v in profile.core_traits.big_five.items()])
         
         prompt = f"""你是{role_data.get('role_name')}。
 
 【人格特质】
-- MBTI: {core_traits.get('mbti', 'INFP')}
+- MBTI: {profile.core_traits.mbti}
 - 大五人格: {big_five_desc}
-- 防御机制: {core_traits.get('defense_mechanism', '')}
-- 价值观: {', '.join(core_traits.get('values', []))}
+- 防御机制: {profile.core_traits.defense_mechanism}
+- 价值观: {', '.join(profile.core_traits.values)}
 
 【语言风格】
-- 句长: {speaking_style.get('sentence_length', 'medium')}
-- 词汇等级: {speaking_style.get('vocabulary_level', 'casual')}
-- 语气词: {', '.join(speaking_style.get('tone_markers', []))}
-- 口头禅: {', '.join(speaking_style.get('catchphrases', []))}
+- 句长: {profile.speaking_style.sentence_length}
+- 词汇等级: {profile.speaking_style.vocabulary_level}
+- 语气词: {', '.join(profile.speaking_style.tone_markers)}
+- 口头禅: {', '.join(profile.speaking_style.catchphrases)}
 
 【场景】{scenario.context}
 
@@ -197,6 +303,10 @@ class PersonaForgeGenerator:
 
 def run_experiment(args):
     """运行实验"""
+    # Change to project root so relative paths work correctly
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    os.chdir(project_root)
+    
     print("=" * 70)
     print("PersonaForge ACL Experiment")
     print(f"开始时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
@@ -216,19 +326,27 @@ def run_experiment(args):
     print(f"已初始化 LLM: {role_llm_name}")
     
     # 初始化
-    runner = ExperimentRunner()
+    runner = ExperimentRunner(llm=llm)
     baseline_gen = BaselineGenerator(llm=llm)
     persona_gen = PersonaForgeGenerator(llm=llm)
     
-    # 选择角色
+    # 选择角色 - PRE-FILTER to only valid characters with personality_profile
     all_characters = runner.list_characters()
+    valid_characters = []
+    for source, role_code in all_characters:
+        role_data = runner.load_character(source, role_code)
+        if role_data and role_data.get("personality_profile"):
+            valid_characters.append((source, role_code))
+    
+    print(f"[Pre-filter] Found {len(valid_characters)} valid characters (with personality_profile)")
+    
     if args.characters == "all":
-        selected_characters = all_characters
+        selected_characters = valid_characters
     else:
         n = int(args.characters)
-        selected_characters = random.sample(all_characters, min(n, len(all_characters)))
+        selected_characters = random.sample(valid_characters, min(n, len(valid_characters)))
     
-    print(f"\n选择的角色数量: {len(selected_characters)}")
+    print(f"选择的角色数量: {len(selected_characters)}")
     
     # 选择场景
     if args.scenarios == "all":
@@ -242,6 +360,8 @@ def run_experiment(args):
     results_by_method = {
         "vanilla": [],
         "character_llm": [],
+        "structured_cot": [],
+        "rag_persona": [],
         "ours": [],
         "ours_no_dual": []
     }
@@ -276,6 +396,22 @@ def run_experiment(args):
                     role_data, scenario, response, method="character_llm"
                 )
                 results_by_method["character_llm"].append(result)
+            
+            # 方法 2.5: Structured-CoT
+            if args.method in ["all", "structured_cot"]:
+                response = baseline_gen.generate_structured_cot(role_data, scenario)
+                result = runner.run_single_evaluation(
+                    role_data, scenario, response, method="structured_cot"
+                )
+                results_by_method["structured_cot"].append(result)
+
+            # 方法 2.6: RAG-Persona
+            if args.method in ["all", "rag_persona"]:
+                response = baseline_gen.generate_rag_persona(role_data, scenario)
+                result = runner.run_single_evaluation(
+                    role_data, scenario, response, method="rag_persona"
+                )
+                results_by_method["rag_persona"].append(result)
             
             # 方法 3: PersonaForge (完整)
             if args.method in ["all", "ours"]:
@@ -322,7 +458,7 @@ def main():
         "--method", 
         type=str, 
         default="all",
-        choices=["all", "vanilla", "character_llm", "ours", "ours_no_dual"],
+        choices=["all", "vanilla", "character_llm", "structured_cot", "rag_persona", "role_llm", "ours", "ours_no_dual"],
         help="要运行的方法"
     )
     parser.add_argument(

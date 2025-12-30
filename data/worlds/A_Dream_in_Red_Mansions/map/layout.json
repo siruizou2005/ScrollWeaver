@@ -8,81 +8,6 @@
  },
  "locations": [
   {
-   "code": "QiushuangZhai",
-   "name": "QiushuangZhai",
-   "description": "",
-   "detail": "",
-   "view_config": {
-    "sw": [
-     3,
-     9
-    ],
-    "se": [
-     7,
-     9
-    ],
-    "ne": [
-     7,
-     11
-    ],
-    "nw": [
-     3,
-     11
-    ]
-   },
-   "adjacencies": []
-  },
-  {
-   "code": "Daguanyuan",
-   "name": "大观园",
-   "description": "大观园是《红楼梦》中贾府为迎接元妃省亲而建的园林。",
-   "detail": "大观园位于宁荣二府之西，是一座集山水之美与人文之雅于一体的古典园林。园内有怡红院、潇湘馆等多处景点，每处都极具特色。怡红院以海棠花闻名，象征着宝玉对美好事物的追求；潇湘馆则因竹林环绕而显得格外幽静，反映了黛玉清高脱俗的性格。整个园林不仅景色优美，四季花开不断，还承载了众多红楼人物的情感纠葛和命运变迁，是全书情节发展的重要舞台之一。",
-   "view_config": {},
-   "adjacencies": [
-    {
-     "to": "RongguoGarden",
-     "distance": 1
-    },
-    {
-     "to": "JiaFamilyAncestralHall",
-     "distance": 1
-    },
-    {
-     "to": "XiaoxiangPavilion",
-     "distance": 1
-    },
-    {
-     "to": "HengwuCourt",
-     "distance": 1
-    }
-   ]
-  },
-  {
-   "code": "YihongYuan",
-   "name": "YihongYuan",
-   "description": "",
-   "detail": "",
-   "view_config": {
-    "sw": [
-     19,
-     2
-    ],
-    "se": [
-     23,
-     2
-    ],
-    "ne": [
-     23,
-     5
-    ],
-    "nw": [
-     19,
-     5
-    ]
-   },
-   "adjacencies": []
-  },
-  {
    "code": "HengwuYuan",
    "name": "HengwuYuan",
    "description": "",
@@ -108,51 +33,26 @@
    "adjacencies": []
   },
   {
-   "code": "HengwuCourt",
-   "name": "蘅芜苑",
-   "description": "薛宝钗居住之所，环境清幽雅致。",
-   "detail": "蘅芜苑位于大观园内，是薛宝钗的住所。这里以栽种各种奇花异草而闻名，特别是香草类植物繁多，使得整个院落终年散发着淡淡的香气，故得名‘蘅芜’。建筑风格简洁大方，与主人薛宝钗的性格相得益彰。苑内布置精巧而不失自然之美，既有文人墨客所追求的诗情画意，又不失为一处宁静舒适的居所。通过其独特的布局和装饰，反映了居住者淡泊名利、温婉贤淑的形象特点。",
-   "view_config": {},
-   "adjacencies": [
-    {
-     "to": "RongguoGarden",
-     "distance": 1
-    },
-    {
-     "to": "Daguanyuan",
-     "distance": 1
-    },
-    {
-     "to": "JiaFamilyAncestralHall",
-     "distance": 1
-    },
-    {
-     "to": "XiaoxiangPavilion",
-     "distance": 1
-    }
-   ]
-  },
-  {
-   "code": "QinfangTing",
-   "name": "QinfangTing",
+   "code": "YihongYuan",
+   "name": "YihongYuan",
    "description": "",
    "detail": "",
    "view_config": {
     "sw": [
-     11,
+     19,
      2
     ],
     "se": [
-     14,
+     23,
      2
     ],
     "ne": [
-     14,
-     3
+     23,
+     5
     ],
     "nw": [
-     11,
-     3
+     19,
+     5
     ]
    },
    "adjacencies": []
@@ -208,26 +108,101 @@
    "adjacencies": []
   },
   {
-   "code": "XiaoxiangGuan",
-   "name": "XiaoxiangGuan",
+   "code": "Daguanyuan",
+   "name": "大观园",
+   "description": "大观园是《红楼梦》中贾府为迎接元妃省亲而建的园林。",
+   "detail": "大观园位于宁荣二府之西，是一座集山水之美与人文之雅于一体的古典园林。园内有怡红院、潇湘馆等多处景点，每处都极具特色。怡红院以海棠花闻名，象征着宝玉对美好事物的追求；潇湘馆则因竹林环绕而显得格外幽静，反映了黛玉清高脱俗的性格。整个园林不仅景色优美，四季花开不断，还承载了众多红楼人物的情感纠葛和命运变迁，是全书情节发展的重要舞台之一。",
+   "view_config": {},
+   "adjacencies": [
+    {
+     "to": "RongguoGarden",
+     "distance": 1
+    },
+    {
+     "to": "JiaFamilyAncestralHall",
+     "distance": 1
+    },
+    {
+     "to": "XiaoxiangPavilion",
+     "distance": 1
+    },
+    {
+     "to": "HengwuCourt",
+     "distance": 1
+    }
+   ]
+  },
+  {
+   "code": "HengwuCourt",
+   "name": "蘅芜苑",
+   "description": "薛宝钗居住之所，环境清幽雅致。",
+   "detail": "蘅芜苑位于大观园内，是薛宝钗的住所。这里以栽种各种奇花异草而闻名，特别是香草类植物繁多，使得整个院落终年散发着淡淡的香气，故得名‘蘅芜’。建筑风格简洁大方，与主人薛宝钗的性格相得益彰。苑内布置精巧而不失自然之美，既有文人墨客所追求的诗情画意，又不失为一处宁静舒适的居所。通过其独特的布局和装饰，反映了居住者淡泊名利、温婉贤淑的形象特点。",
+   "view_config": {},
+   "adjacencies": [
+    {
+     "to": "RongguoGarden",
+     "distance": 1
+    },
+    {
+     "to": "Daguanyuan",
+     "distance": 1
+    },
+    {
+     "to": "JiaFamilyAncestralHall",
+     "distance": 1
+    },
+    {
+     "to": "XiaoxiangPavilion",
+     "distance": 1
+    }
+   ]
+  },
+  {
+   "code": "QiushuangZhai",
+   "name": "QiushuangZhai",
    "description": "",
    "detail": "",
    "view_config": {
     "sw": [
      3,
-     3
+     9
     ],
     "se": [
-     6,
-     3
+     7,
+     9
     ],
     "ne": [
-     6,
-     5
+     7,
+     11
     ],
     "nw": [
      3,
-     5
+     11
+    ]
+   },
+   "adjacencies": []
+  },
+  {
+   "code": "LongcuiAn",
+   "name": "LongcuiAn",
+   "description": "",
+   "detail": "",
+   "view_config": {
+    "sw": [
+     21,
+     7
+    ],
+    "se": [
+     23,
+     7
+    ],
+    "ne": [
+     23,
+     8
+    ],
+    "nw": [
+     21,
+     8
     ]
    },
    "adjacencies": []
@@ -258,26 +233,26 @@
    ]
   },
   {
-   "code": "LongcuiAn",
-   "name": "LongcuiAn",
+   "code": "QinfangTing",
+   "name": "QinfangTing",
    "description": "",
    "detail": "",
    "view_config": {
     "sw": [
-     21,
-     7
+     11,
+     2
     ],
     "se": [
-     23,
-     7
+     14,
+     2
     ],
     "ne": [
-     23,
-     8
+     14,
+     3
     ],
     "nw": [
-     21,
-     8
+     11,
+     3
     ]
    },
    "adjacencies": []
@@ -306,6 +281,31 @@
      "distance": 1
     }
    ]
+  },
+  {
+   "code": "XiaoxiangGuan",
+   "name": "XiaoxiangGuan",
+   "description": "",
+   "detail": "",
+   "view_config": {
+    "sw": [
+     3,
+     3
+    ],
+    "se": [
+     6,
+     3
+    ],
+    "ne": [
+     6,
+     5
+    ],
+    "nw": [
+     3,
+     5
+    ]
+   },
+   "adjacencies": []
   }
  ]
 }

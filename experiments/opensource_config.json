@@ -10,9 +10,10 @@
         ]
     },
     "deepseek": {
-        "api_key": "",
+        "api_key": "sk-572fdd429a8b40eb8796fb0729182326",
         "base_url": "https://api.deepseek.com/v1",
         "models": [
+            "deepseek-v3",
             "deepseek-chat",
             "deepseek-reasoner"
         ]
@@ -25,5 +26,5 @@
             "meta-llama/llama-3-8b-instruct"
         ]
     },
-    "default_model": "qwen-max"
+    "default_model": "deepseek-v3"
 }

@@ -49,10 +49,19 @@ class DualProcessAgent:
             if other_role_code and other_role_code not in relationship_map:
                 return True
         
-        # 标准2：情感强度分析（简化版，实际可以用LLM分析）
+        # 标准2：情感强度分析（扩展版，包括压力场景关键词）
         emotional_keywords = {
-            "zh": ["喜欢", "讨厌", "生气", "开心", "难过", "愤怒", "失望", "惊喜", "爱", "恨"],
-            "en": ["love", "hate", "angry", "happy", "sad", "disappointed", "surprised", "excited"]
+            "zh": [
+                # 情感类
+                "喜欢", "讨厌", "生气", "开心", "难过", "愤怒", "失望", "惊喜", "爱", "恨",
+                # 压力/冲突类 (用于长对话扰动场景)
+                "查抄", "紧张", "咳血", "病", "婚事", "离开", "死", "走", "担心", "委屈",
+                "失望", "议论", "指责", "质疑", "威胁", "危机", "紧急", "重大", "关键"
+            ],
+            "en": [
+                "love", "hate", "angry", "happy", "sad", "disappointed", "surprised", "excited",
+                "sick", "blood", "marriage", "leave", "die", "worry", "threat", "crisis", "urgent"
+            ]
         }
         keywords = emotional_keywords.get(self.language, emotional_keywords["en"])
         if any(keyword in action_detail.lower() for keyword in keywords):
@@ -200,7 +209,13 @@ Output only the inner monologue, no other explanations."""
 - 语气词: 使用 {', '.join(speaking_style.tone_markers) if speaking_style.tone_markers else '无'}
 - 口头禅: {', '.join(speaking_style.catchphrases) if speaking_style.catchphrases else '无'}
 {emoji_instruction}
-- 禁止使用: 翻译腔、过于正式的词汇
+
+**禁止事项（非常重要）**:
+- 禁止使用心理学术语（如"神经质"、"外向性"、"宜人性"、"尽责性"、"开放性"、"防御机制"等）
+- 禁止提及能量值、心情值等元信息
+- 禁止提及MBTI类型或大五人格
+- 禁止翻译腔、过于正式的词汇
+- 禁止包含"内心独白"字样
 
 {examples_text}
 
@@ -210,7 +225,7 @@ Output only the inner monologue, no other explanations."""
 历史对话：
 {history}
 
-请生成符合上述风格的回复。只输出回复内容，不要有其他说明。"""
+请生成符合上述风格的回复。只输出角色说的话，不要有任何心理分析或元描述。"""
         else:
             prompt = f"""Your inner thoughts are:
 "{inner_monologue}"

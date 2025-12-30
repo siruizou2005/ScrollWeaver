@@ -47,6 +47,10 @@ def run_cost_analysis():
     """
     运行成本-性能分析实验
     """
+    # Change to project root so relative paths work correctly
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    os.chdir(project_root)
+    
     print("=" * 70)
     print("Cost-Performance Analysis Experiment")
     print(f"Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
@@ -62,7 +66,7 @@ def run_cost_analysis():
     llm = Gemini(model=role_llm_name, timeout=60)
     
     # 2. Initialize
-    runner = ExperimentRunner()
+    runner = ExperimentRunner(llm=llm)
     persona_gen = PersonaForgeGenerator(llm=llm)
     baseline_gen = BaselineGenerator(llm=llm)
     
@@ -171,7 +175,7 @@ def run_cost_analysis():
     print(f"Token Overhead: {overhead:.1f}%")
     
     # 7. Save results
-    output_dir = "experiment_results/cost_analysis"
+    output_dir = "experiments/experiment_results/cost_analysis"
     os.makedirs(output_dir, exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     output_file = f"{output_dir}/cost_analysis_{timestamp}.json"

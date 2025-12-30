@@ -304,6 +304,10 @@ def create_test_personality_profile(role_code: str = "LinDaiyu-zh") -> 'Personal
 
 def run_trigger_diagnostics():
     """运行触发器诊断实验"""
+    # Change to project root so relative paths work correctly
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    os.chdir(project_root)
+    
     print("=" * 60)
     print("Trigger Diagnostics Experiment")
     print("=" * 60)
@@ -438,11 +442,11 @@ def run_trigger_diagnostics():
         "details": results_details
     }
     
-    os.makedirs("experiment_results", exist_ok=True)
-    with open("experiment_results/trigger_diagnostics.json", "w", encoding="utf-8") as f:
+    os.makedirs("experiments/experiment_results/trigger_diagnostics", exist_ok=True)
+    with open("experiments/experiment_results/trigger_diagnostics/trigger_diagnostics.json", "w", encoding="utf-8") as f:
         json.dump(output, f, ensure_ascii=False, indent=2)
     
-    print(f"\nResults saved to experiment_results/trigger_diagnostics.json")
+    print(f"\nResults saved to experiments/experiment_results/trigger_diagnostics/trigger_diagnostics.json")
     
     return output
 
