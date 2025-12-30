@@ -130,8 +130,9 @@ def run_long_dialogue_benchmark():
         ]
     }
     
-    # Characters to test - from Dream of Red Mansions
+    # Characters to test - 10 characters across 4 domains
     test_characters = [
+        # A Dream in Red Mansions (4 characters)
         {
             "role_code": "LinDaiyu-zh",
             "source": "A_Dream_in_Red_Mansions",
@@ -141,8 +142,52 @@ def run_long_dialogue_benchmark():
             "role_code": "JiaBaoyu-zh", 
             "source": "A_Dream_in_Red_Mansions",
             "language": "zh"
+        },
+        {
+            "role_code": "WangXifeng-zh",
+            "source": "A_Dream_in_Red_Mansions",
+            "language": "zh"
+        },
+        {
+            "role_code": "XueBaochai-zh",
+            "source": "A_Dream_in_Red_Mansions",
+            "language": "zh"
+        },
+        # Romance of the Three Kingdoms (3 characters)
+        {
+            "role_code": "caocao-zh",
+            "source": "Romance_of_the_Three_Kingdoms",
+            "language": "zh"
+        },
+        {
+            "role_code": "zhugeliang-zh",
+            "source": "Romance_of_the_Three_Kingdoms",
+            "language": "zh"
+        },
+        {
+            "role_code": "liubei-zh",
+            "source": "Romance_of_the_Three_Kingdoms",
+            "language": "zh"
+        },
+        # A Song of Ice and Fire (2 characters)
+        {
+            "role_code": "TyrionLannister-zh",
+            "source": "A_Song_of_Ice_and_Fire",
+            "language": "zh"
+        },
+        {
+            "role_code": "DaenerysTargaryen-zh",
+            "source": "A_Song_of_Ice_and_Fire",
+            "language": "zh"
+        },
+        # The Heart of Genius (1 character)
+        {
+            "role_code": "林朝夕-zh",
+            "source": "user_1_天才基本法",
+            "language": "zh"
         }
     ]
+
     
     print(f"Starting Long Dialogue Benchmark for {len(test_characters)} characters...")
     print(f"Using LLM: {role_llm}")
