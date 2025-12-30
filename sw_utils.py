@@ -125,11 +125,15 @@ def get_models(model_name: str):
 
 def build_db(data, db_name, db_type, embedding, save_type="persistent"):
     """Build database from data."""
-    if not data or not db_name:
+    if not db_name:
         return None
     from modules.db.ChromaDB import ChromaDB
     db = ChromaDB(embedding, save_type)
-    db.init_from_data(data, db_name)
+    if data:  # Only initialize with data if data is not empty
+        db.init_from_data(data, db_name)
+    else:
+        # Initialize an empty collection for later use
+        db.db_name = db_name
     return db
 
 def build_orchestrator_data(world_file_path: str, max_words: int = 30):

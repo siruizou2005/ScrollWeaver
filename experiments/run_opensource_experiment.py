@@ -113,6 +113,10 @@ def setup_api_keys(model_name: str, config: dict):
 
 def run_opensource_experiment(args):
     """运行开源模型对比实验"""
+    # Change to project root so relative paths work correctly
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    os.chdir(project_root)
+    
     print("=" * 70)
     print("PersonaForge Open-Source Model Validation Experiment")
     print(f"Model: {args.model}")
@@ -134,7 +138,7 @@ def run_opensource_experiment(args):
         return
     
     # 初始化评估框架
-    runner = ExperimentRunner()
+    runner = ExperimentRunner(llm=llm)
     persona_gen = PersonaForgeGenerator(llm=llm)
     baseline_gen = BaselineGenerator(llm=llm)
     
@@ -238,7 +242,7 @@ def main():
     parser.add_argument(
         "--model", 
         type=str, 
-        default="qwen-max",
+        default="deepseek-v3",
         help="模型名称: qwen-max, qwen-plus, llama3-70b, deepseek-v3, gpt-4-turbo"
     )
     parser.add_argument(

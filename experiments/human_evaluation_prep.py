@@ -42,6 +42,10 @@ def prepare_human_evaluation(num_pairs: int = 200, num_characters: int = 10):
         num_pairs: 目标回复对数量
         num_characters: 参与角色数量
     """
+    # Change to project root so relative paths work correctly
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    os.chdir(project_root)
+    
     print("=" * 70)
     print("Human Evaluation Data Preparation")
     print(f"Target: {num_pairs} response pairs from {num_characters} characters")
@@ -58,7 +62,7 @@ def prepare_human_evaluation(num_pairs: int = 200, num_characters: int = 10):
     llm = Gemini(model=role_llm_name, timeout=60)
     
     # 2. Initialize
-    runner = ExperimentRunner()
+    runner = ExperimentRunner(llm=llm)
     persona_gen = PersonaForgeGenerator(llm=llm)
     
     # 3. Select characters (diverse selection)
@@ -145,7 +149,7 @@ def prepare_human_evaluation(num_pairs: int = 200, num_characters: int = 10):
     questionnaire = _generate_questionnaire(evaluation_pairs)
     
     # 6. Save outputs
-    output_dir = "experiment_results/human_evaluation"
+    output_dir = "experiments/experiment_results/human_evaluation"
     os.makedirs(output_dir, exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     

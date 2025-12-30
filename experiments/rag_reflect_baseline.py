@@ -94,6 +94,10 @@ class RAGReflectGenerator:
         return response, reflection
 
 def run_rag_reflect_baseline():
+    # Change to project root so relative paths work correctly
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    os.chdir(project_root)
+    
     print("=" * 70)
     print("RAG-Reflect Baseline Evaluation")
     print("=" * 70)
@@ -107,7 +111,7 @@ def run_rag_reflect_baseline():
     role_llm_name = project_config.get("role_llm_name", "gemini-2.5-flash-lite")
     llm = Gemini(model=role_llm_name, timeout=60)
     
-    runner = ExperimentRunner()
+    runner = ExperimentRunner(llm=llm)
     gen = RAGReflectGenerator(llm=llm)
     
     selected_roles = [
@@ -137,7 +141,7 @@ def run_rag_reflect_baseline():
             print(f"    PC Score: {eval_res.pc_score:.2f} | SA: {eval_res.sa_score:.2f}")
             
     # Save
-    output_dir = "experiment_results/baselines"
+    output_dir = "experiments/experiment_results/baselines"
     os.makedirs(output_dir, exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     output_file = f"{output_dir}/rag_reflect_results_{timestamp}.json"

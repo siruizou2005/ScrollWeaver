@@ -36,6 +36,10 @@ def run_cross_domain_validation():
     """
     运行跨域验证实验
     """
+    # Change to project root so relative paths work correctly
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    os.chdir(project_root)
+    
     print("=" * 70)
     print("Cross-Domain Validation Experiment")
     print(f"Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
@@ -51,7 +55,7 @@ def run_cross_domain_validation():
     llm = Gemini(model=role_llm_name, timeout=60)
     
     # 2. Initialize
-    runner = ExperimentRunner()
+    runner = ExperimentRunner(llm=llm)
     persona_gen = PersonaForgeGenerator(llm=llm)
     baseline_gen = BaselineGenerator(llm=llm)
     
@@ -126,7 +130,7 @@ def run_cross_domain_validation():
                   f"SA={scores.get('SA (Style Adherence)', 0):.2f}")
     
     # 7. Save results
-    output_dir = "experiment_results/cross_domain"
+    output_dir = "experiments/experiment_results/cross_domain"
     os.makedirs(output_dir, exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     

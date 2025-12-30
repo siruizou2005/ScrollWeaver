@@ -314,6 +314,17 @@ ScrollWeaver/
 
 ---
 
-## 八、 许可证
+## 八、 致谢 (Acknowledgement)
+
+本项目的多智能体模拟框架基于 **[BookWorld](https://github.com/alienet1109/BookWorld)** (Chen et al., 2025) 开发。BookWorld 是一个开源项目（Apache License 2.0），提供了稳健的世界模拟环境和角色交互循环。
+
+**ScrollWeaver 的核心创新点**：
+- **心理学基础的双进程认知架构** (Psychology-Grounded Dual-Process Architecture)
+- **三层人格模型** (Three-Layer Personality Model: Big Five + Defense Mechanisms + Speaking Style)
+- **动态状态管理器** (Dynamic State Manager for evolving relationships)
+
+---
+
+## 九、 许可证
 
 详见 [LICENSE](LICENSE) 文件。

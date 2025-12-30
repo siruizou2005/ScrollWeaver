@@ -13,6 +13,10 @@ from modules.llm.Gemini import Gemini
 from modules.utils import load_json_file, save_json_file
 
 def run_rolebench_expansion():
+    # Change to project root so relative paths work correctly
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    os.chdir(project_root)
+    
     print("=" * 70)
     print("RoleBench Expansion Experiment")
     print(f"Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
@@ -27,28 +31,69 @@ def run_rolebench_expansion():
     role_llm_name = project_config.get("role_llm_name", "gemini-2.5-flash-lite")
     llm = Gemini(model=role_llm_name, timeout=60)
     
-    runner = ExperimentRunner()
+    runner = ExperimentRunner(llm=llm)
     persona_gen = PersonaForgeGenerator(llm=llm)
     
     # Expand to more characters across domains
     target_characters = [
+        # Red Mansions (Classical Chinese)
         ("A_Dream_in_Red_Mansions", "LinDaiyu-zh"),
         ("A_Dream_in_Red_Mansions", "JiaBaoyu-zh"),
-        ("A_Song_of_Ice_and_Fire", "TyrionLannister-en"),
-        ("A_Song_of_Ice_and_Fire", "DaenerysTargaryen-en"),
+        ("A_Dream_in_Red_Mansions", "XueBaochai-zh"),
+        ("A_Dream_in_Red_Mansions", "WangXifeng-zh"),
+        ("A_Dream_in_Red_Mansions", "JiaMu-zh"),
+        ("A_Dream_in_Red_Mansions", "JiaZheng-zh"),
+        ("A_Dream_in_Red_Mansions", "Tanchun-zh"),
+        ("A_Dream_in_Red_Mansions", "ShiXiangyun-zh"),
+        
+        # Three Kingdoms (Historical)
         ("Romance_of_the_Three_Kingdoms", "ZhugeLiang-zh"),
         ("Romance_of_the_Three_Kingdoms", "CaoCao-zh"),
-        ("Alice_s_Adventures_in_Wonderland-Through_the_Looking-Glass", "Alice-en")
+        ("Romance_of_the_Three_Kingdoms", "LiuBei-zh"),
+        ("Romance_of_the_Three_Kingdoms", "GuanYu-zh"),
+        ("Romance_of_the_Three_Kingdoms", "ZhangFei-zh"),
+        ("Romance_of_the_Three_Kingdoms", "SunQuan-zh"),
+        ("Romance_of_the_Three_Kingdoms", "ZhouYu-zh"),
+        ("Romance_of_the_Three_Kingdoms", "SimaYi-zh"),
+
+        # Western Fantasy (Generalization 1)
+        ("A_Song_of_Ice_and_Fire", "TyrionLannister-en"),
+        ("A_Song_of_Ice_and_Fire", "DaenerysTargaryen-en"),
+        ("A_Song_of_Ice_and_Fire", "JonSnow-en"),
+        ("A_Song_of_Ice_and_Fire", "AryaStark-en"),
+        ("A_Song_of_Ice_and_Fire", "CerseiLannister-en"),
+        ("A_Song_of_Ice_and_Fire", "JaimeLannister-en"),
+        ("A_Song_of_Ice_and_Fire", "SansaStark-en"),
+        
+        # Children's Literature (Generalization 2 - Corrected Codes)
+        ("Alice_s_Adventures_in_Wonderland-Through_the_Looking-Glass", "Alice_Liddell-en"),
+        ("Alice_s_Adventures_in_Wonderland-Through_the_Looking-Glass", "Hatter-en"),
+        ("Alice_s_Adventures_in_Wonderland-Through_the_Looking-Glass", "Red_Queen-en"),
+        ("Alice_s_Adventures_in_Wonderland-Through_the_Looking-Glass", "Cheshire_Cat-en"),
+        ("Alice_s_Adventures_in_Wonderland-Through_the_Looking-Glass", "White_Rabbit-en"),
+        
+        # The Heart of Genius (New Domain: Modern/Sci-Fi)
+        ("user_1_天才基本法", "LinZhaoxi-zh"),
+        ("user_1_天才基本法", "PeiZhi-zh"),
+        ("user_1_天才基本法", "LaoLin-zh"),
+        ("user_1_天才基本法", "AnXiaoxiao-zh"),
+        ("user_1_天才基本法", "JiaowuZhuren-zh")
     ]
     
     expanded_results = []
     
+    # PRE-FILTER: Only include characters with valid personality_profile
+    valid_characters = []
     for source, role_code in target_characters:
         role_data = runner.load_character(source, role_code)
-        if not role_data:
-            print(f"Warning: Character {role_code} not found in {source}")
-            continue
-            
+        if role_data and role_data.get("personality_profile"):
+            valid_characters.append((source, role_code, role_data))
+        else:
+            print(f"[Pre-filter] Skipping {role_code} (missing profile)")
+    
+    print(f"\n[Pre-filter] {len(valid_characters)}/{len(target_characters)} characters have valid profiles")
+    
+    for source, role_code, role_data in valid_characters:
         print(f"\n[Expansion] Evaluating: {role_data.get('role_name', role_code)} ({source})")
         
         # Test 3 scenarios per character for breadth
@@ -69,7 +114,7 @@ def run_rolebench_expansion():
                 print(f"    Error: {e}")
                 
     # Save Results
-    output_dir = "experiment_results/expansion"
+    output_dir = "experiments/experiment_results/expansion"
     os.makedirs(output_dir, exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     output_file = f"{output_dir}/rolebench_expansion_{timestamp}.json"

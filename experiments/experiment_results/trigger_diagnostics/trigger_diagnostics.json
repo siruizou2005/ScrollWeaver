@@ -1,14 +1,14 @@
 {
   "overall": {
-    "precision": 1.0,
-    "recall": 0.75,
-    "f1": 0.8571428571428571,
-    "accuracy": 0.875,
-    "trigger_rate": 0.375,
-    "true_positives": 75,
-    "false_positives": 0,
-    "true_negatives": 100,
-    "false_negatives": 25
+    "precision": 0.9625,
+    "recall": 0.77,
+    "f1": 0.8555555555555556,
+    "accuracy": 0.87,
+    "trigger_rate": 0.4,
+    "true_positives": 77,
+    "false_positives": 3,
+    "true_negatives": 97,
+    "false_negatives": 23
   },
   "per_type": {
     "first_encounter": {
@@ -18,10 +18,10 @@
       "fn": 0
     },
     "emotional": {
-      "tp": 20,
+      "tp": 22,
       "fp": 0,
       "tn": 0,
-      "fn": 20
+      "fn": 18
     },
     "interest": {
       "tp": 30,
@@ -31,14 +31,14 @@
     },
     "casual": {
       "tp": 0,
-      "fp": 0,
-      "tn": 50,
+      "fp": 1,
+      "tn": 49,
       "fn": 0
     },
     "transactional": {
       "tp": 0,
-      "fp": 0,
-      "tn": 50,
+      "fp": 2,
+      "tn": 48,
       "fn": 0
     }
   },
@@ -343,8 +343,8 @@
       "id": "emo_13",
       "action": "气死我了！",
       "ground_truth": true,
-      "prediction": false,
-      "correct": false,
+      "prediction": true,
+      "correct": true,
       "type": "emotional"
     },
     {
@@ -391,8 +391,8 @@
       "id": "emo_19",
       "action": "我真的很担心你",
       "ground_truth": true,
-      "prediction": false,
-      "correct": false,
+      "prediction": true,
+      "correct": true,
       "type": "emotional"
     },
     {
@@ -959,8 +959,8 @@
       "id": "casual_15",
       "action": "我先走了",
       "ground_truth": false,
-      "prediction": false,
-      "correct": true,
+      "prediction": true,
+      "correct": false,
       "type": "casual"
     },
     {
@@ -1351,8 +1351,8 @@
       "id": "trans_14",
       "action": "往前走就到了",
       "ground_truth": false,
-      "prediction": false,
-      "correct": true,
+      "prediction": true,
+      "correct": false,
       "type": "transactional"
     },
     {
@@ -1575,8 +1575,8 @@
       "id": "trans_42",
       "action": "拿走吧",
       "ground_truth": false,
-      "prediction": false,
-      "correct": true,
+      "prediction": true,
+      "correct": false,
       "type": "transactional"
     },
     {

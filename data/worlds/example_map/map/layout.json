@@ -8,23 +8,6 @@
  },
  "locations": [
   {
-   "code": "university",
-   "name": "university",
-   "description": "",
-   "detail": "",
-   "view_config": {},
-   "adjacencies": [
-    {
-     "to": "laboratory",
-     "distance": 2
-    },
-    {
-     "to": "eldridge_corporation",
-     "distance": 4
-    }
-   ]
-  },
-  {
    "code": "laboratory",
    "name": "laboratory",
    "description": "",
@@ -38,6 +21,23 @@
     {
      "to": "eldridge_corporation",
      "distance": 5
+    }
+   ]
+  },
+  {
+   "code": "university",
+   "name": "university",
+   "description": "",
+   "detail": "",
+   "view_config": {},
+   "adjacencies": [
+    {
+     "to": "laboratory",
+     "distance": 2
+    },
+    {
+     "to": "eldridge_corporation",
+     "distance": 4
     }
    ]
   },
