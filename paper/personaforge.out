@@ -1,58 +1,71 @@
-\BOOKMARK [1][-]{section.1}{\376\377\000I\000n\000t\000r\000o\000d\000u\000c\000t\000i\000o\000n}{}% 1
-\BOOKMARK [1][-]{section.2}{\376\377\000R\000e\000l\000a\000t\000e\000d\000\040\000W\000o\000r\000k}{}% 2
-\BOOKMARK [2][-]{subsection.2.1}{\376\377\000L\000L\000M\000-\000B\000a\000s\000e\000d\000\040\000R\000o\000l\000e\000-\000P\000l\000a\000y\000i\000n\000g}{section.2}% 3
-\BOOKMARK [2][-]{subsection.2.2}{\376\377\000P\000e\000r\000s\000o\000n\000a\000\040\000D\000i\000a\000l\000o\000g\000u\000e\000\040\000a\000n\000d\000\040\000M\000e\000m\000o\000r\000y\000\040\000S\000y\000s\000t\000e\000m\000s}{section.2}% 4
-\BOOKMARK [2][-]{subsection.2.3}{\376\377\000A\000g\000e\000n\000t\000\040\000A\000r\000c\000h\000i\000t\000e\000c\000t\000u\000r\000e\000s}{section.2}% 5
-\BOOKMARK [2][-]{subsection.2.4}{\376\377\000P\000e\000r\000s\000o\000n\000a\000l\000i\000t\000y\000\040\000M\000o\000d\000e\000l\000i\000n\000g\000\040\000i\000n\000\040\000N\000L\000P}{section.2}% 6
-\BOOKMARK [2][-]{subsection.2.5}{\376\377\000D\000u\000a\000l\000-\000P\000r\000o\000c\000e\000s\000s\000\040\000T\000h\000e\000o\000r\000y\000\040\000a\000n\000d\000\040\000R\000e\000a\000s\000o\000n\000i\000n\000g}{section.2}% 7
-\BOOKMARK [1][-]{section.3}{\376\377\000M\000e\000t\000h\000o\000d\000o\000l\000o\000g\000y}{}% 8
-\BOOKMARK [2][-]{subsection.3.1}{\376\377\000T\000h\000r\000e\000e\000-\000L\000a\000y\000e\000r\000\040\000P\000e\000r\000s\000o\000n\000a\000l\000i\000t\000y\000\040\000A\000r\000c\000h\000i\000t\000e\000c\000t\000u\000r\000e}{section.3}% 9
-\BOOKMARK [3][-]{subsubsection.3.1.1}{\376\377\000C\000o\000r\000e\000\040\000T\000r\000a\000i\000t\000s\000\040\000L\000a\000y\000e\000r}{subsection.3.1}% 10
-\BOOKMARK [3][-]{subsubsection.3.1.2}{\376\377\000S\000p\000e\000a\000k\000i\000n\000g\000\040\000S\000t\000y\000l\000e\000\040\000L\000a\000y\000e\000r}{subsection.3.1}% 11
-\BOOKMARK [3][-]{subsubsection.3.1.3}{\376\377\000D\000y\000n\000a\000m\000i\000c\000\040\000S\000t\000a\000t\000e\000\040\000L\000a\000y\000e\000r}{subsection.3.1}% 12
-\BOOKMARK [2][-]{subsection.3.2}{\376\377\000D\000u\000a\000l\000-\000P\000r\000o\000c\000e\000s\000s\000\040\000G\000e\000n\000e\000r\000a\000t\000i\000o\000n}{section.3}% 13
-\BOOKMARK [3][-]{subsubsection.3.2.1}{\376\377\000S\000e\000l\000e\000c\000t\000i\000v\000e\000\040\000A\000c\000t\000i\000v\000a\000t\000i\000o\000n}{subsection.3.2}% 14
-\BOOKMARK [3][-]{subsubsection.3.2.2}{\376\377\000P\000h\000a\000s\000e\000\040\0001\000:\000\040\000I\000n\000n\000e\000r\000\040\000M\000o\000n\000o\000l\000o\000g\000u\000e}{subsection.3.2}% 15
-\BOOKMARK [3][-]{subsubsection.3.2.3}{\376\377\000P\000h\000a\000s\000e\000\040\0002\000:\000\040\000S\000t\000y\000l\000e\000d\000\040\000R\000e\000s\000p\000o\000n\000s\000e}{subsection.3.2}% 16
-\BOOKMARK [1][-]{section.4}{\376\377\000E\000x\000p\000e\000r\000i\000m\000e\000n\000t\000a\000l\000\040\000S\000e\000t\000u\000p}{}% 17
-\BOOKMARK [2][-]{subsection.4.1}{\376\377\000D\000a\000t\000a\000s\000e\000t\000\040\000a\000n\000d\000\040\000A\000n\000n\000o\000t\000a\000t\000i\000o\000n}{section.4}% 18
-\BOOKMARK [2][-]{subsection.4.2}{\376\377\000E\000v\000a\000l\000u\000a\000t\000i\000o\000n\000\040\000T\000a\000s\000k\000s}{section.4}% 19
-\BOOKMARK [2][-]{subsection.4.3}{\376\377\000B\000a\000s\000e\000l\000i\000n\000e\000s}{section.4}% 20
-\BOOKMARK [2][-]{subsection.4.4}{\376\377\000E\000v\000a\000l\000u\000a\000t\000i\000o\000n\000\040\000M\000e\000t\000r\000i\000c\000s}{section.4}% 21
-\BOOKMARK [1][-]{section.5}{\376\377\000R\000e\000s\000u\000l\000t\000s}{}% 22
-\BOOKMARK [2][-]{subsection.5.1}{\376\377\000M\000a\000i\000n\000\040\000R\000e\000s\000u\000l\000t\000s\000\040\000\050\000S\000c\000e\000n\000a\000r\000i\000o\000-\000B\000a\000s\000e\000d\000\051}{section.5}% 23
-\BOOKMARK [2][-]{subsection.5.2}{\376\377\000L\000o\000n\000g\000-\000D\000i\000a\000l\000o\000g\000u\000e\000\040\000R\000e\000s\000u\000l\000t\000s}{section.5}% 24
-\BOOKMARK [2][-]{subsection.5.3}{\376\377\000A\000b\000l\000a\000t\000i\000o\000n\000\040\000S\000t\000u\000d\000y}{section.5}% 25
-\BOOKMARK [2][-]{subsection.5.4}{\376\377\000G\000e\000n\000e\000r\000a\000l\000i\000z\000a\000t\000i\000o\000n\000\040\000V\000a\000l\000i\000d\000a\000t\000i\000o\000n}{section.5}% 26
-\BOOKMARK [2][-]{subsection.5.5}{\376\377\000H\000u\000m\000a\000n\000\040\000E\000v\000a\000l\000u\000a\000t\000i\000o\000n}{section.5}% 27
-\BOOKMARK [1][-]{section.6}{\376\377\000D\000i\000s\000c\000u\000s\000s\000i\000o\000n}{}% 28
-\BOOKMARK [1][-]{appendix.A}{\376\377\000I\000m\000p\000l\000e\000m\000e\000n\000t\000a\000t\000i\000o\000n\000\040\000R\000e\000s\000o\000u\000r\000c\000e\000s}{}% 29
-\BOOKMARK [2][-]{subsection.A.1}{\376\377\000D\000y\000n\000a\000m\000i\000c\000\040\000S\000t\000a\000t\000e\000\040\000U\000p\000d\000a\000t\000e\000\040\000A\000l\000g\000o\000r\000i\000t\000h\000m}{appendix.A}% 30
-\BOOKMARK [2][-]{subsection.A.2}{\376\377\000D\000e\000f\000e\000n\000s\000e\000\040\000M\000e\000c\000h\000a\000n\000i\000s\000m\000\040\000A\000n\000n\000o\000t\000a\000t\000i\000o\000n\000\040\000G\000u\000i\000d\000e}{appendix.A}% 31
-\BOOKMARK [2][-]{subsection.A.3}{\376\377\000L\000L\000M\000-\000a\000s\000-\000J\000u\000d\000g\000e\000\040\000R\000u\000b\000r\000i\000c}{appendix.A}% 32
-\BOOKMARK [2][-]{subsection.A.4}{\376\377\000B\000i\000g\000\040\000F\000i\000v\000e\000\040\000T\000r\000a\000i\000t\000\040\000I\000n\000d\000i\000c\000a\000t\000o\000r\000s}{appendix.A}% 33
-\BOOKMARK [1][-]{appendix.B}{\376\377\000E\000x\000p\000e\000r\000i\000m\000e\000n\000t\000a\000l\000\040\000P\000r\000o\000t\000o\000c\000o\000l\000s}{}% 34
-\BOOKMARK [2][-]{subsection.B.1}{\376\377\000L\000o\000n\000g\000-\000D\000i\000a\000l\000o\000g\000u\000e\000\040\000P\000e\000r\000t\000u\000r\000b\000a\000t\000i\000o\000n\000\040\000P\000r\000o\000t\000o\000c\000o\000l}{appendix.B}% 35
-\BOOKMARK [2][-]{subsection.B.2}{\376\377\000C\000o\000r\000e\000\040\000P\000r\000o\000m\000p\000t\000\040\000T\000e\000m\000p\000l\000a\000t\000e\000s}{appendix.B}% 36
-\BOOKMARK [1][-]{appendix.C}{\376\377\000B\000a\000s\000e\000l\000i\000n\000e\000\040\000I\000m\000p\000l\000e\000m\000e\000n\000t\000a\000t\000i\000o\000n\000\040\000D\000e\000t\000a\000i\000l\000s}{}% 37
-\BOOKMARK [1][-]{appendix.D}{\376\377\000O\000p\000e\000n\000-\000S\000o\000u\000r\000c\000e\000\040\000E\000n\000d\000-\000t\000o\000-\000E\000n\000d\000\040\000P\000i\000p\000e\000l\000i\000n\000e}{}% 38
-\BOOKMARK [1][-]{appendix.E}{\376\377\000C\000a\000s\000e\000\040\000S\000t\000u\000d\000y\000:\000\040\000P\000e\000r\000t\000u\000r\000b\000a\000t\000i\000o\000n\000\040\000R\000e\000c\000o\000v\000e\000r\000y}{}% 39
-\BOOKMARK [1][-]{appendix.F}{\376\377\000T\000r\000i\000g\000g\000e\000r\000\040\000D\000i\000a\000g\000n\000o\000s\000t\000i\000c\000s\000\040\000D\000e\000t\000a\000i\000l\000s}{}% 40
-\BOOKMARK [2][-]{subsection.F.1}{\376\377\000E\000v\000a\000l\000u\000a\000t\000i\000o\000n\000\040\000V\000a\000l\000i\000d\000a\000t\000i\000o\000n\000\040\000D\000e\000t\000a\000i\000l\000s}{appendix.F}% 41
-\BOOKMARK [2][-]{subsection.F.2}{\376\377\000D\000e\000f\000e\000n\000s\000e\000\040\000M\000e\000c\000h\000a\000n\000i\000s\000m\000\040\000V\000a\000l\000i\000d\000a\000t\000i\000o\000n\000\040\000P\000r\000o\000t\000o\000c\000o\000l}{appendix.F}% 42
-\BOOKMARK [1][-]{appendix.G}{\376\377\000S\000t\000a\000t\000e\000\040\000U\000p\000d\000a\000t\000e\000\040\000S\000e\000n\000s\000i\000t\000i\000v\000i\000t\000y}{}% 43
-\BOOKMARK [1][-]{appendix.H}{\376\377\000D\000e\000f\000e\000n\000s\000e\000\040\000M\000e\000c\000h\000a\000n\000i\000s\000m\000\040\000D\000e\000t\000a\000i\000l\000e\000d\000\040\000A\000n\000a\000l\000y\000s\000i\000s}{}% 44
-\BOOKMARK [1][-]{appendix.I}{\376\377\000C\000r\000o\000s\000s\000-\000P\000a\000r\000t\000n\000e\000r\000\040\000E\000v\000a\000l\000u\000a\000t\000i\000o\000n\000\040\000D\000e\000t\000a\000i\000l\000s}{}% 45
-\BOOKMARK [1][-]{appendix.J}{\376\377\000F\000a\000i\000l\000u\000r\000e\000\040\000C\000a\000s\000e\000\040\000M\000i\000t\000i\000g\000a\000t\000i\000o\000n\000s}{}% 46
-\BOOKMARK [1][-]{appendix.K}{\376\377\000C\000o\000s\000t\000-\000P\000e\000r\000f\000o\000r\000m\000a\000n\000c\000e\000\040\000A\000n\000a\000l\000y\000s\000i\000s}{}% 47
-\BOOKMARK [1][-]{appendix.L}{\376\377\000A\000d\000d\000i\000t\000i\000o\000n\000a\000l\000\040\000R\000e\000s\000u\000l\000t\000s}{}% 48
-\BOOKMARK [2][-]{subsection.L.1}{\376\377\000O\000p\000e\000n\000-\000S\000o\000u\000r\000c\000e\000\040\000G\000e\000n\000e\000r\000a\000t\000o\000r\000\040\000V\000a\000l\000i\000d\000a\000t\000i\000o\000n}{appendix.L}% 49
-\BOOKMARK [1][-]{appendix.M}{\376\377\000C\000r\000o\000s\000s\000-\000D\000o\000m\000a\000i\000n\000\040\000E\000v\000a\000l\000u\000a\000t\000i\000o\000n\000\040\000D\000e\000t\000a\000i\000l\000s}{}% 50
-\BOOKMARK [1][-]{appendix.N}{\376\377\000R\000o\000l\000e\000B\000e\000n\000c\000h\000\040\000E\000v\000a\000l\000u\000a\000t\000i\000o\000n\000\040\000D\000e\000t\000a\000i\000l\000s}{}% 51
-\BOOKMARK [1][-]{appendix.O}{\376\377\000F\000a\000i\000l\000u\000r\000e\000\040\000C\000a\000s\000e\000\040\000S\000t\000u\000d\000i\000e\000s}{}% 52
-\BOOKMARK [2][-]{subsection.O.1}{\376\377\000E\000v\000a\000l\000u\000a\000t\000i\000o\000n\000\040\000B\000i\000a\000s\000\040\000C\000o\000n\000t\000r\000o\000l\000s}{appendix.O}% 53
-\BOOKMARK [2][-]{subsection.O.2}{\376\377\000G\000e\000n\000e\000r\000a\000l\000i\000z\000a\000t\000i\000o\000n\000\040\000D\000e\000t\000a\000i\000l\000s}{appendix.O}% 54
-\BOOKMARK [2][-]{subsection.O.3}{\376\377\000B\000r\000o\000a\000d\000e\000r\000\040\000A\000p\000p\000l\000i\000c\000a\000t\000i\000o\000n\000s}{appendix.O}% 55
-\BOOKMARK [2][-]{subsection.O.4}{\376\377\000P\000C\000\040\000T\000h\000r\000e\000s\000h\000o\000l\000d\000\040\000S\000e\000n\000s\000i\000t\000i\000v\000i\000t\000y}{appendix.O}% 56
-\BOOKMARK [1][-]{appendix.P}{\376\377\000C\000o\000g\000n\000i\000t\000i\000v\000e\000-\000E\000c\000o\000n\000o\000m\000i\000c\000\040\000O\000p\000t\000i\000m\000i\000z\000a\000t\000i\000o\000n}{}% 57
-\BOOKMARK [1][-]{appendix.Q}{\376\377\000F\000a\000i\000l\000u\000r\000e\000\040\000M\000o\000d\000e\000\040\000C\000o\000m\000p\000a\000r\000i\000s\000o\000n\000:\000\040\000W\000h\000y\000\040\000E\000a\000c\000h\000\040\000L\000a\000y\000e\000r\000\040\000M\000a\000t\000t\000e\000r\000s}{}% 58
+\BOOKMARK [1][-]{section.1}{Introduction}{}% 1
+\BOOKMARK [1][-]{section.2}{Related Work}{}% 2
+\BOOKMARK [1][-]{section.3}{Methodology}{}% 3
+\BOOKMARK [2][-]{subsection.3.1}{Three-Layer Personality Architecture}{section.3}% 4
+\BOOKMARK [3][-]{subsubsection.3.1.1}{Core Traits Layer}{subsection.3.1}% 5
+\BOOKMARK [3][-]{subsubsection.3.1.2}{Speaking Style Layer}{subsection.3.1}% 6
+\BOOKMARK [3][-]{subsubsection.3.1.3}{Dynamic State Layer}{subsection.3.1}% 7
+\BOOKMARK [2][-]{subsection.3.2}{Dual-Process Generation}{section.3}% 8
+\BOOKMARK [3][-]{subsubsection.3.2.1}{Selective Activation}{subsection.3.2}% 9
+\BOOKMARK [3][-]{subsubsection.3.2.2}{Phase 1: Inner Monologue}{subsection.3.2}% 10
+\BOOKMARK [3][-]{subsubsection.3.2.3}{Phase 2: Styled Response}{subsection.3.2}% 11
+\BOOKMARK [1][-]{section.4}{Experimental Setup}{}% 12
+\BOOKMARK [2][-]{subsection.4.1}{Dataset and Annotation}{section.4}% 13
+\BOOKMARK [2][-]{subsection.4.2}{Evaluation Tasks}{section.4}% 14
+\BOOKMARK [2][-]{subsection.4.3}{Baselines}{section.4}% 15
+\BOOKMARK [2][-]{subsection.4.4}{Evaluation Metrics}{section.4}% 16
+\BOOKMARK [1][-]{section.5}{Results}{}% 17
+\BOOKMARK [2][-]{subsection.5.1}{Main Results \(Scenario-Based\)}{section.5}% 18
+\BOOKMARK [2][-]{subsection.5.2}{Long-Dialogue Results}{section.5}% 19
+\BOOKMARK [2][-]{subsection.5.3}{Ablation Study}{section.5}% 20
+\BOOKMARK [2][-]{subsection.5.4}{Generalization \046 Open-Source Validation}{section.5}% 21
+\BOOKMARK [2][-]{subsection.5.5}{Comparison with Supervised Fine-Tuning}{section.5}% 22
+\BOOKMARK [2][-]{subsection.5.6}{Prompt Ablation on Small Models}{section.5}% 23
+\BOOKMARK [2][-]{subsection.5.7}{Human Evaluation}{section.5}% 24
+\BOOKMARK [1][-]{section.6}{Discussion}{}% 25
+\BOOKMARK [1][-]{appendix.A}{Implementation Resources}{}% 26
+\BOOKMARK [2][-]{subsection.A.1}{Dynamic State Update Algorithm}{appendix.A}% 27
+\BOOKMARK [2][-]{subsection.A.2}{Speaking Style Layer Details}{appendix.A}% 28
+\BOOKMARK [2][-]{subsection.A.3}{Defense Mechanism Annotation Guide}{appendix.A}% 29
+\BOOKMARK [2][-]{subsection.A.4}{LLM-as-Judge Rubric}{appendix.A}% 30
+\BOOKMARK [2][-]{subsection.A.5}{Big Five Trait Indicators}{appendix.A}% 31
+\BOOKMARK [1][-]{appendix.B}{Experimental Protocols}{}% 32
+\BOOKMARK [2][-]{subsection.B.1}{Long-Dialogue Perturbation Protocol}{appendix.B}% 33
+\BOOKMARK [2][-]{subsection.B.2}{Core Prompt Templates}{appendix.B}% 34
+\BOOKMARK [1][-]{appendix.C}{Baseline Implementation Details}{}% 35
+\BOOKMARK [1][-]{appendix.D}{Case Study: Perturbation Recovery}{}% 36
+\BOOKMARK [1][-]{appendix.E}{Trigger Diagnostics Details}{}% 37
+\BOOKMARK [2][-]{subsection.E.1}{Trigger Learning Protocol}{appendix.E}% 38
+\BOOKMARK [2][-]{subsection.E.2}{Evaluation Validation Details}{appendix.E}% 39
+\BOOKMARK [2][-]{subsection.E.3}{Defense Mechanism Validation Protocol}{appendix.E}% 40
+\BOOKMARK [1][-]{appendix.F}{State Update Sensitivity}{}% 41
+\BOOKMARK [2][-]{subsection.F.1}{Detailed Simulation Protocol}{appendix.F}% 42
+\BOOKMARK [1][-]{appendix.G}{Defense Mechanism Detailed Analysis}{}% 43
+\BOOKMARK [1][-]{appendix.H}{Cross-Partner Evaluation Details}{}% 44
+\BOOKMARK [1][-]{appendix.I}{Failure Case Mitigations}{}% 45
+\BOOKMARK [1][-]{appendix.J}{Cost-Performance Analysis}{}% 46
+\BOOKMARK [1][-]{appendix.K}{Additional Results}{}% 47
+\BOOKMARK [2][-]{subsection.K.1}{Open-Source Generator Validation}{appendix.K}% 48
+\BOOKMARK [1][-]{appendix.L}{Cross-Domain Evaluation Details}{}% 49
+\BOOKMARK [1][-]{appendix.M}{RoleBench Evaluation Details}{}% 50
+\BOOKMARK [1][-]{appendix.N}{Failure Case Studies}{}% 51
+\BOOKMARK [2][-]{subsection.N.1}{Evaluation Bias Controls}{appendix.N}% 52
+\BOOKMARK [2][-]{subsection.N.2}{Generalization Details}{appendix.N}% 53
+\BOOKMARK [2][-]{subsection.N.3}{Broader Applications}{appendix.N}% 54
+\BOOKMARK [2][-]{subsection.N.4}{PC Threshold Sensitivity}{appendix.N}% 55
+\BOOKMARK [1][-]{appendix.O}{Cognitive-Economic Optimization}{}% 56
+\BOOKMARK [1][-]{appendix.P}{Failure Mode Comparison: Why Each Layer Matters}{}% 57
+\BOOKMARK [1][-]{appendix.Q}{Parameter Acquisition Details}{}% 58
+\BOOKMARK [1][-]{appendix.R}{Safety Architecture Details}{}% 59
+\BOOKMARK [1][-]{appendix.S}{SFT vs. PersonaForge: Deep Analysis}{}% 60
+\BOOKMARK [1][-]{appendix.T}{Cross-Cultural Case Studies}{}% 61
+\BOOKMARK [2][-]{subsection.T.1}{Lin Daiyu \(\147\227\236\333\163\211\): Sublimation in Chinese Classical Context}{appendix.T}% 62
+\BOOKMARK [2][-]{subsection.T.2}{Tyrion Lannister: Humor Defense in Western Fantasy Context}{appendix.T}% 63
+\BOOKMARK [2][-]{subsection.T.3}{Comparative Analysis}{appendix.T}% 64
+\BOOKMARK [2][-]{subsection.T.4}{Wang Xifeng \(\163\213\161\231\121\344\): Displacement in Hierarchical Context}{appendix.T}% 65
+\BOOKMARK [1][-]{appendix.U}{SFT Failure Analysis \(Summary\)}{}% 66
+\BOOKMARK [1][-]{appendix.V}{Human Evaluation Details}{}% 67
+\BOOKMARK [1][-]{appendix.W}{Reproducibility Checklist}{}% 68
+\BOOKMARK [1][-]{appendix.X}{Constraint Conflict Rate \(CCR\) Protocol}{}% 69
+\BOOKMARK [1][-]{appendix.Y}{Multi-Mechanism Selection Case Studies}{}% 70
+\BOOKMARK [1][-]{appendix.Z}{Prompt Ablation Details}{}% 71
