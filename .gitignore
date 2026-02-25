@@ -35,3 +35,5 @@ data/maps/user_*.csv
 data/roles/user_*/
 data/worlds/user_*/
 user_uploads/
+modules/data/user_agents/
+/data/temp_roles/
