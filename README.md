@@ -8,7 +8,7 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-latest-green.svg)](https://fastapi.tiangolo.com/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-[English](README.md) | [Chinese](README_zh.md)
+[English](README.md) | [简体中文](README_zh.md)
 
 **Demo:** [https://scrollweaver.harrycn.com](https://scrollweaver.harrycn.com)
 
@@ -415,3 +415,4 @@ See [LICENSE](LICENSE) for details.
 [Get Started](#quick-start) · [Add Your World](#adding-your-own-world) · [Demo](https://scrollweaver.harrycn.com)
 
 </div>
+
