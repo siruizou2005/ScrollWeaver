@@ -29,48 +29,66 @@ The system simulates a complete social environment built around two core agent t
 
 ## Core Experiences
 
-### 1. AI Director Mode (Watch the Story Unfold)
-The default state — fully automated narrative:
-1. Select or upload a world (e.g. *Dream of the Red Chamber*, *A Song of Ice and Fire*)
-2. The Orchestrator begins scheduling scenes based on the world's lore
-3. Characters autonomously dialogue, act, and build relationships
-4. Watch an ever-evolving story you never need to write yourself
+### 1. Creation (造物) — *"Build a World"*
+Upload a novel or describe a setting in one sentence. AI automatically extracts the world's lore, geography, and character profiles to build a fully playable scroll.
 
-### 2. Human Intervention Mode (Play a Character)
-Step in and steer the story at any time:
-1. Select a character to play
-2. The system pauses via WebSocket when it's your character's turn to act
-3. Type your action or dialogue
-4. All other AI characters respond in real time based on your input — true human–AI co-creation
+- **RAG-based extraction** — Upload PDF/TXT (e.g. *The Three-Body Problem*); AI extracts worldview, geography, and character roster in one click
+- **Prompt-based generation** — Describe in a sentence ("a cyberpunk version of Dream of the Red Chamber"); AI generates all configurations
+- **Manual editing** — A full editor for power users: tune event chains, adjust character belief parameters, craft precise lore
 
-### 3. Co-Creation Mode (Generate & Export)
-Designed for writers and content creators:
-1. Load or build your world and character cards
-2. Play key plot points yourself to anchor the story's direction
-3. Hand off to AI to run forward at high speed — N more rounds or N days
-4. Download the complete co-authored script (`.txt` / `.md`) ready for novels, screenplays, or video creation
+### 2. Simulation / Travel (历练) — *"Enter the World"*
+Inhabit a classic literary world as a character. Change fate through your own actions.
+
+**The Living World Map** — The centerpiece of the simulation experience:
+
+- A **24×12 interactive grid map** rendered with SVG, representing the world's geography
+- Each world has a custom background image (e.g. 大观园 ink painting for *Dream of the Red Chamber*)
+- **Buildings are clickable** — click any location to see which characters are currently there and initiate private conversation (私语)
+- **Character avatars** appear in real time on the map showing each character's current location
+- Characters move between locations autonomously as the simulation runs
+- **Pause / Resume** the world at any time from the top control bar
+
+**Player Status** — Your character has three RPG-style attributes tracked in real time:
+- **才情 / 内力** (Talent / Inner Power)
+- **羁绊 / 声望** (Bond / Reputation)
+- **精力 / 行动力** (Energy / Action Points)
+
+**World Chronicle (世界见闻录)** — A scrollable log of all world events, accessible at any time during the session.
+
+**In-world time** — A simulated clock runs at accelerated speed; the current world time is displayed in the top bar.
+
+### 3. Gathering (雅集) — *"Play the Game"*
+Sit at the same table as Lin Daiyu and Cao Cao. Compete in social deduction games powered by the A-O-P belief system.
+
+- **Werewolf (狼人杀)** — Classic social deduction with AI players who have factions, hidden agendas, and can lie
+- **Who is Human (谁是卧底)** — 3 human players + 6 AI; uncover who's who through deduction and bluffing
+- AI characters hold genuine beliefs and allegiances — they will deceive to protect their faction
 
 ---
 
 ## Architecture
 
-### Orchestrator–Performer (O-P) Model
+### Three Interaction Modes
+
+| Mode | Name | Use Case | Key Mechanism |
+|------|------|---------|---------------|
+| **P** | Private Chat (私语) | 1-on-1 roleplay with a character | Direct dialogue |
+| **O-P** | Story Saga (入卷) | Multi-character world simulation | **Event Chain** |
+| **A-O-P** | Arena Games (雅集) | Rule-bound social deduction games | **Belief System** |
+
+**Event Chain** — The Orchestrator controls the story's macro arc through structured event chains, preventing aimless meandering and ensuring every story has a beginning, climax, and resolution.
+
+**Belief System** — In Arena mode, each AI Performer is assigned a faction and hidden role. Their beliefs drive their decisions: they will argue, bluff, and reason strategically to protect their allegiance.
+
+### Orchestrator–Performer (O-P) Core
 
 | Component | File | Role |
 |-----------|------|------|
-| Orchestrator | `modules/orchestrator.py` | World director: loads lore, builds RAG fact base, schedules scenes |
-| Performer | `modules/main_performer.py` | Character actor: loads profile, maintains memory, generates actions |
+| Orchestrator | `modules/orchestrator.py` | Loads lore, builds RAG fact base, schedules scenes |
+| Performer | `modules/main_performer.py` | Loads character profile, maintains memory, generates actions |
 | ScrollWeaver Engine | `ScrollWeaver.py` | Main simulation loop and state coordination |
 | FastAPI Server | `server.py` | REST API + WebSocket real-time streaming |
 | Database | `database.py` | SQLite persistence for scrolls and sessions |
-
-### Supported Interaction Modes
-
-| Mode | Name | Use Case |
-|------|------|---------|
-| **P Mode** | Private Chat | 1-on-1 roleplay, character chat |
-| **O-P Mode** | Story Saga | Multi-character story simulation (default) |
-| **A-O-P Mode** | Arena Games | Rule-bound games: Werewolf, Who is Human |
 
 ### Technology Stack
 
@@ -81,8 +99,9 @@ Designed for writers and content creators:
 | LLM Support | OpenAI, Gemini, DeepSeek, Claude, Qwen, Doubao, Kimi, OpenRouter, Ollama, VLLM |
 | Vector DB | ChromaDB (RAG for world lore & long-term memory) |
 | Embedding | BGE-Small (bilingual CN/EN) |
+| Map Rendering | SVG + D3.js (force-directed graph) |
 | Frontend | Static HTML/CSS/JS |
-| Database | SQLite (`database.py`) |
+| Database | SQLite |
 
 ---
 
@@ -143,7 +162,63 @@ python server.py
 
 ### 5. Open the App
 
-Visit `http://localhost:8000` in your browser. Register/login, select a scroll (world), and start your experience.
+Visit `http://localhost:8000`. Register/login, then from the **Plaza (广场)** choose:
+- **天工** — Enter the Workshop to create a new world
+- **穿越** — Enter an existing world (your library, shared scrolls, or the gathering hall)
+
+---
+
+## App Flow
+
+```
+Login → Plaza (广场)
+          ├── 天工 (Creation)
+          │     ├── Upload novel (RAG extraction)
+          │     ├── Describe in one sentence (Prompt generation)
+          │     └── Manual editor
+          └── 穿越 (Enter World)
+                ├── 藏书阁 (Your Library) ─── Enter World Map ──► Simulation
+                ├── 阅卷 (Explore) ────────── Browse shared scrolls
+                └── 雅集 (Gathering) ────────Werewolf / Who is Human
+```
+
+---
+
+## World Map Interface
+
+When you enter a world, the main view is the **interactive world map**:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  [← Back]  世界地图           [⏸ Pause]    🕐 虚时 08:32   │
+├──────────────────────────┬──────────────────────────────────┤
+│  [Player Avatar]         │                                  │
+│  Name | 穿越者           │                                  │
+│  ✨ Talent  ████░ 60     │      Interactive World Map       │
+│  ♥  Bond    ███░░ 45     │    (SVG, 24×12 grid, zoomable)  │
+│  ⚡ Energy  █████ 80     │                                  │
+│                          │   [建筑物] [角色头像实时移动]    │
+└──────────────────────────┴──────────────────────────────────┘
+```
+
+**Clicking a building** opens a panel showing:
+- All characters currently at that location
+- Option to **initiate private chat (私语)** with any character present
+
+---
+
+## Preset Worlds
+
+ScrollWeaver ships with four pre-built literary worlds:
+
+| World | Preset File | Featured Locations |
+|-------|-------------|-------------------|
+| **Dream of the Red Chamber** (红楼梦) | `experiment_red_mansions.json` | 大观园: 沁芳亭, 潇湘馆, 怡红院, 藕香榭, 栊翠庵, 秋爽斋, 蘅芜苑 |
+| **Romance of the Three Kingdoms** (三国演义) | `experiment_three_kindoms.json` | 隆中, battlefield zones |
+| **A Song of Ice and Fire** | `experiment_icefire.json` | Westeros locations |
+| **Alice's Adventures in Wonderland** | `experiment_alice.json` | Wonderland locations |
+
+The **Dream of the Red Chamber** world features a custom ink-painting background of the Grand View Garden (大观园) with all 7 buildings mapped to their historical coordinates. Characters like Lin Daiyu, Jia Baoyu, and Xue Baochai move between their residences in real time.
 
 ---
 
@@ -158,61 +233,53 @@ ScrollWeaver/
 ├── config.json                  # Configuration (models, API keys)
 ├── requirements.txt             # Python dependencies
 ├── Dockerfile                   # Docker deployment
-├── index.html                   # Frontend entry point
-├── frontend/                    # Static HTML/CSS/JS frontend
-│   ├── pages/                   # HTML pages
-│   ├── js/                      # JavaScript modules
-│   └── css/                     # Stylesheets
+├── index.html                   # App entry point (redirects to plaza)
+├── frontend/
+│   ├── pages/
+│   │   ├── home.html            # Landing / intro page
+│   │   ├── login.html           # Login / register
+│   │   ├── plaza.html           # Main lobby (天工 / 穿越)
+│   │   ├── creation.html        # World creation workshop
+│   │   ├── library.html         # Your scrolls library (藏书阁)
+│   │   ├── explore.html         # Browse shared scrolls (阅卷)
+│   │   ├── world-view.html      # Interactive world map (历练)
+│   │   ├── chat.html            # Private 1-on-1 chat (私语)
+│   │   ├── multiplayer-story.html # Co-op story mode
+│   │   ├── gathering.html       # Gathering lobby
+│   │   ├── werewolf.html        # Werewolf game
+│   │   └── who-is-human.html    # Who is Human game
+│   ├── js/
+│   │   ├── pages/world-view.js  # Map rendering + WebSocket
+│   │   ├── left-section/map-panel.js  # D3.js map panel
+│   │   └── ...
+│   ├── css/
+│   └── assets/images/           # Map backgrounds, icons
 ├── modules/
 │   ├── core/                    # Core server, sessions, socket.io
-│   ├── orchestrator.py          # World Orchestrator agent
-│   ├── main_performer.py        # Character Performer agent
+│   ├── orchestrator.py          # World Orchestrator
+│   ├── main_performer.py        # Character Performer
 │   ├── dual_process_agent.py    # Dual-process cognitive architecture
 │   ├── personality_model.py     # Three-layer personality model
-│   ├── dynamic_state_manager.py # Dynamic relationship/mood tracking
-│   ├── memory.py                # Short/long-term memory
-│   ├── history_manager.py       # Interaction history
-│   ├── embedding.py             # Embedding model wrapper
-│   ├── style_vector_db.py       # Style vector database
-│   ├── llm/                     # LLM adapters (OpenAI, Gemini, etc.)
-│   ├── db/                      # Database adapters (ChromaDB)
-│   ├── prompt/                  # Prompt templates (EN/ZH)
-│   ├── simulation/              # Simulation sub-systems
-│   │   ├── simulator.py         # Main simulation loop
-│   │   ├── scene_manager.py     # Scene scheduling
-│   │   ├── event_manager.py     # Event generation
-│   │   ├── movement_manager.py  # Character movement
-│   │   └── state_manager.py     # World state management
-│   ├── chat/                    # Chat mode performer
-│   ├── werewolf/                # Werewolf game module
+│   ├── dynamic_state_manager.py # Dynamic relationship tracking
+│   ├── simulation/              # Scene/event/movement managers
+│   ├── chat/                    # P-mode chat performer
+│   ├── werewolf/                # Werewolf A-O-P module
 │   ├── gathering/               # Gathering game module
-│   ├── business/                # Business game module
-│   ├── utils/                   # Utility helpers
-│   ├── models/                  # Response data models
-│   └── routes/                  # API route handlers
+│   ├── llm/                     # LLM adapters
+│   ├── db/                      # ChromaDB adapter
+│   └── prompt/                  # Prompt templates (EN/ZH)
 ├── data/
-│   ├── worlds/                  # World lore configurations
+│   ├── worlds/                  # World lore configs
 │   ├── roles/                   # Character profiles (gitignored)
-│   ├── locations/               # Location data
-│   ├── maps/                    # Map data and images
+│   ├── locations/               # Location data per world
+│   ├── maps/                    # Map CSVs + building JSON configs
+│   │   ├── A_Dream_in_Red_Mansions_buildings.json  # 7 buildings with grid coords
+│   │   └── ...
 │   └── werewolf/                # Werewolf game presets
-├── experiment_presets/          # Simulation presets (world launch configs)
-├── extract_data/                # Tools to extract world/role data from text
+├── experiment_presets/          # World launch configurations
+├── extract_data/                # Tools to extract world data from text
 └── map-pic/                     # Map background images
 ```
-
----
-
-## Preset Worlds
-
-ScrollWeaver ships with four pre-built literary worlds:
-
-| World | Source | Characters |
-|-------|--------|-----------|
-| `experiment_red_mansions.json` | Dream of the Red Chamber (红楼梦) | Jia Baoyu, Lin Daiyu, Xue Baochai... |
-| `experiment_three_kindoms.json` | Romance of the Three Kingdoms (三国演义) | Cao Cao, Liu Bei, Zhuge Liang... |
-| `experiment_icefire.json` | A Song of Ice and Fire | Tyrion, Daenerys, Jon Snow... |
-| `experiment_alice.json` | Alice's Adventures in Wonderland | Alice, Mad Hatter, Queen of Hearts... |
 
 ---
 
@@ -230,7 +297,7 @@ Each character agent operates on three layers:
 
 Inspired by psychological dual-process theory:
 - **System 1 (Fast)** — Instinctive reaction based on personality and current mood
-- **System 2 (Slow)** — Deliberate inner monologue ("Think-then-Speak") with defense mechanism triggers
+- **System 2 (Slow)** — Deliberate inner monologue ("Think-then-Speak") with defense mechanism triggers under stress
 
 ### RAG-Based World Consistency
 
@@ -238,52 +305,54 @@ The Orchestrator builds a ChromaDB vector store from the world's lore at startup
 
 ### Dynamic State Manager
 
-Tracks evolving relationship states between characters over time — affinity, tension, and trust change based on interaction history, ensuring organic social dynamics rather than static configurations.
+Tracks evolving relationship states between characters over time — affinity, tension, and trust change based on interaction history, ensuring organic social dynamics.
 
 ---
 
 ## Adding Your Own World
 
-### Method 1: Manual (Recommended)
+### Method 1: In-app Creation (Recommended)
 
-1. Create a world config in `data/worlds/<your_world>/general.json`
-2. Add location data to `data/locations/<your_world>.json`
-3. Add a map to `data/maps/<your_world>.csv`
-4. Add character profiles to `data/roles/<your_world>/`
-5. Create a preset in `experiment_presets/experiment_<your_world>.json`
-6. Set `preset_path` in `config.json` and restart
+Use the **Workshop (造办处)** in the app:
+1. Upload your novel as PDF/TXT — AI extracts everything automatically
+2. Or describe your world in one sentence — AI generates configurations from scratch
+3. Or use the manual editor for fine-grained control
 
-### Method 2: Auto-Extract from Text
+### Method 2: Manual File Creation
 
-Use the extraction pipeline in `extract_data/`:
+1. Create `data/worlds/<world>/general.json` — world lore config
+2. Create `data/locations/<world>.json` — location definitions
+3. Create `data/maps/<world>.csv` — grid map
+4. Optionally create `data/maps/<world>_buildings.json` — named building polygons with grid coordinates
+5. Add character profiles to `data/roles/<world>/`
+6. Create `experiment_presets/experiment_<world>.json`
+7. Set `preset_path` in `config.json` and restart
+
+### Method 3: Auto-Extract from Text (CLI)
+
 ```bash
-# Edit extract_data/extract_config.json with your source text
+# Edit extract_data/extract_config.json first
 python extract_data/extract_data.py      # Extract characters and locations
 python extract_data/extract_settings.py  # Extract world settings
 ```
 
-### Method 3: Add a New LLM Adapter
+### Adding a New LLM Adapter
 
-1. Create a file in `modules/llm/`
-2. Inherit from `BaseLLM`
-3. Register in `sw_utils.py` → `get_models()`
+1. Create a file in `modules/llm/`, inherit from `BaseLLM`
+2. Register in `sw_utils.py` → `get_models()`
 
 ---
 
 ## Troubleshooting
 
-**Scroll stuck on "Loading..."**
+**World stuck on "Loading..."**
 - Check `server.log` for initialization errors
 - Verify `preset_path` in `config.json` points to an existing file
 - Ensure API keys are valid
 
-**WebSocket 500 error**
-- Usually a ScrollWeaver initialization failure — check server logs
-- Verify all paths in the preset file are correct
+**WebSocket 500 error** — Usually a ScrollWeaver initialization failure; check server logs and verify all paths in the preset file.
 
-**Model loading fails**
-- Confirm the API key is valid and has quota
-- For local models (Ollama/VLLM), ensure the service is running
+**Map not displaying correctly** — Ensure `data/maps/<world>.csv` and `data/maps/<world>_buildings.json` exist and match the world's `general.json` config.
 
 ---
 
@@ -308,6 +377,9 @@ This project's multi-agent simulation framework builds on **[BookWorld](https://
 - Psychology-grounded dual-process cognitive architecture
 - Three-layer personality model (Big Five + Defense Mechanisms + Speaking Style)
 - Dynamic state manager for evolving character relationships
+- Interactive world map with real-time character movement
+- Event chain mechanism for coherent long-form storytelling
+- Belief system enabling strategic AI behavior in social deduction games
 
 ---
 
@@ -335,6 +407,6 @@ See [LICENSE](LICENSE) for details.
 
 **Turn your favorite story into a living world.**
 
-[Get Started](#quick-start) · [Add Your World](#adding-your-own-world) · [Contributing](#contributing)
+[Get Started](#quick-start) · [Add Your World](#adding-your-own-world) · [Demo](https://scrollweaver.harrycn.com)
 
 </div>
