@@ -8,7 +8,7 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-latest-green.svg)](https://fastapi.tiangolo.com/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-[English](README.md) | [中文](README_zh.md)
+[English](README.md) | [Chinese](README_zh.md)
 
 **Demo:** [https://scrollweaver.harrycn.com](https://scrollweaver.harrycn.com)
 
@@ -18,7 +18,7 @@
 
 ## What is ScrollWeaver?
 
-**ScrollWeaver** (织梦绘卷) is a multi-agent social simulation engine that breathes life into static text — novels, worldbuilding documents, lore collections — turning them into interactive, co-creatable, exportable **living worlds**.
+**ScrollWeaver** is a multi-agent social simulation engine that breathes life into static text — novels, worldbuilding documents, lore collections — turning them into interactive, co-creatable, exportable **living worlds**.
 
 The system simulates a complete social environment built around two core agent types:
 
@@ -29,39 +29,42 @@ The system simulates a complete social environment built around two core agent t
 
 ## Core Experiences
 
-### 1. Creation (造物) — *"Build a World"*
+### 1. Creation — *"Build a World"*
+
 Upload a novel or describe a setting in one sentence. AI automatically extracts the world's lore, geography, and character profiles to build a fully playable scroll.
 
 - **RAG-based extraction** — Upload PDF/TXT (e.g. *The Three-Body Problem*); AI extracts worldview, geography, and character roster in one click
 - **Prompt-based generation** — Describe in a sentence ("a cyberpunk version of Dream of the Red Chamber"); AI generates all configurations
 - **Manual editing** — A full editor for power users: tune event chains, adjust character belief parameters, craft precise lore
 
-### 2. Simulation / Travel (历练) — *"Enter the World"*
+### 2. Simulation — *"Enter the World"*
+
 Inhabit a classic literary world as a character. Change fate through your own actions.
 
 **The Living World Map** — The centerpiece of the simulation experience:
 
 - A **24×12 interactive grid map** rendered with SVG, representing the world's geography
-- Each world has a custom background image (e.g. 大观园 ink painting for *Dream of the Red Chamber*)
-- **Buildings are clickable** — click any location to see which characters are currently there and initiate private conversation (私语)
+- Each world has a custom background image (e.g. an ink painting of the Grand View Garden for *Dream of the Red Chamber*)
+- **Buildings are clickable** — click any location to see which characters are currently there and initiate a private one-on-one conversation
 - **Character avatars** appear in real time on the map showing each character's current location
 - Characters move between locations autonomously as the simulation runs
 - **Pause / Resume** the world at any time from the top control bar
 
 **Player Status** — Your character has three RPG-style attributes tracked in real time:
-- **才情 / 内力** (Talent / Inner Power)
-- **羁绊 / 声望** (Bond / Reputation)
-- **精力 / 行动力** (Energy / Action Points)
+- **Talent / Inner Power**
+- **Bond / Reputation**
+- **Energy / Action Points**
 
-**World Chronicle (世界见闻录)** — A scrollable log of all world events, accessible at any time during the session.
+**World Chronicle** — A scrollable log of all world events, accessible at any time during the session.
 
 **In-world time** — A simulated clock runs at accelerated speed; the current world time is displayed in the top bar.
 
-### 3. Gathering (雅集) — *"Play the Game"*
+### 3. Gathering — *"Play the Game"*
+
 Sit at the same table as Lin Daiyu and Cao Cao. Compete in social deduction games powered by the A-O-P belief system.
 
-- **Werewolf (狼人杀)** — Classic social deduction with AI players who have factions, hidden agendas, and can lie
-- **Who is Human (谁是卧底)** — 3 human players + 6 AI; uncover who's who through deduction and bluffing
+- **Werewolf** — Classic social deduction with AI players who have factions, hidden agendas, and can lie
+- **Who is Human** — 3 human players + 6 AI; uncover who's who through deduction and bluffing
 - AI characters hold genuine beliefs and allegiances — they will deceive to protect their faction
 
 ---
@@ -72,9 +75,9 @@ Sit at the same table as Lin Daiyu and Cao Cao. Compete in social deduction game
 
 | Mode | Name | Use Case | Key Mechanism |
 |------|------|---------|---------------|
-| **P** | Private Chat (私语) | 1-on-1 roleplay with a character | Direct dialogue |
-| **O-P** | Story Saga (入卷) | Multi-character world simulation | **Event Chain** |
-| **A-O-P** | Arena Games (雅集) | Rule-bound social deduction games | **Belief System** |
+| **P** | Private Chat | 1-on-1 roleplay with a character | Direct dialogue |
+| **O-P** | Story Saga | Multi-character world simulation | **Event Chain** |
+| **A-O-P** | Arena Games | Rule-bound social deduction games | **Belief System** |
 
 **Event Chain** — The Orchestrator controls the story's macro arc through structured event chains, preventing aimless meandering and ensuring every story has a beginning, climax, and resolution.
 
@@ -99,7 +102,7 @@ Sit at the same table as Lin Daiyu and Cao Cao. Compete in social deduction game
 | LLM Support | OpenAI, Gemini, DeepSeek, Claude, Qwen, Doubao, Kimi, OpenRouter, Ollama, VLLM |
 | Vector DB | ChromaDB (RAG for world lore & long-term memory) |
 | Embedding | BGE-Small (bilingual CN/EN) |
-| Map Rendering | SVG + D3.js (force-directed graph) |
+| Map Rendering | SVG + D3.js |
 | Frontend | Static HTML/CSS/JS |
 | Database | SQLite |
 
@@ -162,24 +165,26 @@ python server.py
 
 ### 5. Open the App
 
-Visit `http://localhost:8000`. Register/login, then from the **Plaza (广场)** choose:
-- **天工** — Enter the Workshop to create a new world
-- **穿越** — Enter an existing world (your library, shared scrolls, or the gathering hall)
+Visit `http://localhost:8000`. Register/login, then from the **Plaza** choose:
+- **Workshop** — Create a new world from a novel, a prompt, or manually
+- **Travel** — Enter an existing world (your library, shared scrolls, or the gathering hall)
 
 ---
 
 ## App Flow
 
 ```
-Login → Plaza (广场)
-          ├── 天工 (Creation)
-          │     ├── Upload novel (RAG extraction)
-          │     ├── Describe in one sentence (Prompt generation)
-          │     └── Manual editor
-          └── 穿越 (Enter World)
-                ├── 藏书阁 (Your Library) ─── Enter World Map ──► Simulation
-                ├── 阅卷 (Explore) ────────── Browse shared scrolls
-                └── 雅集 (Gathering) ────────Werewolf / Who is Human
+Login --> Plaza
+           |
+           +-- Workshop (Creation)
+           |     +-- Upload novel  (RAG extraction)
+           |     +-- One-sentence prompt  (AI generation)
+           |     +-- Manual editor
+           |
+           +-- Travel (Enter World)
+                 +-- Library  ----------->  Enter World Map --> Simulation
+                 +-- Explore  ----------->  Browse shared scrolls
+                 +-- Gathering  --------->  Werewolf / Who is Human
 ```
 
 ---
@@ -189,21 +194,22 @@ Login → Plaza (广场)
 When you enter a world, the main view is the **interactive world map**:
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│  [← Back]  世界地图           [⏸ Pause]    🕐 虚时 08:32   │
-├──────────────────────────┬──────────────────────────────────┤
-│  [Player Avatar]         │                                  │
-│  Name | 穿越者           │                                  │
-│  ✨ Talent  ████░ 60     │      Interactive World Map       │
-│  ♥  Bond    ███░░ 45     │    (SVG, 24×12 grid, zoomable)  │
-│  ⚡ Energy  █████ 80     │                                  │
-│                          │   [建筑物] [角色头像实时移动]    │
-└──────────────────────────┴──────────────────────────────────┘
++-------------------------------------------------------------+
+|  [<- Back]  World Map          [|| Pause]   Clock 08:32    |
++------------------------+------------------------------------+
+|  [Player Avatar]       |                                    |
+|  Character Name        |                                    |
+|  Traveler              |      Interactive World Map         |
+|  Talent   [####-] 60   |    (SVG, 24x12 grid, zoomable)    |
+|  Bond     [###--] 45   |                                    |
+|  Energy   [#####] 80   |   Buildings  +  Live character     |
+|                        |   avatars moving in real time      |
++------------------------+------------------------------------+
 ```
 
 **Clicking a building** opens a panel showing:
 - All characters currently at that location
-- Option to **initiate private chat (私语)** with any character present
+- Option to **start a private one-on-one chat** with any character present
 
 ---
 
@@ -213,12 +219,12 @@ ScrollWeaver ships with four pre-built literary worlds:
 
 | World | Preset File | Featured Locations |
 |-------|-------------|-------------------|
-| **Dream of the Red Chamber** (红楼梦) | `experiment_red_mansions.json` | 大观园: 沁芳亭, 潇湘馆, 怡红院, 藕香榭, 栊翠庵, 秋爽斋, 蘅芜苑 |
-| **Romance of the Three Kingdoms** (三国演义) | `experiment_three_kindoms.json` | 隆中, battlefield zones |
+| **Dream of the Red Chamber** | `experiment_red_mansions.json` | Grand View Garden: Qinfang Pavilion, Xiaoxiang Lodge, Yihong Courtyard, Ouxiang Pavilion, Longcui Nunnery, Qiushuang Studio, Hengwu Garden |
+| **Romance of the Three Kingdoms** | `experiment_three_kindoms.json` | Longzhong, major battlefield zones |
 | **A Song of Ice and Fire** | `experiment_icefire.json` | Westeros locations |
 | **Alice's Adventures in Wonderland** | `experiment_alice.json` | Wonderland locations |
 
-The **Dream of the Red Chamber** world features a custom ink-painting background of the Grand View Garden (大观园) with all 7 buildings mapped to their historical coordinates. Characters like Lin Daiyu, Jia Baoyu, and Xue Baochai move between their residences in real time.
+The **Dream of the Red Chamber** world features a custom ink-painting background of the Grand View Garden with all 7 buildings mapped to their historical coordinates. Characters like Lin Daiyu, Jia Baoyu, and Xue Baochai move between their residences in real time.
 
 ---
 
@@ -233,17 +239,17 @@ ScrollWeaver/
 ├── config.json                  # Configuration (models, API keys)
 ├── requirements.txt             # Python dependencies
 ├── Dockerfile                   # Docker deployment
-├── index.html                   # App entry point (redirects to plaza)
+├── index.html                   # App entry point
 ├── frontend/
 │   ├── pages/
 │   │   ├── home.html            # Landing / intro page
 │   │   ├── login.html           # Login / register
-│   │   ├── plaza.html           # Main lobby (天工 / 穿越)
+│   │   ├── plaza.html           # Main lobby
 │   │   ├── creation.html        # World creation workshop
-│   │   ├── library.html         # Your scrolls library (藏书阁)
-│   │   ├── explore.html         # Browse shared scrolls (阅卷)
-│   │   ├── world-view.html      # Interactive world map (历练)
-│   │   ├── chat.html            # Private 1-on-1 chat (私语)
+│   │   ├── library.html         # Your scrolls library
+│   │   ├── explore.html         # Browse shared scrolls
+│   │   ├── world-view.html      # Interactive world map
+│   │   ├── chat.html            # Private 1-on-1 chat
 │   │   ├── multiplayer-story.html # Co-op story mode
 │   │   ├── gathering.html       # Gathering lobby
 │   │   ├── werewolf.html        # Werewolf game
@@ -262,7 +268,7 @@ ScrollWeaver/
 │   ├── personality_model.py     # Three-layer personality model
 │   ├── dynamic_state_manager.py # Dynamic relationship tracking
 │   ├── simulation/              # Scene/event/movement managers
-│   ├── chat/                    # P-mode chat performer
+│   ├── chat/                    # Private chat performer
 │   ├── werewolf/                # Werewolf A-O-P module
 │   ├── gathering/               # Gathering game module
 │   ├── llm/                     # LLM adapters
@@ -311,12 +317,11 @@ Tracks evolving relationship states between characters over time — affinity, t
 
 ## Adding Your Own World
 
-### Method 1: In-app Creation (Recommended)
+### Method 1: In-app Workshop (Recommended)
 
-Use the **Workshop (造办处)** in the app:
 1. Upload your novel as PDF/TXT — AI extracts everything automatically
-2. Or describe your world in one sentence — AI generates configurations from scratch
-3. Or use the manual editor for fine-grained control
+2. Or describe your world in one sentence — AI generates all configurations from scratch
+3. Or use the manual editor for fine-grained control over every detail
 
 ### Method 2: Manual File Creation
 
