@@ -380,19 +380,6 @@ python extract_data/extract_settings.py  # 提取世界设定
 
 ---
 
-## 引用
-
-```bibtex
-@inproceedings{ran2025scrollweaver,
-  title={BOOKWORLD: From Novels to Interactive Agent Societies for Story Creation},
-  author={Ran, Yiting and Wang, Xintao and Qiu, Tian and Liang, Jiaqing and Xiao, Yanghua and Yang, Deqing},
-  booktitle={Proceedings of the 63rd Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers)},
-  pages={15898--15912},
-  year={2025}
-}
-```
-
----
 
 ## 许可证
 
@@ -407,3 +394,4 @@ python extract_data/extract_settings.py  # 提取世界设定
 [快速开始](#快速开始) · [添加你的世界](#添加你自己的世界) · [Demo](https://scrollweaver.harrycn.com)
 
 </div>
+
