@@ -388,20 +388,6 @@ This project's multi-agent simulation framework builds on **[BookWorld](https://
 
 ---
 
-## Citation
-
-```bibtex
-@inproceedings{ran2025scrollweaver,
-  title={BOOKWORLD: From Novels to Interactive Agent Societies for Story Creation},
-  author={Ran, Yiting and Wang, Xintao and Qiu, Tian and Liang, Jiaqing and Xiao, Yanghua and Yang, Deqing},
-  booktitle={Proceedings of the 63rd Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers)},
-  pages={15898--15912},
-  year={2025}
-}
-```
-
----
-
 ## License
 
 See [LICENSE](LICENSE) for details.
@@ -415,4 +401,5 @@ See [LICENSE](LICENSE) for details.
 [Get Started](#quick-start) · [Add Your World](#adding-your-own-world) · [Demo](https://scrollweaver.harrycn.com)
 
 </div>
+
 
