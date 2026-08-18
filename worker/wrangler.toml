@@ -1,0 +1,73 @@
+name = "scrollweaver"
+main = "src/index.ts"
+compatibility_date = "2025-01-01"
+# nodejs_compat 提供 crypto 等 API；Workers 原生 fetch 已足够，不引入 polyfill 体积
+compatibility_flags = ["nodejs_compat"]
+
+# 前端静态资源由 Workers Assets 直接托管，无需单独部署 Pages，
+# 也就不存在跨域问题——API 和页面同源。
+[assets]
+directory = "../web"
+binding = "ASSETS"
+# 前端 JS 里硬编码了 /frontend/pages/*.html 这类绝对路径，
+# html_handling 必须关掉，否则 .html 会被 307 重定向成无扩展名 URL，
+# 「页面与功能不变」就做不到。
+html_handling = "none"
+# 找不到对应文件时交给 Worker 处理（API 路由）
+not_found_handling = "none"
+
+[vars]
+ROLE_MODEL = "glm-4.7"
+WORLD_MODEL = "glm-4.7"
+EMBEDDING_MODEL = "embedding-3"
+LLM_TIMEOUT_MS = "120000"
+LLM_MAX_RETRIES = "3"
+RETRIEVAL_TOP_K = "3"
+
+# --- D1：用户、书卷、故事、会话存档 ---
+# 首次部署前执行： wrangler d1 create scrollweaver
+[[d1_databases]]
+binding = "DB"
+database_name = "scrollweaver"
+database_id = "00000000-0000-0000-0000-000000000000"
+
+# --- KV：角色 / 世界观 / 预设等静态内容（构建期灌入）---
+# 首次部署前执行： wrangler kv namespace create CONTENT
+[[kv_namespaces]]
+binding = "CONTENT"
+id = "0000000000000000000000000000000f"
+
+# --- R2：头像、地图背景、用户上传 ---
+# 首次部署前执行： wrangler r2 bucket create scrollweaver-media
+[[r2_buckets]]
+binding = "MEDIA"
+bucket_name = "scrollweaver-media"
+
+# --- Durable Objects：一个游戏会话 / 一个房间各一个实例 ---
+[[durable_objects.bindings]]
+name = "STORY_SESSION"
+class_name = "StorySession"
+
+[[durable_objects.bindings]]
+name = "ROOM"
+class_name = "Room"
+
+[[durable_objects.bindings]]
+name = "BUSINESS_GAME"
+class_name = "BusinessGame"
+
+[[durable_objects.bindings]]
+name = "WHO_IS_HUMAN"
+class_name = "WhoIsHuman"
+
+[[durable_objects.bindings]]
+name = "WEREWOLF_GAME"
+class_name = "WerewolfGame"
+
+# 免费版只支持 SQLite 后端的 DO，必须用 new_sqlite_classes
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["StorySession", "Room", "BusinessGame", "WhoIsHuman", "WerewolfGame"]
+
+[observability]
+enabled = true

@@ -1,0 +1,4 @@
+# 本地开发密钥。复制为 .dev.vars 后填入真实值。
+# 线上用 `wrangler secret put GLM_API_KEY` 配置，绝不提交真实密钥。
+GLM_API_KEY=your-glm-api-key
+JWT_SECRET=change-me

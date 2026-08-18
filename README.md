@@ -1,319 +1,142 @@
-# ScrollWeaver (织梦绘卷)—— 从文本到“活世界”的多智能体互动故事系统
+# ScrollWeaver · Serverless 重构版
 
-## 一、 项目概述：ScrollWeaver 是什么？
+由 AI 驱动的沉浸式虚拟世界构建与多智能体博弈平台。本仓库是原项目的 **Cloudflare Workers 重构版**：
+前端页面与样式逐像素保持不变，后端整体重写。
 
-### 1.1 一句话定位
+## 与原版的关系
 
-ScrollWeaver (织梦绘卷) 是一个多智能体社会模拟引擎，它能将静态的文本（如小说、设定集）“复活”为可互动、可共创、可导出的“活世界”。
+| | 原版（Python） | 本版（TypeScript / Workers） |
+|---|---|---|
+| 后端 | FastAPI + uvicorn，21,473 行 | Cloudflare Workers，部署产物 gzip 后约 100 KB |
+| 依赖 | 1.2 GB（torch 498 MB + chromadb + transformers + modelscope…） | 3 个运行时依赖（hono / zod / zod-to-json-schema） |
+| 检索 | 本地 bge-small（首次运行下载 98 MB 模型）+ ChromaDB | 构建期切块 + 运行时词法检索，零依赖 |
+| 会话状态 | 进程内存字典，重启即丢 | Durable Object 持久化，可断点续跑 |
+| 数据库 | 本地 SQLite | D1 |
+| LLM | 14 个接口互不一致的适配器 | 1 个接口 1 份实现，任意 OpenAI 兼容端点 |
+| 前端 | 15 个静态页面 | **完全相同的 15 个页面**（仅 2 个文件换掉 socket.io） |
 
-### 1.2 核心理念
+## 目录结构
 
-本项目模拟一个完整的社会系统，包含两大核心：
-* **指挥家 (Orchestrator)**： 作为“世界代理”或“导演”，它理解世界观、地点和规则，负责编排场景、调度角色登场。
-* **表演者 (Performer)**： 作为“角色代理”或“演员”，它们拥有各自的性格、记忆和目标，在“指挥家”设定的场景中自主行动、对话和演化。
-
-### 1.3 核心目标与价值
-
-* **赋能创作**： 自动从文本中提炼设定与角色，并持续生成符合原作风格的新剧情，最终允许用户下载导出生动的故事内容，为作者和编剧提供灵感。
-* **交互式体验**： 支持人类玩家“扮演”或“降临”任意角色，与 AI 智能体共同推动故事发展，将“读故事”变为“玩故事”。
-* **构建“活的世界”**： 创造一个角色拥有记忆、目标会动态演化、并能对玩家行为做出真实反应的社会模拟沙盒。
-
-### 1.4 项目链接
-* **Demo:** [https://scrollweaver.harrycn.com](https://scrollweaver.harrycn.com)
-
----
-
-## 二、 核心体验与玩法：用户怎么玩？
-
-ScrollWeaver 提供了三种递进的核心玩法，从“观察”到“介入”，再到“共创与生成”，完美贴合不同用户的创作需求。
-
-### 2.1 玩法一：AI 导演模式（观察故事）
-
-这是系统的默认状态，主打“自动化叙事”。
-1.  **世界加载**： 用户选择一个预设世界（如红楼梦、冰与火之歌）或上传自己的小说文本。
-2.  **AI 自动演进**： “指挥家” (Orchestrator) 开始工作，它根据世界观和角色目标，自动设置场景并调度“表演者” (Performer) 登场。
-3.  **AI 自主表演**： 角色们根据自己的性格、记忆和当前目标，自主地进行对话、行动和互动，持续生成新的剧情。
-4.  **纯粹观察**： 用户如同观看一场永不重复的戏剧，观察 AI 如何演绎和推进符合逻辑的新故事。
-
-### 2.2 玩法二：人类介入模式（扮演角色）
-
-当用户希望亲自影响剧情走向时，可以随时切换到“介入模式”。
-1.  **选择角色**： 用户在前端界面上选择一个希望扮演的角色（例如，选择扮演“贾宝玉”）。
-2.  **系统暂停**： 当剧情轮到该角色行动时，系统（`server.py` 通过 WebSocket）会自动暂停，等待用户输入。
-3.  **亲自“表演”**： 用户在前端输入自己的对话或行动。
-4.  **AI 实时响应**： 系统将用户的输入作为“既定事实”纳入历史，其他 AI 角色会基于这一新的输入，实时调整自己的反应和后续行动，实现人与 AI 共同创作（Co-creation）的独特体验。
-
-### 2.3 玩法三：人机协同创作模式（生成与导出）
-
-**(重点功能)** 这是为创作者设计的核心功能，主打**“人机协同”与“高效内容生成”**。它将“扮演模式”与“AI 高速演算”相结合。
-1.  **设定“剧本”**： 用户加载或创建好自己的世界观和角色卡。
-2.  **介入关键节点**： 用户可以像“玩法二”一样，先亲自“扮演”角色，推动剧情到关键节点，确保故事的核心走向（例如，A 和 B 必须在此相遇）。
-3.  **AI 接管推演**： 当用户完成关键布局后，点击“AI 接管生成”。AI 将基于用户已创造的剧情，在后台高速推演后续 N 个回合或 N 天的剧情。
-4.  **下载共创内容**： 生成完毕后，用户可以一键下载这份“人机共创”的完整故事脚本（例如 `.txt` 或 `.md` 格式）。这份脚本既包含了用户亲自撰写的关键情节，也包含了 AI 补完的丰富细节，可直接用于小说、剧本或视频创作。
-
----
-
-## 三、 技术实现深度解析
-
-本项目基于模块化的多智能体架构，确保了叙事的一致性、灵活性和可扩展性。
-
-### 3.1 总体架构
-
-* **后端 (FastAPI + WebSocket)**： (`server.py`) 负责提供 API 接口、托管前端静态资源，并通过 WebSocket 实时推送“消息流”和“状态流”，同时接收用户的“介入”指令。
-* **核心引擎 (`ScrollWeaver.py`)**： 负责模拟的主循环、状态管理和组件（指挥家、表演者）的协同工作。
-* **前端 (`index.html` + `frontend/`)**： 纯静态页面，作为“观察者”和“扮演者”的控制面板，展示对话流、角色/地图面板、场景状态，并提供输入接口。
-
-### 3.2 核心引擎：导演-演员 (O-P) 模型
-
-5.  **指挥家 (Orchestrator / 世界层)**
-    * **文件**： `modules/orchestrator.py`
-    * **职责**： 扮演“导演”和“世界规则”。
-    * **功能**：
-        * **世界加载**： 加载世界观 (`data/worlds/`)、地点 (`data/locations/`) 和地图信息。
-        * **RAG 检索**： 将世界设定构建为事实库 (ChromaDB, `modules/db/`)，用于检索增强，确保 AI 行为符合世界观。
-        * **场景编排**： 决定“下一幕”发生在何时、何地。
-        * **角色调度**： 决定该场景中有哪些“表演者”登场，并生成场景引导语。
-6.  **表演者 (Performer / 角色层)**
-    * **文件**： `modules/main_performer.py`
-    * **职责**： 扮演“演员”，忠于自己的角色。
-    * **功能**：
-        * **画像与记忆**： 加载角色档案 (`data/roles/`)，拥有独立的短期记忆（历史）和长期记忆（设定）。
-        * **目标演化**： 拥有动态的目标（Goals），这些目标会根据场景引导和历史事件而调整。
-        * **生成行动**： 基于“（指挥家的）场景上下文 + （自己的）角色画像/记忆/目标”，生成具体的行动和台词。
-
-### 3.3 核心工作流（仿真循环）
-
-1.  **初始化**： 从 `config.json` 加载预设，`ScrollWeaver.py` 初始化“指挥家”和所有“表演者”。
-2.  **构建记忆**： “指挥家”加载世界观，并使用嵌入模型 (`modules/embedding.py`) 构建世界事实 RAG 检索库 (ChromaDB)。
-3.  **场景开始**： “指挥家”决定场景和登场角色。
-4.  **回合推进**： “指挥家”依次激活场景中的“表演者”。
-5.  **“介入”检查点**：
-    * 如果被激活的是“人类玩家”扮演的角色（玩法二/三）：系统通过 WebSocket 等待前端输入。
-    * 否则： “表演者” (AI) 自主生成行动/对话（玩法一）。
-6.  **记录与广播**： 行动结果被记入历史，并通过 WebSocket 广播给所有前端观察者。
-7.  **循环/存档/导出**： 推进到下一回合。状态可被自动保存 (`./experiment_saves/`)，或在“协同创作模式”（玩法三）下触发“内容导出”API。
-
-### 3.4 关键技术特性
-
-* **模型高度灵活**： (`modules/llm/`) 支持切换 OpenAI, Gemini, Qwen, DeepSeek, Ollama/VLLM 本地模型等。
-* **可插拔 RAG**： 默认使用 BGE-Small + ChromaDB，易于替换和扩展。
-* **数据管道**：
-    * **手动（推荐）**： 参照 `data/` 目录手动构建高质量的世界与角色档案。
-    * **自动（实验性）**： 使用 `extract_data/` 脚本从文本中自动提炼角色和设定。
-    * **转换**： 支持 `convert_sillytavern_cards_to_data.py` 将SillyTavern 角色卡转换为可用数据。
-
----
-
-## 四、 创新点与赛道匹配
-
-### 4.1 核心创新点
-
-1.  **从“单体AI”到“社会AI”**： 不同于 1v1 的角色扮演，ScrollWeaver 构建了一个“多智能体社会”，AI 之间会自主发生有逻辑的互动，形成关系网和动态剧情。
-2.  **导演-演员 (O-P) 架构**： “指挥家”负责宏观场景和一致性，“表演者”负责微观演绎和个性化。这种分层架构有效解决了多智能体叙事中常见的“剧情漂移”和“人设崩塌”问题。
-3.  **人-机协同创作**： 创新的“协同创作模式”（玩法三）允许玩家先设定关键剧情，再由 AI 高速补完，实现了从“实时扮演”到“异步共创”的飞跃。
-
-### 4.2 赛道匹配：精准契合「具象热爱（内容生成智能体）」
-
-本项目精准聚焦并深度契合 主赛道四「具象热爱（内容生成智能体）」。
-大赛对该赛道的定义是“开发 AI 驱动的内容生成Agent”，ScrollWeaver 正是这样一个以“AI 叙事”为核心的内容生成系统。
-* **打造“AI 创作助手”**： ScrollWeaver 的“协同创作模式”（玩法三）是一个强大的“AI 创作助手”。用户只需提供初始“素材”并介入关键节点，AI 就能高效生成包含用户创意的优质内容。 尤其是**“故事下载”**功能，将 ScrollWeaver 从一个模拟器转变为一个实用的 AIGC 生产力工具，让用户能将 AI 辅助生成的灵感和素材直接用于自己的小说或剧本。
-* **实现“人机自然协作”**： 我们通过“扮演模式”（玩法二）和“协同创作模式”（玩法三）实现了“人机协作...融入创作过程”的最佳实践。用户（人）的“扮演”输入会被 AI 实时响应（玩法二），或者作为“关键剧情锚点”被 AI 继承并高速推演（玩法三）。这打破了传统的“人写、AI 润色”模式，实现了从“实时演绎”到“异步共创”的深度协作。
-* **“具象”用户的“热爱”**： 本项目让 Soul 平台上富有创造力的 Z 世代用户，能将他们所“热爱”的任何 IP（小说、动漫、游戏）或个人幻想，通过我们的引擎“具象化”为一个可观察、可互动的“活世界”。这极大地**“赋能（了 Soul 的）兴趣内容生态”**，创造了一种全新的、具有高度沉浸感和可玩性的 AIGC/UGC 形式。
-
----
-
-## 五、 安装与运行指南
-
-### 5.1 环境要求
-
-* Python 3.8+
-* 至少 4GB 可用内存（推荐 8GB+）
-* 网络连接（用于下载模型和 API 调用）
-
-### 5.2 安装步骤
-
-1. **克隆仓库**
-```bash
-git clone <repository-url>
-cd ScrollWeaver
+```
+.
+├── web/                      前端，原样保留
+│   ├── index.html
+│   └── frontend/             URL 布局与原版一致（/frontend/pages/*.html）
+├── worker/
+│   ├── src/
+│   │   ├── index.ts          路由入口
+│   │   ├── config.ts         单一配置源（供应商表驱动）
+│   │   ├── auth.ts           PBKDF2 口令 + HMAC JWT
+│   │   ├── llm/client.ts     统一 LLM 层（结构化输出 + 自修重试）
+│   │   ├── domain/           纯业务逻辑，无 IO
+│   │   │   ├── engine.ts     剧情状态机
+│   │   │   ├── orchestrator.ts / performer.ts
+│   │   │   ├── state.ts      可序列化会话状态
+│   │   │   ├── content.ts    内容包
+│   │   │   ├── retrieval.ts  词法检索
+│   │   │   └── schemas.ts    20 个结构化输出契约
+│   │   ├── durable/          StorySession / Room / 三个玩法
+│   │   ├── api/              按领域拆分的路由
+│   │   ├── storage/repo.ts   D1 数据访问
+│   │   └── prompts/          从原版移植的 48 个提示词模板
+│   ├── schema.sql            D1 表结构
+│   └── wrangler.toml
+├── data/                     内容资产（角色 / 世界观 / 地点 / 预设）
+├── scripts/import-content.mjs  构建期把 data/ 打包进 KV
+└── reference/                原版 Python 代码，仅供移植比对
 ```
 
-2. **安装依赖**
-```bash
-pip install -r requirements.txt
-pip install 'httpx[socks]'  # 如果使用 SOCKS 代理，需要额外安装此包
-```
-
-3. **配置 API Keys**
-
-编辑 `config.json` 文件，填入您的 API Keys：
-```json
-{
-    "role_llm_name": "gemini-2.5-flash-lite",
-    "world_llm_name": "gemini-2.5-flash-lite",
-    "embedding_model_name": "bge-small",
-    "preset_path": "./experiment_presets/experiment_three_kindoms.json",
-    "OPENAI_API_KEY": "your-openai-key",
-    "GEMINI_API_KEY": "your-gemini-key",
-    "GOOGLE_API_KEY": "your-google-key",
-    ...
-}
-```
-
-支持的模型提供商：
-* OpenAI (GPT-3.5, GPT-4, GPT-4o)
-* Google Gemini (gemini-2.5-flash, gemini-pro)
-* Anthropic Claude
-* Qwen, DeepSeek, Doubao
-* OpenRouter (支持多种模型)
-
-4. **初始化数据库**
-
-数据库会在首次运行时自动创建。如果需要重置：
-```bash
-rm scrollweaver.db  # 删除现有数据库
-# 服务器启动时会自动创建新数据库
-```
-
-### 5.3 启动服务器
+## 本地开发
 
 ```bash
-python server.py
+cd worker
+npm install
+
+# 配置密钥（不会被提交）
+cp .dev.vars.example .dev.vars
+# 编辑 .dev.vars 填入 GLM_API_KEY
+
+# 建表 + 灌内容
+npx wrangler d1 execute scrollweaver --local --file=schema.sql
+node ../scripts/import-content.mjs
+npx wrangler kv bulk put ../dist/kv-bulk.json --binding CONTENT --local
+
+npm run dev            # http://localhost:8787
 ```
 
-服务器将在 `http://localhost:8000` 启动。
+验证：
 
-**使用代理（可选）**：
-如果您的环境需要代理，可以设置环境变量：
 ```bash
-export https_proxy=http://127.0.0.1:7890
-export http_proxy=http://127.0.0.1:7890
-export all_proxy=socks5://127.0.0.1:7890
-python server.py
+npm run typecheck
+npm test               # 设置 GLM_API_KEY 环境变量可额外跑真实 LLM 用例
+curl localhost:8787/api/health
 ```
 
-**注意**：如果使用 SOCKS 代理，请确保已安装 `httpx[socks]`：
+## 部署到 Cloudflare
+
+免费额度足够支撑一个演示站点：Workers 10 万请求/天、Durable Objects
+10 万请求/天、D1 5 GB、KV 1 GB、R2 10 GB、Pages 无限带宽。
+
 ```bash
-pip install 'httpx[socks]'
+cd worker
+
+# 1. 创建资源，把返回的 id 填进 wrangler.toml
+npx wrangler d1 create scrollweaver
+npx wrangler kv namespace create CONTENT
+npx wrangler r2 bucket create scrollweaver-media
+
+# 2. 建表
+npx wrangler d1 execute scrollweaver --remote --file=schema.sql
+
+# 3. 灌内容包
+node ../scripts/import-content.mjs
+npx wrangler kv bulk put ../dist/kv-bulk.json --binding CONTENT --remote
+
+# 4. 配置密钥（绝不写进文件）
+npx wrangler secret put GLM_API_KEY
+npx wrangler secret put JWT_SECRET
+
+# 5. 部署
+npx wrangler deploy
 ```
 
-### 5.4 访问应用
+## 换模型 / 换供应商
 
-1. 打开浏览器访问 `http://localhost:8000`
-2. 首次使用需要注册/登录
-3. 在广场页选择或创建书卷
-4. 进入书卷页面开始体验
+只支持 **OpenAI 兼容端点**。切换供应商不需要改代码：
 
-### 5.5 故障排除
-
-#### 问题：书卷一直显示"正在加载书卷..."
-
-**原因**：WebSocket 连接失败或 ScrollWeaver 初始化失败
-
-**解决方案**：
-1. 检查服务器日志（`server.log` 或终端输出）
-2. 确认 `config.json` 中的 `preset_path` 指向的文件存在
-3. 如果使用代理，确保已安装 `httpx[socks]`：
-   ```bash
-   pip install 'httpx[socks]'
-   ```
-4. 检查数据库中的书卷 `preset_path` 是否正确
-5. 重启服务器并刷新浏览器页面
-
-#### 问题：WebSocket 连接返回 500 错误
-
-**原因**：通常是 ScrollWeaver 初始化时出错
-
-**解决方案**：
-1. 查看服务器日志中的详细错误信息
-2. 检查预设文件路径是否正确
-3. 确认 API Keys 配置正确
-4. 检查网络连接和代理设置
-
-#### 问题：模型加载失败
-
-**解决方案**：
-1. 检查 API Keys 是否有效
-2. 确认网络连接正常
-3. 如果使用代理，检查代理配置
-4. 查看 `model_cache/` 目录权限
-
-#### 问题：角色列表为空
-
-**解决方案**：
-1. 检查书卷的预设文件是否存在
-2. 确认预设文件中的 `role_file_dir` 路径正确
-3. 检查 `data/roles/` 目录下是否有对应的角色文件
-
----
-
-## 六、 未来路线图
-
-我们计划在现有的沙盒模拟基础上，适配更多结构化的"互动叙事"玩法，并大力发展用户共创生态，将 ScrollWeaver 引擎打造为通用的"多智能体游戏与内容创作框架"。
-
-### 6.1 构建"共创生态" (UGC)
-
-这是我们后期的核心目标，旨在赋能 Soul 的兴趣内容生态。
-* **开放世界观编辑器**： 我们将开发可视化编辑器，让用户（Souler）不再局限于上传文本，而是可以**"共创"并分享**自己的世界观、地点、地图和规则。
-* **角色卡工坊 (Workshop)**： 建立一个社区工坊，让用户可以**"共创"并分享**他们精心设计的角色卡。优秀的角色卡将被更多"世界"所接纳，形成一个由用户驱动的、可无限扩展的内容库。
-
-### 6.2 新玩法适配：剧本杀 & 狼人杀
-
-* **适配「剧本杀 (Jubensha)」**：
-    * **指挥家 (Orchestrator)** 将扮演"主持人(DM)"角色，负责管理主线剧情、时间推进和证据线索库（通过 RAG 检索）。
-    * **表演者 (Performer)** (无论是 AI 还是人类玩家) 将获得各自的"秘密剧本"（即独特的初始记忆和隐藏目标），它们必须在"指挥家"设定的场景中，通过互动、搜证、推理来达成各自的目标。
-* **适配「狼人杀 (Werewolf)」**：
-    * **指挥家 (Orchestrator)** 将扮演"法官"，严格执行游戏规则（如黑夜/白天阶段切换、投票统计、技能结算）。
-    * **表演者 (Performer)** 将被赋予特定角色（如狼人、村民、预言家），它们必须利用自己的记忆和角色目标，在"指挥家"的规则下进行发言、欺骗、和逻辑推演。
-
----
-
-## 七、 开发与贡献
-
-### 7.1 项目结构
-
-```
-ScrollWeaver/
-├── server.py              # FastAPI 服务器主文件
-├── ScrollWeaver.py        # 核心引擎包装类
-├── config.json            # 配置文件
-├── database.py            # 数据库操作
-├── modules/               # 核心模块
-│   ├── core/              # 核心服务器类
-│   ├── orchestrator.py    # 指挥家（世界层）
-│   ├── main_performer.py  # 表演者（角色层）
-│   ├── llm/               # LLM 模型接口
-│   ├── embedding.py       # 嵌入模型
-│   └── ...
-├── frontend/              # 前端静态文件
-│   ├── pages/             # HTML 页面
-│   ├── js/                # JavaScript 文件
-│   └── css/               # 样式文件
-├── data/                  # 数据文件
-│   ├── worlds/            # 世界观文件
-│   ├── roles/             # 角色档案
-│   ├── locations/         # 地点信息
-│   └── maps/              # 地图数据
-└── experiment_presets/    # 预设配置文件
+```bash
+# 换模型
+npx wrangler deploy --var ROLE_MODEL:deepseek-chat --var WORLD_MODEL:deepseek-chat
+npx wrangler secret put DEEPSEEK_API_KEY
 ```
 
-### 7.2 代码规范
+内置端点：GLM / OpenAI / DeepSeek / Kimi / DashScope(Qwen) / OpenRouter。
+用任意中转站时设置对应的 `<NAME>_API_BASE` 即可；模型名匹配不到内置前缀时，
+会自动回落到第一个已配置的端点。
 
-* 使用 Python 类型提示
-* 遵循 PEP 8 代码风格
-* 关键函数添加文档字符串
-* 错误处理使用 try-except 并记录日志
+新增一家供应商 = 在 `src/config.ts` 的 `PROVIDER_TABLE` 里加一行。
 
-### 7.3 提交 Issue
+## 已知差异
 
-如遇到问题，请提供：
-1. 错误日志
-2. 复现步骤
-3. 环境信息（Python 版本、操作系统等）
-4. 相关配置文件（隐藏敏感信息）
+- **上传文档生成书卷**：原版把二进制直接丢给 Gemini 多模态解析，会把功能焊死在单一供应商上。
+  本版改为**浏览器端提取文字**（pdf.js / fflate），再走通用生成链路——Worker 零 CPU 消耗，
+  也不锁供应商。支持 PDF / DOCX / TXT / MD；旧版二进制 `.doc` 不支持（提示另存为 .docx）；
+  扫描版 PDF 没有文字层，会给出明确提示而不是把空内容喂给模型。
+  `creation.html` 的格式提示与文件选择器已同步去掉 `.doc`（页面此处唯一的改动）。
+- **检索方式**：原版用 bge-small 向量检索，本版用词法检索。语料是几十段世界观设定，
+  实测效果相当，但省掉了 580 MB 依赖和每次行动一次 embedding 往返。
+  `ContentPack.worldChunks` 保留了 `vector` 字段，将来接 Workers AI 可平滑切换。
+- **多人房间**：原版用 socket.io，本版用 Durable Object + 原生 WebSocket。
+  前端通过 `web/frontend/js/common/room-socket.js` 垫片保持 `.on()/.emit()` 调用不变。
 
----
+## 移植时修掉的原版缺陷
 
-## 八、 许可证
-
-详见 [LICENSE](LICENSE) 文件。
+- `interaction_handler` 判断 `single`/`multi`/`enviroment`（拼写错误），而 schema 与提示词给的是
+  `role`/`environment`/`npc`/`no` —— **四种互动里三种永远命中不了**，角色发完独白就结束，从不互相回应。
+- `sw_utils.json_parser` 用 `eval()` 解析模型输出（代码注入面）。
+- `Gemini._get_response_fallback` 静默丢弃 `response_model`，把字符串返回给期待结构化对象的调用方；
+  且非重试错误会在 fallback 之前 `raise`，导致备用通道永远不可达。
+- 7 处硬编码模型名绕过 `config.json`，使配置形同虚设。
+- `get_models` 的 `gpt-*` 分支缺 else，未列举的模型名会让函数隐式返回 `None`。
+- `judge_if_ended` 失败时默认 `if_end=True`，判定失败会直接把玩家的剧情结束掉。
+- `decide_next_actor` / 移动决策不校验返回值，模型编造的角色或地点会污染状态。

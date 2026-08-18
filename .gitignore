@@ -1,37 +1,9 @@
-**/__pycache__/**
-**/chromadb_saves/
-/log/
-/experiment_saves/
-run.sh
-/config/
-.vscode/
-nohup.out
-BookWorld_test.py
-.DS_Store
-model_cache/
-.cursor
-scrollweaver.db
+node_modules/
+dist/
+.wrangler/
+.dev.vars
 *.log
-server_debug.log
-server_output.log
-server.log
+.DS_Store
 
-# Frontend dependencies
-frontend/node_modules/
-frontend/.next/
-frontend/next-env.d.ts
-
-# Other files
-Gemini_Generated_Image_*.png
-
-# Large directories
-SillyTavern-release/
-3D模型/
-
-# User-created local scrolls (should not be uploaded to GitHub)
-experiment_presets/user_*.json
-data/locations/user_*.json
-data/maps/user_*.csv
-data/roles/user_*/
-data/worlds/user_*/
-user_uploads/
+# 原版 Python 代码，仅作移植期比对用，不进版本库
+reference/
