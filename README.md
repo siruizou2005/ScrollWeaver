@@ -10,7 +10,7 @@
 
 [English](README.md) | [简体中文](README_zh.md)
 
-**Demo:** [https://scrollweaver.harrycn.com](https://scrollweaver.harrycn.com)
+**Demo:** [https://scrollweaver.sirui-account.workers.dev/]([https://scrollweaver.harrycn.com](https://scrollweaver.sirui-account.workers.dev/))
 
 </div>
 
