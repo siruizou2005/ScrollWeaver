@@ -25,7 +25,8 @@ import {
 } from './state';
 
 export interface OutMessage {
-  type: 'system' | 'world' | 'role' | 'npc';
+  /** await_user 不是一条展示消息，而是让 DO 发 waiting_for_user_input 的信号 */
+  type: 'system' | 'world' | 'role' | 'npc' | 'await_user';
   roleCode?: string;
   name?: string;
   text: string;
@@ -136,14 +137,21 @@ export class StoryEngine {
         if (!cs || !role) continue;
         cs.motivation = motivations[code] ?? '';
         cs.goal = cs.motivation;
-        appendHistory(this.state, {
+        const detail = this.t(
+          `${role.nickname} 设立了动机: ${cs.motivation}`,
+          `${role.nickname} has set the motivation: ${cs.motivation}`,
+        );
+        const entry = appendHistory(this.state, {
           round: 0,
           actorType: 'role',
           actor: code,
           actType: 'goal setting',
-          detail: `${role.nickname} 设立了动机: ${cs.motivation}`,
+          detail,
           group: [code],
         });
+        // 推到前端显示。早期版本（cc905dc）就是 yield 出去的，stable 改成了只记录，
+        // 但角色多时开局要等很久，没有任何反馈；显示出来既有进度感也交代了人物动机。
+        emit({ type: 'role', roleCode: code, name: role.role_name, text: detail, id: entry.id });
       }
     } catch (err) {
       // 动机缺失不该阻断开局——用角色简介兜底，剧情仍可推进
@@ -199,6 +207,7 @@ export class StoryEngine {
 
     // 依次让角色行动
     for (const code of group) {
+      if (this.state.awaitingUserFor) return true; // 等玩家输入，先让出控制权
       const actor = this.state.sceneMode
         ? await orch.decideNextActor(this.worldDeps, this.state, group, code)
         : code;
@@ -274,6 +283,18 @@ export class StoryEngine {
     const role = this.pack.roles[code];
     const cs = this.state.characters[code];
     if (!role || !cs) return;
+
+    // 玩家扮演的角色由玩家自己写台词：挂起循环，等 user_message 回来再继续
+    if (this.state.userRoleCode === code) {
+      this.state.awaitingUserFor = code;
+      emit({
+        type: 'await_user',
+        roleCode: code,
+        name: role.role_name,
+        text: this.t('轮到你行动了', 'It is your turn to act'),
+      });
+      return;
+    }
 
     let plan: RolePlan;
     try {

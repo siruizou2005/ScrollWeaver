@@ -76,6 +76,11 @@ export interface SessionState {
   history: HistoryEntry[];
   /** 本轮起始的历史下标，用于判断本轮是否该结束 */
   roundStartIndex: number;
+
+  /** 玩家选择扮演的角色；轮到它行动时由玩家写台词而不是 LLM 生成 */
+  userRoleCode: string | null;
+  /** 正在等待玩家为该角色输入；非空时推进循环暂停 */
+  awaitingUserFor: string | null;
 }
 
 export interface CreateOptions {
@@ -120,6 +125,8 @@ export function createSession(opts: CreateOptions): SessionState {
     recentSpeakers: [],
     history: [],
     roundStartIndex: 0,
+    userRoleCode: null,
+    awaitingUserFor: null,
   };
 }
 

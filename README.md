@@ -3,8 +3,8 @@
 由 AI 驱动的沉浸式虚拟世界构建与多智能体博弈平台。本仓库是原项目的 **Cloudflare Workers 重构版**：
 前端页面与样式逐像素保持不变，后端整体重写。
 
-**Demo：** https://scrollweaver.sirui-account.workers.dev
-（线上跑的就是本分支的代码）
+**Demo：** https://scrollweaver.siruizou.com
+（线上跑的就是本分支的代码；`*.workers.dev` 作为备用入口保留）
 
 ## 与原版的关系
 
@@ -102,6 +102,10 @@ npx wrangler secret put JWT_SECRET
 # 5. 部署
 npx wrangler deploy
 ```
+
+自定义域名已写在 `wrangler.toml` 的 `[[routes]]` 里（`custom_domain = true`，
+Cloudflare 会自动建 DNS 记录并签发证书，前提是该域名托管在同一账号下）。
+换成你自己的域名时改 `pattern` 即可。
 
 ## 换模型 / 换供应商
 

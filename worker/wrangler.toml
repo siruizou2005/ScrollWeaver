@@ -4,8 +4,21 @@ compatibility_date = "2025-01-01"
 # nodejs_compat 提供 crypto 等 API；Workers 原生 fetch 已足够，不引入 polyfill 体积
 compatibility_flags = ["nodejs_compat"]
 
+# 显式保留 *.workers.dev 作为备用入口。配了 routes 之后 wrangler 默认会关掉它，
+# 而自定义域名的 DNS 或证书一旦出问题就没有第二条路可走，
+# 所以把行为写明确而不是依赖默认值。（TOML 顶层键必须在任何表头之前）
+workers_dev = true
+
 # 前端静态资源由 Workers Assets 直接托管，无需单独部署 Pages，
 # 也就不存在跨域问题——API 和页面同源。
+# 自定义域名。custom_domain = true 会让 Cloudflare 自动建 DNS 记录并签发证书，
+# 前提是 siruizou.com 已经在同一个账号下托管。
+# 用自定义域名而不是 *.workers.dev：后者会随 Worker 名或账号变化，
+# 写进 README 的地址不该这么脆。
+[[routes]]
+pattern = "scrollweaver.siruizou.com"
+custom_domain = true
+
 [assets]
 directory = "../web"
 binding = "ASSETS"
