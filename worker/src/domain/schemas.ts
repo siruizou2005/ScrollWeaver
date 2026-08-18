@@ -315,3 +315,21 @@ export const ScrollConfig = z.object({
   locations: z.array(LocationConfig).min(1).describe('地点列表，每个地点必须有唯一的名称。'),
 });
 export type ScrollConfig = z.infer<typeof ScrollConfig>;
+
+// ---------- 事件链（多幕剧情预览）----------
+
+export const EventChainAct = z.object({
+  act_number: z.number().int().describe('第几幕，从 1 开始'),
+  title: z.string().describe('这一幕的标题，6-12 字'),
+  main_plot: z.string().describe('明线：这一幕台面上发生的主要冲突与进展'),
+  sub_plot: z.string().describe('暗线：暗中推进、尚未被角色察觉的线索'),
+  key_events: z.array(z.string()).describe('这一幕的 2-4 个关键事件，每条一句话'),
+  relationship_changes: z.string().describe('这一幕结束后主要角色之间关系的变化'),
+});
+export type EventChainAct = z.infer<typeof EventChainAct>;
+
+export const EventChain = z.object({
+  overall_theme: z.string().describe('整条故事线的核心主题，一到两句话'),
+  acts: z.array(EventChainAct).describe('各幕，数量与请求的幕数一致'),
+});
+export type EventChain = z.infer<typeof EventChain>;

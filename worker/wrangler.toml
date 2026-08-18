@@ -29,19 +29,13 @@ RETRIEVAL_TOP_K = "3"
 [[d1_databases]]
 binding = "DB"
 database_name = "scrollweaver"
-database_id = "00000000-0000-0000-0000-000000000000"
+database_id = "3ee249a2-8d10-459f-8240-eb9931b5631d"
 
 # --- KV：角色 / 世界观 / 预设等静态内容（构建期灌入）---
 # 首次部署前执行： wrangler kv namespace create CONTENT
 [[kv_namespaces]]
 binding = "CONTENT"
-id = "0000000000000000000000000000000f"
-
-# --- R2：头像、地图背景、用户上传 ---
-# 首次部署前执行： wrangler r2 bucket create scrollweaver-media
-[[r2_buckets]]
-binding = "MEDIA"
-bucket_name = "scrollweaver-media"
+id = "39244f316507421c8ffe82ec1ad43c77"
 
 # --- Durable Objects：一个游戏会话 / 一个房间各一个实例 ---
 [[durable_objects.bindings]]

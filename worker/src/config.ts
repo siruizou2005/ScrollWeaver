@@ -18,8 +18,6 @@ export interface Env {
   DB: D1Database;
   /** 角色 / 世界观 / 预设等静态内容 */
   CONTENT: KVNamespace;
-  /** 头像、地图背景、用户上传 */
-  MEDIA: R2Bucket;
 
   // --- Durable Objects ---
   STORY_SESSION: DurableObjectNamespace;

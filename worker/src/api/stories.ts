@@ -7,9 +7,8 @@ import { z } from 'zod';
 
 import { loadConfig } from '@/config';
 import { loadPack } from '@/domain/content';
-import { EventText } from '@/domain/schemas';
+import { EventChain } from '@/domain/schemas';
 import { getLLM, LLMError } from '@/llm';
-import { orchestratorPrompts, render } from '@/prompts';
 
 import { currentUser, optionalAuth, requireAuth, type App } from './middleware';
 
@@ -58,32 +57,41 @@ storyRoutes.post('/scroll/:id/generate-event-chain', async (c) => {
     return c.json({ detail: '书卷不存在' }, 404);
   }
 
+  const body = await c.req
+    .json<{ act_count?: number; acts?: number }>()
+    .catch(() => ({}) as { act_count?: number; acts?: number });
+  // 前端提供 1/3/5/8/10 幕的选项
+  const actCount = Math.min(10, Math.max(1, Number(body.act_count ?? body.acts ?? 3) || 3));
+
   const config = loadConfig(c.env);
-  const P = orchestratorPrompts(pack.preset.language);
   const rolesInfo = Object.values(pack.roles)
     .map((r) => `${r.role_name}：${r.profile}`)
     .join('\n');
+  const locations = Object.values(pack.locations)
+    .map((l) => `${l.location_name}：${l.description}`)
+    .join('\n');
 
-  const basePrompt = render(P.GENERATE_INTERVENTION_PROMPT, {
-    world_description: pack.world.description,
-    roles_info: rolesInfo,
-    history_text: '',
-  });
+  const zh = pack.preset.language === 'zh';
+  const prompt = zh
+    ? `你是一位擅长多幕剧结构的编剧。请为下面的世界设计一条 ${actCount} 幕的故事线。\n\n` +
+      `世界观：${pack.world.description}\n${pack.world.detail}\n\n` +
+      `登场人物：\n${rolesInfo}\n\n可用地点：\n${locations}\n\n` +
+      `要求：每一幕都要有台面上的明线冲突和暗中推进的暗线；` +
+      `幕与幕之间要有因果递进；关系变化要具体到人物之间。恰好 ${actCount} 幕。`
+    : `Design a ${actCount}-act story arc for the world below.\n\n` +
+      `World: ${pack.world.description}\n${pack.world.detail}\n\n` +
+      `Characters:\n${rolesInfo}\n\nLocations:\n${locations}\n\n` +
+      `Each act needs a visible main plot and a hidden sub plot, with causal progression ` +
+      `between acts. Exactly ${actCount} acts.`;
 
-  const llm = getLLM(config, undefined, 'world');
   try {
-    // 并发生成 3 条互不相同的事件线，比旧版逐条串行快得多
-    const events = await Promise.all(
-      [0, 1, 2].map(async (i) => {
-        const variant =
-          pack.preset.language === 'zh'
-            ? `${basePrompt}\n\n请给出第 ${i + 1} 种可能的开局，与其它可能明显不同。`
-            : `${basePrompt}\n\nProvide alternative opening #${i + 1}, clearly different from others.`;
-        const result = await llm.structured(variant, EventText, { temperature: 1.0 });
-        return result.event;
-      }),
-    );
-    return c.json({ success: true, events });
+    const chain = await getLLM(config, undefined, 'world').structured(prompt, EventChain, {
+      temperature: 0.9,
+    });
+    // 幕号可能被模型写错，这里按顺序纠正，避免前端显示成「第 0 幕」
+    const acts = chain.acts.map((a, i) => ({ ...a, act_number: i + 1 }));
+    // event-chain-preview.js:89 读的是 result.event_chain
+    return c.json({ success: true, event_chain: { ...chain, acts } });
   } catch (err) {
     console.error('[stories] 事件链生成失败:', err);
     return c.json({ detail: err instanceof LLMError ? err.message : '事件链生成失败' }, 502);

@@ -65,6 +65,8 @@ export class StorySession extends DurableObject<Env> {
         case 'control':
           return await this.handleControl(ws, msg);
         case 'request_characters':
+        case 'request_scene_characters':
+          // 前端在切换场景时发后者，语义与前者相同（都要一份角色名单）
           return await this.sendCharacters(ws);
         case 'generate_story':
           return await this.handleExportStory(ws);
@@ -120,6 +122,9 @@ export class StorySession extends DurableObject<Env> {
   }
 
   private async handleControl(ws: WebSocket, msg: ClientMessage): Promise<void> {
+    if (!(await this.hydrate())) {
+      return this.sendError(ws, '会话尚未初始化，请刷新页面重试');
+    }
     switch (msg.action) {
       case 'start':
         if (this.running) return;
@@ -140,8 +145,10 @@ export class StorySession extends DurableObject<Env> {
   }
 
   private async handleUserMessage(ws: WebSocket, msg: ClientMessage): Promise<void> {
-    const state = this.state;
-    if (!state) return this.sendError(ws, '会话尚未初始化');
+    if (!(await this.hydrate())) {
+      return this.sendError(ws, '会话尚未初始化，请刷新页面重试');
+    }
+    const state = this.state as SessionState;
     const text = String(msg.text ?? '').trim();
     if (!text) return;
 
@@ -169,8 +176,10 @@ export class StorySession extends DurableObject<Env> {
   }
 
   private async sendCharacters(ws: WebSocket): Promise<void> {
-    const pack = this.pack;
-    if (!pack) return this.sendError(ws, '会话尚未初始化');
+    if (!(await this.hydrate())) {
+      return this.sendError(ws, '会话尚未初始化，请刷新页面重试');
+    }
+    const pack = this.pack as ContentPack;
     this.send(ws, {
       type: 'characters_list',
       data: Object.values(pack.roles).map((r) => ({
@@ -182,9 +191,11 @@ export class StorySession extends DurableObject<Env> {
   }
 
   private async handleExportStory(ws: WebSocket): Promise<void> {
-    const state = this.state;
-    const pack = this.pack;
-    if (!state || !pack) return this.sendError(ws, '会话尚未初始化');
+    if (!(await this.hydrate())) {
+      return this.sendError(ws, '会话尚未初始化，请刷新页面重试');
+    }
+    const state = this.state as SessionState;
+    const pack = this.pack as ContentPack;
 
     const config = loadConfig(this.env);
     const logs = state.history
@@ -227,9 +238,11 @@ export class StorySession extends DurableObject<Env> {
    * 丢失多少进度。一步大约是一个角色的行动，代价可接受。
    */
   private async runLoop(ws: WebSocket): Promise<void> {
-    const pack = this.pack;
-    const state = this.state;
-    if (!pack || !state) return this.sendError(ws, '会话尚未初始化');
+    if (!(await this.hydrate())) {
+      return this.sendError(ws, '会话尚未初始化，请刷新页面重试');
+    }
+    const pack = this.pack as ContentPack;
+    const state = this.state as SessionState;
 
     this.running = true;
     this.stopRequested = false;
@@ -267,6 +280,29 @@ export class StorySession extends DurableObject<Env> {
   }
 
   // ---------- 工具 ----------
+
+  /**
+   * 从存储恢复会话。
+   *
+   * hibernation 是把双刃剑：WebSocket 连接能在 DO 实例被驱逐后存活（这正是免费额度
+   * 下能长时间挂着会话的原因），但实例是**重新构造**的——this.pack / this.state
+   * 这些内存字段会归零。因此每个处理器都必须先 hydrate，不能假设 init 时设的值还在。
+   *
+   * 返回 false 表示这个连接还没 init 过，调用方应提示刷新。
+   */
+  private async hydrate(): Promise<boolean> {
+    if (this.pack && this.state) return true;
+    const scrollId = await this.ctx.storage.get<string>(SCROLL_KEY);
+    if (!scrollId) return false;
+    try {
+      this.pack = await loadPack(this.env.CONTENT, scrollId);
+    } catch (err) {
+      console.error('[StorySession] 内容包加载失败:', err);
+      return false;
+    }
+    this.state = (await this.ctx.storage.get<SessionState>(STATE_KEY)) ?? null;
+    return Boolean(this.pack && this.state);
+  }
 
   private async ensureLoaded(scrollId: string): Promise<void> {
     if (this.pack?.preset.id !== scrollId) {

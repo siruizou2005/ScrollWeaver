@@ -75,9 +75,16 @@ chatRoutes.post('/chat/send', requireAuth, async (c) => {
       history,
       currentUser(c).username,
     );
-    history.push({ role: 'assistant', content: reply, at: Date.now() });
+    const at = Date.now();
+    history.push({ role: 'assistant', content: reply, at });
     await repo.saveChatMessages(session.id, history);
-    return c.json({ success: true, reply, role_code: session.role_code });
+    // 字段名对齐前端：chat.js 读的是 data.message 与 data.timestamp
+    return c.json({
+      success: true,
+      message: reply,
+      timestamp: new Date(at).toISOString(),
+      role_code: session.role_code,
+    });
   } catch (err) {
     // 用户消息已经入历史但没拿到回复——回滚，避免下次带着孤立的用户消息重发
     history.pop();
@@ -92,9 +99,15 @@ chatRoutes.get('/chat/history/:id', requireAuth, async (c) => {
   const session = await c.get('repo').getChat(c.req.param('id'));
   if (!session) return c.json({ detail: '会话不存在' }, 404);
   if (session.user_id !== currentUser(c).sub) return c.json({ detail: '无权访问该会话' }, 403);
+  const stored = JSON.parse(session.messages) as ChatMessage[];
+  // chat.js 读 data.history，且 renderMessage 用的是 msg.timestamp（不是内部的 at）
   return c.json({
     success: true,
-    messages: JSON.parse(session.messages) as ChatMessage[],
+    history: stored.map((m) => ({
+      role: m.role,
+      content: m.content,
+      timestamp: new Date(m.at).toISOString(),
+    })),
     role_code: session.role_code,
   });
 });

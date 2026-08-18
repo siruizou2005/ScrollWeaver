@@ -130,6 +130,9 @@ scrollRoutes.get('/scroll/:id/world-info', async (c) => {
     const pack = await loadPack(c.env.CONTENT, c.req.param('id'));
     return c.json({
       success: true,
+      // intro.js:81 读的是顶层 world_description，不是 world.description
+      world_description: pack.world.description,
+      world_detail: pack.world.detail,
       world: pack.world,
       locations: Object.values(pack.locations),
     });
@@ -144,7 +147,8 @@ scrollRoutes.post('/scroll/:id/share', requireAuth, async (c) => {
     .get('repo')
     .setScrollPublic(c.req.param('id'), currentUser(c).sub, body.is_public ?? true);
   if (!ok) return c.json({ detail: '书卷不存在或无权限' }, 404);
-  return c.json({ success: true });
+  // 前端把 data.message 直接弹给用户
+  return c.json({ success: true, message: body.is_public === false ? '已取消共享' : '书卷已共享' });
 });
 
 /** 兼容旧接口：前端创建页仍会调用。 */

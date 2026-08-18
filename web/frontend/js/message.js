@@ -309,7 +309,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
             sendWebSocketMessage({
                 type: 'init',
-                scroll_id: parseInt(scrollIdToLoad)
+                // 书卷 ID 是字符串（如 experiment_three_kindoms），
+                // 旧版是数据库自增整数才需要 parseInt，这里强转会变成 NaN
+                scroll_id: scrollIdToLoad
             });
         }
     };
@@ -1264,7 +1266,7 @@ document.addEventListener('DOMContentLoaded', function () {
             payload.scene = String(currentSceneFilter);
         }
         if (scrollId) {
-            payload.scroll_id = parseInt(scrollId);
+            payload.scroll_id = scrollId;
         }
 
         if (sendWebSocketMessage(payload)) {

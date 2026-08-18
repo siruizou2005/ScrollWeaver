@@ -29,13 +29,23 @@ const app = new Hono<App>();
 app.use('/api/*', withRepo);
 
 /**
- * 根路径。
+ * 页面入口。
  *
- * assets 的 html_handling 被关掉了（否则 /frontend/pages/x.html 会被 307 成
- * 无扩展名 URL，而前端 JS 里全是带 .html 的硬编码路径），代价是目录索引也没了，
- * 所以这里显式把 / 映射到 index.html。
+ * 沿用旧版 server.py 的映射，两条都不能少：
+ *   /      -> frontend/pages/home.html  落地页
+ *   /game  -> index.html                「入卷」玩法的聊天界面
+ * 前端有 4 处直接跳 `/game?...`（intro.js、event-chain-preview.js），
+ * 少了这条路由整个入卷玩法都进不去。
+ *
+ * 需要显式路由是因为 assets 的 html_handling 被关掉了（否则
+ * /frontend/pages/x.html 会被 307 成无扩展名 URL，而前端 JS 里全是带 .html
+ * 的硬编码路径），代价是目录索引与默认文档都没了。
  */
-app.get('/', (c) => c.env.ASSETS.fetch(new URL('/index.html', c.req.url)));
+const serveAsset = (path: string) => (c: Context<App>) =>
+  c.env.ASSETS.fetch(new URL(path, c.req.url));
+
+app.get('/', serveAsset('/frontend/pages/home.html'));
+app.get('/game', serveAsset('/index.html'));
 
 /**
  * 健康检查：同时暴露“配置是否可用”。
@@ -91,8 +101,25 @@ const gameSocket =
 
 app.get('/ws/business/:gameId', gameSocket('BUSINESS_GAME'));
 app.get('/ws/who-is-human/:gameId', gameSocket('WHO_IS_HUMAN'));
-app.get('/ws/werewolf/:gameId', gameSocket('WEREWOLF_GAME'));
-app.get('/ws/werewolf/:gameId/:playerId', gameSocket('WEREWOLF_GAME'));
+/**
+ * 狼人杀的 game_id 形如 `{uuid}~{preset}~{preferredRole}`（见 api/games.ts）。
+ * 这里拆开：uuid 决定 DO 实例，另外两段作为查询参数转给 DO 用于发牌。
+ */
+const werewolfSocket = (c: Context<App>) => {
+  if (c.req.header('upgrade') !== 'websocket') {
+    return c.json({ detail: '该端点仅接受 WebSocket 连接' }, 426);
+  }
+  const raw = c.req.param('gameId') ?? 'default';
+  const [id = 'default', preset = 'simple_8', preferredRole = ''] = raw.split('~');
+  const ns = c.env.WEREWOLF_GAME;
+  const url = new URL(c.req.url);
+  url.searchParams.set('preset', preset);
+  if (preferredRole) url.searchParams.set('preferred_role', preferredRole);
+  return ns.get(ns.idFromName(id)).fetch(new Request(url, c.req.raw));
+};
+
+app.get('/ws/werewolf/:gameId', werewolfSocket);
+app.get('/ws/werewolf/:gameId/:playerId', werewolfSocket);
 
 /** 匹配 / 多人房间 WebSocket。 */
 app.get('/ws/room/:roomId', (c) => {

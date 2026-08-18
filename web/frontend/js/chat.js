@@ -198,7 +198,7 @@ async function createOrGetSession() {
                 'Authorization': `Bearer ${token}`
             },
             body: JSON.stringify({
-                scroll_id: parseInt(scrollId),
+                scroll_id: scrollId,
                 role_code: roleCode,
                 user_name: '用户' // 可以从用户信息获取
             })

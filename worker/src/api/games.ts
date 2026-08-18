@@ -28,7 +28,7 @@ const newGameId = () => crypto.randomUUID().slice(0, 12);
 
 // ---------- 商业博弈 ----------
 
-gameRoutes.post('/business/create', requireAuth, (c) =>
+gameRoutes.post('/business/create', (c) =>
   c.json({ success: true, game_id: newGameId() }),
 );
 
@@ -61,20 +61,39 @@ gameRoutes.get('/business/leaderboard', optionalAuth, async (c) => {
 
 // ---------- 谁是人类 ----------
 
-gameRoutes.post('/who-is-human/create', requireAuth, (c) =>
+// 同样不加鉴权：前端这几个 create 都不带 Authorization 头
+gameRoutes.post('/who-is-human/create', (c) =>
   c.json({ success: true, game_id: newGameId() }),
 );
 
 // ---------- 狼人杀 ----------
 
-gameRoutes.post('/werewolf/create', requireAuth, (c) => {
-  const gameId = newGameId();
+/**
+ * 创建狼人杀对局。
+ *
+ * 不加 requireAuth：werewolf.js:146 的 fetch 只带 Content-Type，不带 Authorization，
+ * 加了鉴权会直接 401，整个玩法进不去。
+ *
+ * 板子与指定身份透传到 WebSocket 的查询参数，由 WerewolfGame 在建连时发牌。
+ */
+const werewolfBody = z.object({
+  preset: z.enum(['standard_12', 'simple_8', 'simple_6']).default('simple_8'),
+  preferred_role: z
+    .enum(['werewolf', 'seer', 'witch', 'hunter', 'guard', 'villager'])
+    .optional(),
+});
+
+gameRoutes.post('/werewolf/create', async (c) => {
+  const parsed = werewolfBody.safeParse(await c.req.json().catch(() => ({})));
+  const { preset, preferred_role } = parsed.success ? parsed.data : { preset: 'simple_8' as const, preferred_role: undefined };
+  // 用 ~ 编进 game_id：前端把它拼进路径 /ws/werewolf/{game_id}/{player_id}，
+  // 若用 ? 会把后半段变成查询串、截断路径，所以只能用路径安全的分隔符。
+  // Worker 路由会解析出这三段。
   return c.json({
     success: true,
-    game_id: gameId,
-    // 旧版前端会用 player_id 拼 WebSocket 路径 /ws/werewolf/{game}/{player}
-    player_id: 'p_human',
-    preset: 'simple_8',
+    game_id: `${newGameId()}~${preset}~${preferred_role ?? ''}`,
+    player_id: 'player_0',
+    preset,
   });
 });
 
@@ -82,6 +101,6 @@ gameRoutes.post('/werewolf/create', requireAuth, (c) => {
  * 旧版有独立的 start 接口；现在开局由 WebSocket 的 start_game 消息触发
  * （因为发牌结果要通过同一条连接推给玩家）。保留端点让前端流程不变。
  */
-gameRoutes.post('/werewolf/start', requireAuth, (c) =>
+gameRoutes.post('/werewolf/start', (c) =>
   c.json({ success: true, via: 'websocket', detail: '请通过 WebSocket 发送 start_game 开始对局' }),
 );

@@ -73,7 +73,8 @@ async function createRoom(c: Context<App>) {
   const rooms = await readRegistry(c.env.CONTENT);
   rooms.push(room);
   await writeRegistry(c.env.CONTENT, rooms);
-  return c.json({ success: true, room_id: room.id, room });
+  // intro.js:639 用 data.room_code 展示给玩家，data.room_id 用于跳转
+  return c.json({ success: true, room_id: room.id, room_code: room.id, room });
 }
 
 roomRoutes.post('/multiplayer/create-room', requireAuth, createRoom);
@@ -116,5 +117,6 @@ roomRoutes.post('/game/join-room/:id', requireAuth, async (c) => {
   const rooms = await readRegistry(c.env.CONTENT);
   const room = rooms.find((r) => r.id === c.req.param('id'));
   if (!room) return c.json({ detail: '房间不存在或已过期' }, 404);
-  return c.json({ success: true, room });
+  // intro.js:673 用 data.room_id 拼跳转地址
+  return c.json({ success: true, room_id: room.id, scroll: room.scroll_id, room });
 });
