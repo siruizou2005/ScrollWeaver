@@ -10,7 +10,7 @@
 
 [English](README.md) | [中文](README_zh.md)
 
-**Demo：** [https://scrollweaver.harrycn.com](https://scrollweaver.harrycn.com)
+**Demo：** [https://scrollweaver.sirui-account.workers.dev](https://scrollweaver.sirui-account.workers.dev)
 
 </div>
 
@@ -391,7 +391,7 @@ python extract_data/extract_settings.py  # 提取世界设定
 
 **让你最热爱的故事世界活起来。**
 
-[快速开始](#快速开始) · [添加你的世界](#添加你自己的世界) · [Demo](https://scrollweaver.harrycn.com)
+[快速开始](#快速开始) · [添加你的世界](#添加你自己的世界) · [Demo](https://scrollweaver.sirui-account.workers.dev)
 
 </div>
 

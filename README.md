@@ -10,7 +10,7 @@
 
 [English](README.md) | [简体中文](README_zh.md)
 
-**Demo:** [https://scrollweaver.sirui-account.workers.dev/]([https://scrollweaver.harrycn.com](https://scrollweaver.sirui-account.workers.dev/))
+**Demo:** [https://scrollweaver.sirui-account.workers.dev](https://scrollweaver.sirui-account.workers.dev)
 
 </div>
 
@@ -398,7 +398,7 @@ See [LICENSE](LICENSE) for details.
 
 **Turn your favorite story into a living world.**
 
-[Get Started](#quick-start) · [Add Your World](#adding-your-own-world) · [Demo](https://scrollweaver.harrycn.com)
+[Get Started](#quick-start) · [Add Your World](#adding-your-own-world) · [Demo](https://scrollweaver.sirui-account.workers.dev)
 
 </div>
 
