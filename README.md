@@ -3,6 +3,9 @@
 由 AI 驱动的沉浸式虚拟世界构建与多智能体博弈平台。本仓库是原项目的 **Cloudflare Workers 重构版**：
 前端页面与样式逐像素保持不变，后端整体重写。
 
+**Demo：** https://scrollweaver.sirui-account.workers.dev
+（线上跑的就是本分支的代码）
+
 ## 与原版的关系
 
 | | 原版（Python） | 本版（TypeScript / Workers） |
