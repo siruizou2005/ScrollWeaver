@@ -107,6 +107,8 @@ function loadRoles(source, codes) {
       gender: info.gender ?? '',
       identity: info.identity ?? [],
       relation: info.relation ?? {},
+      // 三层人格画像。缺失时不写空对象——下游用 `personality ? ... : ...` 判断有无
+      ...(info.personality_profile ? { personality: info.personality_profile } : {}),
     };
   }
   }

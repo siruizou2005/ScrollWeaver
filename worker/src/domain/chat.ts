@@ -13,6 +13,7 @@ import type { LLM } from '@/llm';
 import { system, user, assistant, type Message } from '@/llm';
 
 import type { ContentPack } from './content';
+import { personaBlock } from './persona';
 import type { ChatMessage } from '@/storage/repo';
 
 /** 只保留最近若干轮，避免上下文无限增长。 */
@@ -43,6 +44,16 @@ export function buildSystemPrompt(pack: ContentPack, roleCode: string, userName:
 3. 回复长度控制在 2-4 句，像真实对话而非独白。
 4. 用纯文本，不要使用 Markdown 标记。
 5. 对方称呼为「${userName}」。`,
+    // 三层人格。私语没有会话级的记忆层（历史存在 D1，不含心情能量），
+    // 因此传 null，由画像里的初始心情与能量兜底。
+    role.personality
+      ? personaBlock(
+          role.personality,
+          null,
+          pack.world.language,
+          (code) => pack.roles[code]?.role_name ?? code,
+        )
+      : '',
   ];
   return parts.filter(Boolean).join('\n\n');
 }

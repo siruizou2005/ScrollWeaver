@@ -10,6 +10,7 @@ import type { LLM } from '@/llm';
 import { performerPrompts, render } from '@/prompts';
 
 import { type ContentPack, locationName } from './content';
+import { personaBlock } from './persona';
 import { searchWorld } from './retrieval';
 import {
   BatchMotivations,
@@ -54,6 +55,23 @@ function relationText(pack: ContentPack, selfCode: string, otherCode: string): s
   const rel = pack.roles[selfCode]?.relation?.[otherCode];
   if (!rel) return '';
   return `${rel.relation.join('、')}：${rel.detail}`;
+}
+
+/**
+ * 角色的三层人格段落，追加在提示词末尾；角色没有人格画像时返回空串。
+ *
+ * 与旧版一致地作为**后缀**而非改写模板：这样人格模型是可加可减的一层，
+ * 用户自建的无人格书卷走的仍是原来那条路径。
+ */
+function persona(deps: PerformerDeps, state: SessionState, code: string): string {
+  const profile = deps.pack.roles[code]?.personality;
+  if (!profile) return '';
+  return personaBlock(
+    profile,
+    state.characters[code]?.persona ?? null,
+    state.language,
+    (other) => deps.pack.roles[other]?.role_name ?? other,
+  );
 }
 
 /** 角色可见的历史（只含 group 为空或包含自己的记录）。 */
@@ -197,6 +215,8 @@ export async function makePlan(
     knowledges: knowledges.join('\n'),
   });
 
+  prompt += persona(deps, state, code);
+
   if (state.event) {
     prompt += '\n' + render(P.INTERVENTION_PROMPT, { intervention: state.event });
   }
@@ -235,7 +255,7 @@ export async function singleRoleResponse(
     references: references.join('\n'),
     knowledges: knowledges.join('\n'),
   });
-  return deps.llm.structured(prompt, SingleRoleResponse);
+  return deps.llm.structured(prompt + persona(deps, state, args.code), SingleRoleResponse);
 }
 
 export async function multiRoleResponse(
@@ -265,7 +285,7 @@ export async function multiRoleResponse(
     references: references.join('\n'),
     knowledges: knowledges.join('\n'),
   });
-  return deps.llm.structured(prompt, MultiRoleResponse);
+  return deps.llm.structured(prompt + persona(deps, state, args.code), MultiRoleResponse);
 }
 
 export async function npcResponse(
@@ -291,7 +311,7 @@ export async function npcResponse(
     references: references.join('\n'),
     knowledges: knowledges.join('\n'),
   });
-  return deps.llm.structured(prompt, NPCRoleResponse);
+  return deps.llm.structured(prompt + persona(deps, state, args.code), NPCRoleResponse);
 }
 
 // ---------- 移动 ----------

@@ -85,6 +85,7 @@ live('剧情引擎（真实 LLM）', () => {
       scrollId: 'experiment_three_kindoms',
       language: 'zh',
       roleCodes: Object.keys(PACK.roles).slice(0, 3), // 3 个角色够验证互动
+      roles: PACK.roles,
       maxRounds: 1,
     });
     const engine = new StoryEngine(

@@ -11,6 +11,8 @@
 
 import type { Language } from '@/prompts';
 
+import type { PersonalityProfile } from './persona';
+
 export interface RoleInfo {
   role_code: string;
   role_name: string;
@@ -21,6 +23,11 @@ export interface RoleInfo {
   gender: string;
   identity: string[];
   relation: Record<string, { relation: string[]; detail: string }>;
+  /**
+   * 三层人格画像。当前 82 个角色全部带此字段，但保持可选：
+   * 用户自建的书卷不一定有，缺失时角色走无人格的原路径。
+   */
+  personality?: PersonalityProfile;
 }
 
 export interface WorldInfo {

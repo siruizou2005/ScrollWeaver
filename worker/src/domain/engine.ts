@@ -13,6 +13,7 @@ import type { LLM } from '@/llm';
 
 import { type ContentPack, locationName, nameToCode } from './content';
 import * as orch from './orchestrator';
+import { applyInteraction } from './persona';
 import * as perf from './performer';
 import type { RolePlan } from './schemas';
 import {
@@ -340,6 +341,29 @@ export class StoryEngine {
     }
   }
 
+  /**
+   * 一次对话之后更新双方的记忆层（心情 / 能量 / 亲密度）。
+   *
+   * 旧版只更新应答方，而且传的是**它自己刚说出口的那句话**，等于让角色
+   * 对自己的话产生情绪；发起方则完全不受影响，关系永远是单向的。
+   * 这里两边都更新，且各自处理的是「对方说了什么」。
+   */
+  private exchange(aCode: string, bCode: string, aHeard: string, bHeard: string): void {
+    this.updatePersona(aCode, bCode, aHeard);
+    this.updatePersona(bCode, aCode, bHeard);
+  }
+
+  private updatePersona(code: string, otherCode: string, heard: string): void {
+    const profile = this.pack.roles[code]?.personality;
+    const cs = this.state.characters[code];
+    if (!profile || !cs?.persona) return;
+    applyInteraction(profile, cs.persona, {
+      text: heard,
+      otherCode,
+      lang: this.state.language,
+    });
+  }
+
   private async roleInteraction(
     emit: Emit,
     makerCode: string,
@@ -368,6 +392,7 @@ export class StoryEngine {
         text: reply.detail,
         id: entry.id,
       });
+      this.exchange(targetCode, makerCode, detail, reply.detail);
     } catch (err) {
       console.warn(`[engine] ${targetCode} 回应失败:`, err);
     }
@@ -404,6 +429,7 @@ export class StoryEngine {
           text: reply.detail,
           id: entry.id,
         });
+        this.exchange(targetCode, makerCode, detail, reply.detail);
         if (reply.if_end_interaction) break;
       } catch (err) {
         console.warn(`[engine] ${targetCode} 群体回应失败:`, err);

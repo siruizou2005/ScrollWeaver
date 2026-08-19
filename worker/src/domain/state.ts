@@ -11,6 +11,8 @@
 
 import type { Language } from '@/prompts';
 
+import { initialPersonaState, type PersonalityProfile, type PersonaState } from './persona';
+
 export interface CharacterState {
   code: string;
   locationCode: string;
@@ -23,6 +25,13 @@ export interface CharacterState {
   activity: number;
   /** 正在移动时的目的地与剩余距离；null 表示未在移动 */
   moving: { to: string; remaining: number } | null;
+  /**
+   * 三层人格的记忆层（心情 / 能量 / 关系）。角色没有人格画像时为 null。
+   *
+   * 放在这里而不是写回 role_info.json：预设是所有会话共享的只读内容，
+   * 而心情和关系是这一局特有的。旧版把二者混在一个文件里，见 persona.ts 的说明。
+   */
+  persona: PersonaState | null;
 }
 
 export type ActorType = 'role' | 'world' | 'system' | 'npc';
@@ -92,11 +101,17 @@ export interface CreateOptions {
   maxRounds?: number;
   script?: string;
   intervention?: string;
+  /**
+   * 角色的人格画像，用来初始化记忆层。直接传 pack.roles 即可（结构兼容）。
+   * 不传则所有角色的 persona 为 null，行为与加入人格模型之前一致。
+   */
+  roles?: Record<string, { personality?: PersonalityProfile }>;
 }
 
 export function createSession(opts: CreateOptions): SessionState {
   const characters: Record<string, CharacterState> = {};
   for (const code of opts.roleCodes) {
+    const profile = opts.roles?.[code]?.personality;
     characters[code] = {
       code,
       locationCode: '',
@@ -105,6 +120,7 @@ export function createSession(opts: CreateOptions): SessionState {
       status: '',
       activity: 1,
       moving: null,
+      persona: profile ? initialPersonaState(profile) : null,
     };
   }
   return {

@@ -398,6 +398,7 @@ export class StorySession extends DurableObject<Env> {
           scrollId,
           language: this.pack.preset.language,
           roleCodes: Object.keys(this.pack.roles),
+          roles: this.pack.roles,          // 供 createSession 初始化记忆层
           intervention: this.pack.preset.intervention,
           script: this.pack.preset.script,
           mode: this.pack.preset.script ? 'script' : 'free',
@@ -438,6 +439,9 @@ export class StorySession extends DurableObject<Env> {
         state: cs?.status ?? '',
         status: cs?.status ?? '',
         activity: cs?.activity ?? 1,
+        // 记忆层。无人格画像的角色为 null，前端按缺省处理即可
+        mood: cs?.persona?.mood ?? null,
+        energy: cs?.persona?.energy ?? null,
       };
     });
   }
